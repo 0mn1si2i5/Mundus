@@ -64,6 +64,17 @@ test('selects a local city and validates coordinate input', async ({
   await expect(page.getByRole('alert')).toContainText('纬度需在');
 });
 
+test('loads the scoped Natural Earth nearest-place result', async ({
+  page,
+}) => {
+  await page.goto('./?mode=sunline&v=1');
+  await expect(page.getByText('数据中最近的聚居点')).toBeHidden();
+
+  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await expect(page.getByText('Santa Fe, Argentina')).toBeVisible();
+  await expect(page.getByText(/非完整城市名录/)).toBeVisible();
+});
+
 test('offers explicit share precision choices', async ({ page }) => {
   await page.goto('./?point=30.25%2C120.75&v=1');
   await page.getByRole('button', { name: '分享' }).click();

@@ -11,6 +11,7 @@ import {
   chordDistanceKm,
   surfaceDistanceKm,
 } from '../features/antipodes/distance';
+import { useNearestPopulatedPlace } from '../features/antipodes/populatedPlaces';
 import { MODE_DEFINITIONS } from '../features/modes/modeRegistry';
 import { ShareDialog } from '../features/share/ShareDialog';
 import { useAppStore } from '../state/appStore';
@@ -68,6 +69,10 @@ export function App() {
   const t = messages[locale];
   const mode = MODE_DEFINITIONS[activeMode];
   const antipode = antipodeOf(point);
+  const nearestPlace = useNearestPopulatedPlace(
+    antipode,
+    activeMode === 'antipodes',
+  );
   const numberFormatter = new Intl.NumberFormat(
     locale === 'zh' ? 'zh-CN' : 'en-US',
     {
@@ -131,6 +136,30 @@ export function App() {
         <strong>
           {antipode.latitude.toFixed(4)}°, {antipode.longitude.toFixed(4)}°
         </strong>
+        {nearestPlace.status !== 'idle' ? (
+          <div className={styles.nearestPlace}>
+            <span>{t.nearestPlace}</span>
+            {nearestPlace.status === 'ready' ? (
+              <>
+                <em>
+                  {nearestPlace.result.place.name},{' '}
+                  {nearestPlace.result.place.country}
+                </em>
+                <strong>
+                  {t.nearestPlaceDistance}{' '}
+                  {numberFormatter.format(nearestPlace.result.distanceKm)} km
+                </strong>
+                <small>{t.nearestPlaceScope}</small>
+              </>
+            ) : (
+              <strong>
+                {nearestPlace.status === 'loading'
+                  ? t.nearestPlaceLoading
+                  : t.nearestPlaceUnavailable}
+              </strong>
+            )}
+          </div>
+        ) : null}
         <div className={styles.distanceRow}>
           <span>{t.coreDistance}</span>
           <strong>
