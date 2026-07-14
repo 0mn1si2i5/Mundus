@@ -60,8 +60,11 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
       en: 'Unpack health, education, and income behind similar outcomes.',
     },
     cameraPolicy: 'preserve',
-    resources: ['natural-earth-countries-110m'],
-    stateSchema: z.object({}),
+    resources: ['natural-earth-countries-110m', 'undp-hdr-2025-development'],
+    stateSchema: z.object({
+      indicator: z.enum(['hdi', 'health', 'education', 'income']),
+      year: z.number().int().min(1990).max(2023),
+    }),
   },
   sunline: {
     id: 'sunline',
