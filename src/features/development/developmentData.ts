@@ -75,9 +75,12 @@ export function decodeDevelopmentDataset(input: unknown): DevelopmentDataset {
 
 export function loadDevelopmentDataset(): Promise<DevelopmentDataset> {
   datasetPromise ??=
-    import('../../data/generated/undp-hdr-2025-development.json').then(
-      (module) => decodeDevelopmentDataset(module.default),
-    );
+    import('../../data/generated/undp-hdr-2025-development.json')
+      .then((module) => decodeDevelopmentDataset(module.default))
+      .catch((error: unknown) => {
+        datasetPromise = undefined;
+        throw error;
+      });
   return datasetPromise;
 }
 

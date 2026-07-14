@@ -48,7 +48,8 @@ export const useAppStore = create<AppState>((set) => ({
   hoveredCountry: null,
   cameraTarget: null,
   hasInteracted: false,
-  selectMode: (activeMode) => set({ activeMode }),
+  selectMode: (activeMode) =>
+    set({ activeMode, hoveredCountry: null, cameraTarget: null }),
   selectPoint: (point) =>
     set({ point, cameraTarget: point, hasInteracted: true }),
   selectDevelopmentIndicator: (developmentIndicator) =>

@@ -43,6 +43,24 @@ test('rotates and selects the globe from the keyboard', async ({ page }) => {
   await expect(globe).toBeFocused();
 });
 
+test('does not turn a globe drag into a point selection', async ({ page }) => {
+  await page.goto('./?mode=sunline&v=1');
+  const canvas = page.locator('canvas');
+  await expect(canvas).toBeVisible();
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('Globe canvas has no bounding box.');
+
+  const startX = box.x + box.width / 2;
+  const startY = box.y + box.height / 2;
+  const urlBeforeDrag = page.url();
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(startX + 70, startY + 12, { steps: 6 });
+  await page.mouse.up();
+
+  await expect(page).toHaveURL(urlBeforeDrag);
+});
+
 test('restores shareable state and browser history', async ({ page }) => {
   await page.goto('./?mode=sunline&point=0%2C-140&v=1');
   await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
@@ -52,6 +70,23 @@ test('restores shareable state and browser history', async ({ page }) => {
   await expect(page).toHaveURL(/mode=development/);
   await page.goBack();
   await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
+});
+
+test('replaces continuous timeline changes instead of flooding history', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./?mode=development&indicator=education&year=2005&v=1');
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开发展控件' }).click();
+  }
+
+  await page.getByRole('button', { name: '收入' }).click();
+  await page.getByRole('slider', { name: /年份/ }).fill('2010');
+  await page.getByRole('slider', { name: /年份/ }).fill('2011');
+  await page.goBack();
+
+  await expect(page).toHaveURL(/indicator=education/);
+  await expect(page).toHaveURL(/year=2005/);
 });
 
 test('selects a local city and validates coordinate input', async ({

@@ -26,6 +26,11 @@ import { useAppStore } from '../../state/appStore';
 import { useFrameBenchmark } from '../performance/useFrameBenchmark';
 import { createCountryTexture, getCountryDataset } from './countryData';
 import { antipodeOf, geoToVector3, vector3ToGeo } from './geo';
+import {
+  isSelectionGesture,
+  rotateCameraVertically,
+  TOUCH_CLICK_DRAG_THRESHOLD_PX,
+} from './interaction';
 import { detectQualityProfile, type QualityProfile } from './quality';
 import { supportsWebGL2 } from './webgl';
 import styles from './GlobeViewport.module.css';
@@ -256,10 +261,7 @@ function GlobeScene({
         finishCameraMove();
       },
       rotateVertical(radians) {
-        const right = new Vector3(1, 0, 0)
-          .applyQuaternion(camera.quaternion)
-          .normalize();
-        camera.position.applyAxisAngle(right, radians);
+        rotateCameraVertically(camera.position, radians);
         finishCameraMove();
       },
       zoom(factor) {
@@ -334,6 +336,9 @@ function GlobeScene({
 
   function handleSelect(event: ThreeEvent<PointerEvent>) {
     event.stopPropagation();
+    const threshold =
+      event.pointerType === 'touch' ? TOUCH_CLICK_DRAG_THRESHOLD_PX : undefined;
+    if (!isSelectionGesture(event.delta, threshold)) return;
     if (!group.current) return;
     const selectedPoint = vector3ToGeo(
       group.current.worldToLocal(event.point.clone()),
@@ -417,7 +422,10 @@ function GlobeScene({
         maxDistance={5}
         rotateSpeed={0.55}
         zoomSpeed={0.65}
-        onStart={markInteraction}
+        onStart={() => {
+          clearCameraTarget();
+          markInteraction();
+        }}
         onChange={() => invalidate()}
         makeDefault
       />

@@ -16,7 +16,16 @@ export function useUrlState() {
         return;
       }
       const query = serializeUrlState(state);
-      window.history.pushState(
+      const onlyDevelopmentYearChanged =
+        state.activeMode === previous.activeMode &&
+        state.point === previous.point &&
+        state.developmentIndicator === previous.developmentIndicator &&
+        state.developmentYear !== previous.developmentYear;
+      const updateHistory = onlyDevelopmentYearChanged
+        ? window.history.replaceState
+        : window.history.pushState;
+      updateHistory.call(
+        window.history,
         null,
         '',
         `${window.location.pathname}${query}${window.location.hash}`,

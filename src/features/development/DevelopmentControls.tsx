@@ -17,6 +17,7 @@ const COPY = {
     title: '拆解发展结构',
     loading: '正在载入 UNDP HDR 2025…',
     error: '发展数据暂时无法载入。',
+    retry: '重试',
     year: '年份',
     selected: '所选国家',
     choose: '点击地球选择国家',
@@ -46,6 +47,7 @@ const COPY = {
     title: 'Unpack development',
     loading: 'Loading UNDP HDR 2025…',
     error: 'Development data is unavailable.',
+    retry: 'Retry',
     year: 'Year',
     selected: 'Selected country',
     choose: 'Click the globe to select a country',
@@ -144,9 +146,12 @@ export function DevelopmentControls({
               </p>
             ) : null}
             {loadState.status === 'error' ? (
-              <p className={styles.status} role="alert">
-                {copy.error}
-              </p>
+              <div className={styles.errorStatus} role="alert">
+                <p className={styles.status}>{copy.error}</p>
+                <button type="button" onClick={loadState.retry}>
+                  {copy.retry}
+                </button>
+              </div>
             ) : null}
             {loadState.status === 'ready' ? (
               <>

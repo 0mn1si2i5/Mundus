@@ -118,8 +118,11 @@ export function useNearestPopulatedPlace(
 
 function loadPopulatedPlaces(): Promise<readonly PopulatedPlace[]> {
   placesPromise ??=
-    import('../../data/generated/natural-earth-populated-places-50m.json').then(
-      (module) => decodePopulatedPlaces(module.default),
-    );
+    import('../../data/generated/natural-earth-populated-places-50m.json')
+      .then((module) => decodePopulatedPlaces(module.default))
+      .catch((error: unknown) => {
+        placesPromise = undefined;
+        throw error;
+      });
   return placesPromise;
 }
