@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { z } from 'zod';
 import type { Locale } from '../../i18n/messages';
 import { useAppStore } from '../../state/appStore';
-import { useResponsivePanel } from '../controls/useResponsivePanel';
+import { ModePanel, type ModePanelHandle } from '../controls/ModePanel';
 import { antipodeOf } from '../globe/geo';
 import { FEATURED_CITIES, searchCities, type CityEntry } from './cities';
 import styles from './OtherSideControls.module.css';
@@ -65,8 +65,7 @@ export function OtherSideControls({ locale }: { locale: Locale }) {
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [locating, setLocating] = useState(false);
-  const { desktop, expanded, setExpanded } = useResponsivePanel();
-  const toggle = useRef<HTMLButtonElement>(null);
+  const panel = useRef<ModePanelHandle>(null);
   const copy = COPY[locale];
   const results = useMemo(() => searchCities(query, locale), [locale, query]);
   const examples = FEATURED_CITIES.filter((city) => EXAMPLE_IDS.has(city.id));
@@ -75,12 +74,7 @@ export function OtherSideControls({ locale }: { locale: Locale }) {
     selectPoint(city.point);
     setQuery('');
     setError('');
-    if (!desktop) collapse();
-  }
-
-  function collapse() {
-    setExpanded(false);
-    window.requestAnimationFrame(() => toggle.current?.focus());
+    panel.current?.collapseIfMobile();
   }
 
   function submitCoordinates(event: FormEvent<HTMLFormElement>) {
@@ -119,115 +113,95 @@ export function OtherSideControls({ locale }: { locale: Locale }) {
   }
 
   return (
-    <section
+    <ModePanel
+      ref={panel}
+      id="place-controls"
       className={styles.panel}
-      data-expanded={expanded}
-      aria-labelledby="place-controls-title"
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && expanded && !desktop) {
-          event.preventDefault();
-          collapse();
-        }
-      }}
+      title={copy.title}
+      expandLabel={copy.show}
+      collapseLabel={copy.hide}
+      headerActions={
+        <button
+          type="button"
+          className={styles.flip}
+          onClick={() => requestCameraFocus(antipodeOf(point))}
+        >
+          {copy.flip} <span aria-hidden="true">↗</span>
+        </button>
+      }
     >
-      <div className={styles.heading}>
-        <h2 id="place-controls-title">{copy.title}</h2>
-        <div className={styles.headingActions}>
-          <button
-            ref={toggle}
-            type="button"
-            className={styles.toggle}
-            onClick={() => setExpanded((current) => !current)}
-            aria-expanded={expanded}
-            aria-controls="place-controls-body"
-            aria-label={expanded ? copy.hide : copy.show}
-          >
-            <span aria-hidden="true">{expanded ? '–' : '+'}</span>
-          </button>
-          <button
-            type="button"
-            className={styles.flip}
-            onClick={() => requestCameraFocus(antipodeOf(point))}
-          >
-            {copy.flip} <span aria-hidden="true">↗</span>
-          </button>
-        </div>
-      </div>
+      <>
+        <label className={styles.search}>
+          <span>{copy.search}</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={copy.searchPlaceholder}
+            autoComplete="off"
+          />
+        </label>
+        {results.length > 0 ? (
+          <ul className={styles.results} aria-label={copy.search}>
+            {results.map((city) => (
+              <li key={city.id}>
+                <button type="button" onClick={() => chooseCity(city)}>
+                  <strong>{city.name[locale]}</strong>
+                  <span>{city.country[locale]}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
 
-      {expanded ? (
-        <div id="place-controls-body" className={styles.body}>
-          <label className={styles.search}>
-            <span>{copy.search}</span>
+        <form
+          key={`${point.latitude},${point.longitude}`}
+          className={styles.coordinates}
+          onSubmit={submitCoordinates}
+        >
+          <span>{copy.coordinates}</span>
+          <label>
+            <span>{copy.latitude}</span>
             <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={copy.searchPlaceholder}
-              autoComplete="off"
+              name="latitude"
+              inputMode="decimal"
+              defaultValue={point.latitude.toFixed(4)}
             />
           </label>
-          {results.length > 0 ? (
-            <ul className={styles.results} aria-label={copy.search}>
-              {results.map((city) => (
-                <li key={city.id}>
-                  <button type="button" onClick={() => chooseCity(city)}>
-                    <strong>{city.name[locale]}</strong>
-                    <span>{city.country[locale]}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          <label>
+            <span>{copy.longitude}</span>
+            <input
+              name="longitude"
+              inputMode="decimal"
+              defaultValue={point.longitude.toFixed(4)}
+            />
+          </label>
+          <button type="submit">{copy.apply}</button>
+        </form>
 
-          <form
-            key={`${point.latitude},${point.longitude}`}
-            className={styles.coordinates}
-            onSubmit={submitCoordinates}
-          >
-            <span>{copy.coordinates}</span>
-            <label>
-              <span>{copy.latitude}</span>
-              <input
-                name="latitude"
-                inputMode="decimal"
-                defaultValue={point.latitude.toFixed(4)}
-              />
-            </label>
-            <label>
-              <span>{copy.longitude}</span>
-              <input
-                name="longitude"
-                inputMode="decimal"
-                defaultValue={point.longitude.toFixed(4)}
-              />
-            </label>
-            <button type="submit">{copy.apply}</button>
-          </form>
-
-          <div className={styles.secondary}>
-            <button type="button" onClick={locate} disabled={locating}>
-              {locating ? copy.locating : copy.locate}
-            </button>
-            <div className={styles.examples} aria-label={copy.examples}>
-              <span>{copy.examples}</span>
-              {examples.map((city) => (
-                <button
-                  key={city.id}
-                  type="button"
-                  onClick={() => chooseCity(city)}
-                >
-                  {city.name[locale]}
-                </button>
-              ))}
-            </div>
+        <div className={styles.secondary}>
+          <button type="button" onClick={locate} disabled={locating}>
+            {locating ? copy.locating : copy.locate}
+          </button>
+          <div className={styles.examples} aria-label={copy.examples}>
+            <span>{copy.examples}</span>
+            {examples.map((city) => (
+              <button
+                key={city.id}
+                type="button"
+                onClick={() => chooseCity(city)}
+              >
+                {city.name[locale]}
+              </button>
+            ))}
           </div>
-          {error ? (
-            <p className={styles.error} role="alert">
-              {error}
-            </p>
-          ) : null}
         </div>
-      ) : null}
-    </section>
+        {error ? (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        ) : null}
+      </>
+    </ModePanel>
   );
 }

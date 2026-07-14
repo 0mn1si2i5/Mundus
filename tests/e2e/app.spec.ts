@@ -43,6 +43,152 @@ test('loads the laboratory shell and switches language', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Other Side' })).toBeVisible();
 });
 
+test('dismisses the first-interaction hint after real globe use', async ({
+  page,
+}) => {
+  await page.goto('./');
+  const hint = page.getByTestId('first-interaction-hint');
+  await expect(hint).toBeVisible();
+  expect(
+    overlaps(
+      await hint.boundingBox(),
+      await page.locator('section[data-mode]').boundingBox(),
+    ),
+  ).toBe(false);
+  expect(
+    overlaps(
+      await hint.boundingBox(),
+      await page.locator('[data-mode-panel="place-controls"]').boundingBox(),
+    ),
+  ).toBe(false);
+
+  const canvas = page.locator('canvas');
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('Globe canvas has no bounding box.');
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 60, y + 8, { steps: 5 });
+  await page.mouse.up();
+
+  await expect(hint).toBeHidden();
+  await page.reload();
+  await expect(hint).toBeHidden();
+});
+
+test('keeps the hint for incidental pointing and accepts wheel use', async ({
+  page,
+}) => {
+  await page.goto('./');
+  const hint = page.getByTestId('first-interaction-hint');
+  const canvas = page.locator('canvas');
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('Globe canvas has no bounding box.');
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 2, y + 2);
+  await page.mouse.up();
+  await expect(hint).toBeVisible();
+
+  await page.mouse.wheel(0, 120);
+  await expect(hint).toBeHidden();
+});
+
+test('opens the mode atlas and restores keyboard focus', async ({ page }) => {
+  await page.goto('./?point=30.25%2C120.75&v=1');
+  const opener = page.getByRole('button', { name: '模式图鉴' });
+  expect((await opener.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  await opener.focus();
+  await opener.click();
+
+  const atlas = page.getByRole('dialog', { name: '三种观察地球的方式' });
+  await expect(atlas).toBeVisible();
+  await expect(atlas.getByRole('heading', { level: 3 })).toHaveCount(3);
+  await expect(page.locator('#root')).toHaveAttribute('inert', '');
+  await expect(
+    atlas.getByRole('button', { name: '关闭模式图鉴' }),
+  ).toBeFocused();
+
+  await page.keyboard.press('Shift+Tab');
+  await expect(
+    atlas.getByRole('button', { name: '用这种方式观察' }).last(),
+  ).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(atlas).toBeHidden();
+  await expect(opener).toBeFocused();
+  await expect(page).toHaveURL(/point=30.25%2C120.75/);
+});
+
+test('selects a mode from the atlas without moving the selected place', async ({
+  page,
+}) => {
+  await page.goto('./?point=30.25%2C120.75&v=1');
+  await page.getByRole('button', { name: '模式图鉴' }).click();
+  const developmentEntry = page
+    .getByRole('listitem')
+    .filter({ hasText: '发展的不同侧面' });
+  await developmentEntry
+    .getByRole('button', { name: '用这种方式观察' })
+    .click();
+
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(
+    page.getByRole('heading', { name: '发展的不同侧面' }),
+  ).toBeFocused();
+  await expect(page).toHaveURL(/mode=development/);
+  await expect(page).toHaveURL(/point=30.25%2C120.75/);
+
+  await page.goBack();
+  await expect(page.getByRole('heading', { name: '地球另一端' })).toBeVisible();
+  await expect(page).toHaveURL(/point=30.25%2C120.75/);
+
+  await page.goForward();
+  await expect(
+    page.getByRole('heading', { name: '发展的不同侧面' }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/mode=development/);
+  await expect(page).toHaveURL(/point=30.25%2C120.75/);
+});
+
+test('keeps the English mode atlas usable at 320px', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto('./');
+  await page.getByRole('button', { name: '切换为英文' }).click();
+
+  const opener = page.getByRole('button', { name: 'Mode atlas' });
+  expect((await opener.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+
+  await opener.click();
+  const atlas = page.getByRole('dialog', {
+    name: 'Three ways of seeing Earth',
+  });
+  await expect(atlas).toBeVisible();
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+
+  const buttons = atlas.getByRole('button');
+  for (let index = 0; index < (await buttons.count()); index += 1) {
+    expect(
+      (await buttons.nth(index).boundingBox())?.height,
+    ).toBeGreaterThanOrEqual(44);
+  }
+});
+
 test('matches the document language to an English browser', async ({
   browser,
 }) => {
@@ -273,3 +419,16 @@ test('offers explicit share precision choices', async ({ page }) => {
   await expect(dialog).toBeHidden();
   await expect(page.getByRole('button', { name: '分享' })).toBeFocused();
 });
+
+function overlaps(
+  first: { x: number; y: number; width: number; height: number } | null,
+  second: { x: number; y: number; width: number; height: number } | null,
+): boolean {
+  if (!first || !second) return false;
+  return !(
+    first.x + first.width <= second.x ||
+    second.x + second.width <= first.x ||
+    first.y + first.height <= second.y ||
+    second.y + second.height <= first.y
+  );
+}

@@ -32,9 +32,7 @@
 }
 
 .eyebrow,
-.index,
-.result span,
-.hint {
+.index {
   color: var(--color-muted);
   font-size: 0.67rem;
   letter-spacing: 0.14em;
@@ -60,13 +58,16 @@
 }
 
 .textButton {
+  min-height: 2.75rem;
+  padding: 0 0.45rem;
   cursor: pointer;
 }
 
 .languageButton {
   display: grid;
-  width: 2.5rem;
-  height: 2.5rem;
+  flex: 0 0 2.75rem;
+  width: 2.75rem;
+  height: 2.75rem;
   place-items: center;
   border: 1px solid var(--color-line);
   border-radius: 50%;
@@ -112,33 +113,6 @@
   }
 }
 
-.result {
-  position: absolute;
-  z-index: 4;
-  top: 29%;
-  right: 2.5rem;
-  display: grid;
-  width: 15rem;
-  gap: 0.45rem;
-  padding: 1.2rem 0;
-  border-block: 1px solid var(--color-line);
-  pointer-events: none;
-  animation: modeEnter 240ms ease-out both;
-}
-
-.result strong {
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  font-weight: 400;
-}
-
-.result em {
-  color: var(--color-accent);
-  font-family: var(--font-display);
-  font-size: 1.1rem;
-  font-style: normal;
-}
-
 .hoverLabel {
   position: absolute;
   z-index: 5;
@@ -153,63 +127,6 @@
   letter-spacing: 0.08em;
   transform: translateX(-50%);
   pointer-events: none;
-}
-
-.rule {
-  height: 1px;
-  margin: 0.6rem 0;
-  background: var(--color-line);
-}
-
-.distanceRow {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.35rem 0.7rem;
-  margin-top: 0.6rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--color-line);
-}
-
-.nearestPlace {
-  display: grid;
-  gap: 0.35rem;
-  margin-top: 0.65rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--color-line);
-}
-
-.nearestPlace em {
-  font-size: 0.95rem;
-}
-
-.nearestPlace small {
-  color: var(--color-muted);
-  font-size: 0.58rem;
-  line-height: 1.45;
-}
-
-.sunlineResult {
-  top: 24%;
-}
-
-.sunlineResult > em {
-  color: #d3b66f;
-}
-
-.polarState,
-.subsolar {
-  margin-top: 0.55rem;
-  padding-top: 0.65rem;
-  border-top: 1px solid var(--color-line);
-}
-
-.polarState {
-  color: #d3b66f;
-}
-
-.subsolar {
-  display: grid;
-  gap: 0.3rem;
 }
 
 .modeNav {
@@ -255,16 +172,6 @@
   color: var(--color-accent);
   font-family: var(--font-mono);
   font-size: 0.65rem;
-}
-
-.hint {
-  position: absolute;
-  z-index: 3;
-  bottom: 7.3rem;
-  left: 50%;
-  margin: 0;
-  transform: translateX(-50%);
-  pointer-events: none;
 }
 
 .fallback {
@@ -334,6 +241,15 @@
     padding: 1.3rem 1.25rem;
   }
 
+  .actions {
+    gap: 0.25rem;
+  }
+
+  .textButton {
+    padding-inline: 0.3rem;
+    font-size: 0.78rem;
+  }
+
   .intro {
     top: 17%;
     left: 1.25rem;
@@ -348,79 +264,6 @@
   .intro > p:last-child {
     max-width: 70%;
     font-size: 0.78rem;
-  }
-
-  .result {
-    top: 36%;
-    right: 1.25rem;
-    bottom: auto;
-    width: calc(100% - 2.5rem);
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.25rem 1rem;
-    padding: 0.8rem 0;
-    text-align: right;
-  }
-
-  .sunlineResult {
-    top: 32%;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    text-align: left;
-  }
-
-  .sunlineResult > :nth-child(n) {
-    grid-row: auto;
-    grid-column: auto;
-    text-align: inherit;
-  }
-
-  .sunlineResult > .rule {
-    display: block;
-    grid-column: 1 / -1;
-  }
-
-  .sunlineResult > .distanceRow,
-  .sunlineResult > .subsolar,
-  .sunlineResult > .polarState {
-    grid-column: 1 / -1;
-  }
-
-  .result > :nth-child(-n + 3) {
-    text-align: left;
-  }
-
-  .result > .rule {
-    display: none;
-  }
-
-  .result > span:nth-of-type(1),
-  .result > span:nth-of-type(2) {
-    grid-row: 1;
-  }
-
-  .result > em:nth-of-type(1),
-  .result > em:nth-of-type(2) {
-    grid-row: 2;
-  }
-
-  .result > strong:nth-of-type(1),
-  .result > strong:nth-of-type(2) {
-    grid-row: 3;
-  }
-
-  .nearestPlace,
-  .distanceRow {
-    grid-column: 1 / -1;
-  }
-
-  .nearestPlace {
-    margin-top: 0.35rem;
-    padding-top: 0.5rem;
-  }
-
-  .distanceRow {
-    margin-top: 0.25rem;
-    padding-top: 0.5rem;
   }
 
   .modeNav {
@@ -438,10 +281,6 @@
     font-size: 0.64rem;
   }
 
-  .hint {
-    display: none;
-  }
-
   .recoverableMode {
     right: 1.25rem;
     bottom: 5.2rem;
@@ -450,8 +289,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .intro,
-  .result {
+  .intro {
     animation: none;
   }
 

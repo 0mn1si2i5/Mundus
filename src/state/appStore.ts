@@ -22,6 +22,7 @@ interface AppState {
   hoveredCountry: CountryRef | null;
   cameraTarget: GeoPoint | null;
   hasInteracted: boolean;
+  hasMeaningfulInteraction: boolean;
   selectMode: (mode: ModeId) => void;
   selectPoint: (point: GeoPoint) => void;
   selectDevelopmentIndicator: (indicator: DevelopmentIndicator) => void;
@@ -38,6 +39,7 @@ interface AppState {
   requestCameraFocus: (point: GeoPoint) => void;
   clearCameraTarget: () => void;
   markInteraction: () => void;
+  markMeaningfulInteraction: () => void;
 }
 
 function preferredLocale(): Locale {
@@ -58,6 +60,7 @@ export const useAppStore = create<AppState>((set) => ({
   hoveredCountry: null,
   cameraTarget: null,
   hasInteracted: false,
+  hasMeaningfulInteraction: false,
   sunlinePlaying: false,
   selectMode: (activeMode) =>
     set({
@@ -67,7 +70,12 @@ export const useAppStore = create<AppState>((set) => ({
       sunlinePlaying: false,
     }),
   selectPoint: (point) =>
-    set({ point, cameraTarget: point, hasInteracted: true }),
+    set({
+      point,
+      cameraTarget: point,
+      hasInteracted: true,
+      hasMeaningfulInteraction: true,
+    }),
   selectDevelopmentIndicator: (developmentIndicator) =>
     set({ developmentIndicator }),
   selectDevelopmentYear: (developmentYear) => set({ developmentYear }),
@@ -133,4 +141,6 @@ export const useAppStore = create<AppState>((set) => ({
     set({ cameraTarget, hasInteracted: true }),
   clearCameraTarget: () => set({ cameraTarget: null }),
   markInteraction: () => set({ hasInteracted: true }),
+  markMeaningfulInteraction: () =>
+    set({ hasInteracted: true, hasMeaningfulInteraction: true }),
 }));

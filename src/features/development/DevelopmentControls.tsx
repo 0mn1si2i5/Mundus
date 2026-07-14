@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Locale } from '../../i18n/messages';
 import { useAppStore } from '../../state/appStore';
+import { ModePanel } from '../controls/ModePanel';
 import type { CountryRef } from '../globe/countryData';
-import { useResponsivePanel } from '../controls/useResponsivePanel';
 import {
   DEVELOPMENT_INDICATORS,
   developmentColor,
@@ -99,9 +99,7 @@ export function DevelopmentControls({
     (state) => state.selectDevelopmentIndicator,
   );
   const selectYear = useAppStore((state) => state.selectDevelopmentYear);
-  const { desktop, expanded, setExpanded } = useResponsivePanel();
   const [tableOpen, setTableOpen] = useState(false);
-  const toggle = useRef<HTMLButtonElement>(null);
   const tableButton = useRef<HTMLButtonElement>(null);
   const copy = COPY[locale];
   const country = selectedCountry
@@ -109,149 +107,120 @@ export function DevelopmentControls({
     : null;
   const selectedValue = country ? valueFor(country, indicator, year) : null;
 
-  function collapse() {
-    setExpanded(false);
-    setTableOpen(false);
-    window.requestAnimationFrame(() => toggle.current?.focus());
-  }
-
   return (
     <>
-      <section
-        className={styles.panel}
-        data-expanded={expanded}
-        aria-labelledby="development-controls-title"
-        onKeyDown={(event) => {
-          if (event.key === 'Escape' && !desktop) {
-            event.preventDefault();
-            collapse();
-          }
-        }}
+      <ModePanel
+        id="development-controls"
+        title={copy.title}
+        subtitle={copy.scope}
+        expandLabel={copy.expand}
+        collapseLabel={copy.collapse}
+        onCollapse={() => setTableOpen(false)}
       >
-        <div className={styles.heading}>
-          <div>
-            <h2 id="development-controls-title">{copy.title}</h2>
-            <p>{copy.scope}</p>
-          </div>
-          <button
-            ref={toggle}
-            className={styles.toggle}
-            type="button"
-            aria-expanded={expanded}
-            aria-controls="development-controls-body"
-            aria-label={expanded ? copy.collapse : copy.expand}
-            onClick={() => setExpanded((current) => !current)}
-          >
-            {expanded ? '–' : '+'}
-          </button>
-        </div>
-
-        {expanded ? (
-          <div id="development-controls-body" className={styles.body}>
-            {loadState.status === 'loading' ? (
-              <p className={styles.status} role="status">
-                {copy.loading}
-              </p>
-            ) : null}
-            {loadState.status === 'error' ? (
-              <div className={styles.errorStatus} role="alert">
-                <p className={styles.status}>{copy.error}</p>
-                <button type="button" onClick={loadState.retry}>
-                  {copy.retry}
-                </button>
+        <>
+          {loadState.status === 'loading' ? (
+            <p className={styles.status} role="status">
+              {copy.loading}
+            </p>
+          ) : null}
+          {loadState.status === 'error' ? (
+            <div className={styles.errorStatus} role="alert">
+              <p className={styles.status}>{copy.error}</p>
+              <button type="button" onClick={loadState.retry}>
+                {copy.retry}
+              </button>
+            </div>
+          ) : null}
+          {loadState.status === 'ready' ? (
+            <>
+              <div className={styles.indicators} aria-label={copy.title}>
+                {DEVELOPMENT_INDICATORS.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    data-active={item === indicator}
+                    aria-pressed={item === indicator}
+                    onClick={() => selectIndicator(item)}
+                  >
+                    {copy.indicators[item]}
+                  </button>
+                ))}
               </div>
-            ) : null}
-            {loadState.status === 'ready' ? (
-              <>
-                <div className={styles.indicators} aria-label={copy.title}>
-                  {DEVELOPMENT_INDICATORS.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      data-active={item === indicator}
-                      aria-pressed={item === indicator}
-                      onClick={() => selectIndicator(item)}
-                    >
-                      {copy.indicators[item]}
-                    </button>
+
+              <label className={styles.timeline}>
+                <span>{copy.year}</span>
+                <strong>{year}</strong>
+                <input
+                  type="range"
+                  min="1990"
+                  max="2023"
+                  step="1"
+                  value={year}
+                  onChange={(event) => selectYear(Number(event.target.value))}
+                />
+              </label>
+
+              <div className={styles.selection} aria-live="polite">
+                <span>{copy.selected}</span>
+                <strong>{selectedCountry?.name ?? copy.choose}</strong>
+                {selectedCountry ? (
+                  <em>
+                    {country
+                      ? (selectedValue?.toFixed(3) ?? copy.missing)
+                      : copy.noPolygon}
+                  </em>
+                ) : null}
+              </div>
+
+              <div className={styles.legend} aria-label={copy.legend}>
+                <span>{copy.legend}</span>
+                <div>
+                  {LEGEND_VALUES.map((value) => (
+                    <i
+                      key={value}
+                      style={{ backgroundColor: developmentColor(value) }}
+                    />
                   ))}
                 </div>
+                <small>
+                  0 <b>{copy.noData}</b> 1
+                </small>
+              </div>
 
-                <label className={styles.timeline}>
-                  <span>{copy.year}</span>
-                  <strong>{year}</strong>
-                  <input
-                    type="range"
-                    min="1990"
-                    max="2023"
-                    step="1"
-                    value={year}
-                    onChange={(event) => selectYear(Number(event.target.value))}
-                  />
-                </label>
-
-                <div className={styles.selection} aria-live="polite">
-                  <span>{copy.selected}</span>
-                  <strong>{selectedCountry?.name ?? copy.choose}</strong>
-                  {selectedCountry ? (
-                    <em>
-                      {country
-                        ? (selectedValue?.toFixed(3) ?? copy.missing)
-                        : copy.noPolygon}
-                    </em>
-                  ) : null}
-                </div>
-
-                <div className={styles.legend} aria-label={copy.legend}>
-                  <span>{copy.legend}</span>
-                  <div>
-                    {LEGEND_VALUES.map((value) => (
-                      <i
-                        key={value}
-                        style={{ backgroundColor: developmentColor(value) }}
-                      />
-                    ))}
-                  </div>
-                  <small>
-                    0 <b>{copy.noData}</b> 1
-                  </small>
-                </div>
-
-                <div className={styles.footerActions}>
-                  <button
-                    ref={tableButton}
-                    type="button"
-                    aria-expanded={tableOpen}
-                    onClick={() => setTableOpen((current) => !current)}
+              <div className={styles.footerActions}>
+                <button
+                  ref={tableButton}
+                  type="button"
+                  aria-expanded={tableOpen}
+                  onClick={() => setTableOpen((current) => !current)}
+                >
+                  {tableOpen ? copy.closeTable : copy.table}
+                </button>
+                <details>
+                  <summary>{copy.method}</summary>
+                  <p>{copy.methodText}</p>
+                  <p>{copy.attribution}</p>
+                  <a
+                    href="https://hdr.undp.org/data-center/documentation-and-downloads"
+                    target="_blank"
+                    rel="noreferrer"
                   >
-                    {tableOpen ? copy.closeTable : copy.table}
-                  </button>
-                  <details>
-                    <summary>{copy.method}</summary>
-                    <p>{copy.methodText}</p>
-                    <p>{copy.attribution}</p>
-                    <a
-                      href="https://hdr.undp.org/data-center/documentation-and-downloads"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {copy.source} ↗
-                    </a>
-                    {' · '}
-                    <a
-                      href="https://creativecommons.org/licenses/by/3.0/igo/"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {copy.license} ↗
-                    </a>
-                  </details>
-                </div>
-              </>
-            ) : null}
-          </div>
-        ) : null}
-      </section>
+                    {copy.source} ↗
+                  </a>
+                  {' · '}
+                  <a
+                    href="https://creativecommons.org/licenses/by/3.0/igo/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {copy.license} ↗
+                  </a>
+                </details>
+              </div>
+            </>
+          ) : null}
+        </>
+      </ModePanel>
 
       {tableOpen && loadState.status === 'ready' ? (
         <DevelopmentTable

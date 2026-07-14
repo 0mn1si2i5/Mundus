@@ -2,7 +2,8 @@ import type { Locale } from '../../i18n/messages';
 import { z } from 'zod';
 import { SUNLINE_MAX_TIME_MS, SUNLINE_MIN_TIME_MS } from '../sunline/solar';
 
-export type ModeId = 'antipodes' | 'development' | 'sunline';
+export const MODE_ORDER = ['antipodes', 'development', 'sunline'] as const;
+export type ModeId = (typeof MODE_ORDER)[number];
 
 interface LocalizedText {
   zh: string;
@@ -93,6 +94,10 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
     }),
   },
 };
+
+export function modeIndex(mode: ModeId): number {
+  return MODE_ORDER.indexOf(mode);
+}
 
 export function isLocale(value: string | null): value is Locale {
   return value === 'zh' || value === 'en';

@@ -30,7 +30,7 @@ export interface NearestPopulatedPlace {
   distanceKm: number;
 }
 
-type LoadState =
+export type PopulatedPlaceLoadState =
   | { status: 'idle'; result: null }
   | { status: 'loading'; result: null }
   | { status: 'ready'; result: NearestPopulatedPlace }
@@ -78,14 +78,16 @@ export function findNearestPopulatedPlace(
 export function useNearestPopulatedPlace(
   point: GeoPoint,
   enabled = true,
-): LoadState {
+): PopulatedPlaceLoadState {
   const { latitude, longitude } = point;
   const key = `${latitude},${longitude}`;
-  const [state, setState] = useState<LoadState & { key: string }>({
-    key,
-    status: 'loading',
-    result: null,
-  });
+  const [state, setState] = useState<PopulatedPlaceLoadState & { key: string }>(
+    {
+      key,
+      status: 'loading',
+      result: null,
+    },
+  );
 
   useEffect(() => {
     if (!enabled) return;

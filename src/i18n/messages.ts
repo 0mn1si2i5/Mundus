@@ -4,6 +4,7 @@ export const messages = {
   zh: {
     laboratory: '交互式三维地球实验室',
     share: '分享',
+    modeAtlas: '模式图鉴',
     changeLanguage: '切换为英文',
     result: '位置结果',
     selectedPoint: '选择地点',
@@ -43,6 +44,7 @@ export const messages = {
   en: {
     laboratory: 'Interactive terrestrial laboratory',
     share: 'Share',
+    modeAtlas: 'Mode atlas',
     changeLanguage: 'Switch to Chinese',
     result: 'Location result',
     selectedPoint: 'Selected point',
