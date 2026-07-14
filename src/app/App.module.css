@@ -80,6 +80,7 @@
   left: 2.5rem;
   width: min(26rem, 31vw);
   pointer-events: none;
+  animation: modeEnter 240ms ease-out both;
 }
 
 .intro h1 {
@@ -122,6 +123,7 @@
   padding: 1.2rem 0;
   border-block: 1px solid var(--color-line);
   pointer-events: none;
+  animation: modeEnter 240ms ease-out both;
 }
 
 .result strong {
@@ -184,6 +186,30 @@
   color: var(--color-muted);
   font-size: 0.58rem;
   line-height: 1.45;
+}
+
+.sunlineResult {
+  top: 24%;
+}
+
+.sunlineResult > em {
+  color: #d3b66f;
+}
+
+.polarState,
+.subsolar {
+  margin-top: 0.55rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--color-line);
+}
+
+.polarState {
+  color: #d3b66f;
+}
+
+.subsolar {
+  display: grid;
+  gap: 0.3rem;
 }
 
 .modeNav {
@@ -295,6 +321,30 @@
     text-align: right;
   }
 
+  .sunlineResult {
+    top: 32%;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    text-align: left;
+  }
+
+  .sunlineResult > :nth-child(n) {
+    grid-row: auto;
+    grid-column: auto;
+    text-align: inherit;
+  }
+
+  .sunlineResult > .rule {
+    display: block;
+    grid-column: 1 / -1;
+  }
+
+  .sunlineResult > .distanceRow,
+  .sunlineResult > .subsolar,
+  .sunlineResult > .polarState {
+    grid-column: 1 / -1;
+  }
+
   .result > :nth-child(-n + 3) {
     text-align: left;
   }
@@ -354,7 +404,24 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .intro,
+  .result {
+    animation: none;
+  }
+
   .modeNav button {
     transition: none;
+  }
+}
+
+@keyframes modeEnter {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

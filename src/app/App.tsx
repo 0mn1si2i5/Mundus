@@ -23,6 +23,11 @@ import {
   valuesByCountryId,
 } from '../features/development/developmentData';
 import { useDevelopmentDataset } from '../features/development/useDevelopmentDataset';
+import {
+  observeSun,
+  solarEventsUtc,
+  solarPosition,
+} from '../features/sunline/solar';
 import styles from './App.module.css';
 
 const GlobeViewport = lazy(() =>
@@ -40,6 +45,12 @@ const OtherSideControls = lazy(() =>
 const DevelopmentControls = lazy(() =>
   import('../features/development/DevelopmentControls').then((module) => ({
     default: module.DevelopmentControls,
+  })),
+);
+
+const SunlineControls = lazy(() =>
+  import('../features/sunline/SunlineControls').then((module) => ({
+    default: module.SunlineControls,
   })),
 );
 
@@ -77,6 +88,7 @@ export function App() {
     (state) => state.developmentIndicator,
   );
   const developmentYear = useAppStore((state) => state.developmentYear);
+  const sunlineTimeMs = useAppStore((state) => state.sunlineTimeMs);
   const selectedCountry = useAppStore((state) => state.selectedCountry);
   const antipodeCountry = useAppStore((state) => state.antipodeCountry);
   const hoveredCountry = useAppStore((state) => state.hoveredCountry);
@@ -102,6 +114,14 @@ export function App() {
       ].map(([countryId, value]) => [countryId, developmentColor(value)]),
     );
   }, [developmentData, developmentIndicator, developmentYear]);
+  const sunline = useMemo(() => {
+    const position = solarPosition(sunlineTimeMs);
+    return {
+      position,
+      observation: observeSun(point, sunlineTimeMs),
+      events: solarEventsUtc(point, sunlineTimeMs),
+    };
+  }, [point, sunlineTimeMs]);
   const numberFormatter = new Intl.NumberFormat(
     locale === 'zh' ? 'zh-CN' : 'en-US',
     {
@@ -139,6 +159,7 @@ export function App() {
       </header>
 
       <section
+        key={activeMode}
         className={styles.intro}
         data-mode={activeMode}
         aria-labelledby="mode-title"
@@ -162,6 +183,11 @@ export function App() {
             keyboardSelectedLabel={t.globeSelected}
             countryFills={developmentFills}
             showAntipodes={activeMode === 'antipodes'}
+            sunline={
+              activeMode === 'sunline'
+                ? { subsolarPoint: sunline.position.subsolarPoint }
+                : null
+            }
           />
         </Suspense>
       </ErrorBoundary>
@@ -220,6 +246,52 @@ export function App() {
         </aside>
       ) : null}
 
+      {activeMode === 'sunline' ? (
+        <aside
+          className={`${styles.result} ${styles.sunlineResult}`}
+          aria-live="polite"
+          aria-label={t.sunlineResult}
+        >
+          <span>{t.selectedPoint}</span>
+          <em>{selectedCountry?.name ?? t.openOcean}</em>
+          <strong>
+            {point.latitude.toFixed(2)}°, {point.longitude.toFixed(2)}°
+          </strong>
+          <div className={styles.rule} />
+          <span>{t.solarAltitude}</span>
+          <strong>{sunline.observation.altitudeDegrees.toFixed(1)}°</strong>
+          <span>{t.daylightState}</span>
+          <em>
+            {sunline.observation.daylight === 'day'
+              ? t.daylightDay
+              : sunline.observation.daylight === 'civil-twilight'
+                ? t.daylightTwilight
+                : t.daylightNight}
+          </em>
+          {sunline.events.status === 'normal' ? (
+            <div className={styles.distanceRow}>
+              <span>{t.sunrise}</span>
+              <strong>{formatUtcEvent(sunline.events.sunriseMs)}</strong>
+              <span>{t.sunset}</span>
+              <strong>{formatUtcEvent(sunline.events.sunsetMs)}</strong>
+            </div>
+          ) : (
+            <strong className={styles.polarState}>
+              {sunline.events.status === 'polar-day'
+                ? t.polarDay
+                : t.polarNight}
+            </strong>
+          )}
+          <div className={styles.subsolar}>
+            <span>{t.subsolarPoint}</span>
+            <strong>
+              {sunline.position.subsolarPoint.latitude.toFixed(2)}°,{' '}
+              {sunline.position.subsolarPoint.longitude.toFixed(2)}°
+            </strong>
+          </div>
+        </aside>
+      ) : null}
+
       {hoveredCountry ? (
         <p className={styles.hoverLabel}>{hoveredCountry.name}</p>
       ) : null}
@@ -237,6 +309,12 @@ export function App() {
             loadState={developmentData}
             selectedCountry={selectedCountry}
           />
+        </Suspense>
+      ) : null}
+
+      {activeMode === 'sunline' ? (
+        <Suspense fallback={null}>
+          <SunlineControls locale={locale} />
         </Suspense>
       ) : null}
 
@@ -261,6 +339,10 @@ export function App() {
       ) : null}
     </main>
   );
+}
+
+function formatUtcEvent(timestampMs: number): string {
+  return `${new Date(timestampMs).toISOString().slice(5, 16).replace('T', ' ')} UTC`;
 }
 
 function GlobeFallback({ label }: { label: string }) {

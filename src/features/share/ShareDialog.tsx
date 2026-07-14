@@ -8,6 +8,8 @@ const COPY = {
   zh: {
     title: '分享这一视角',
     description: '坐标会写入分享链接。你可以保留精确位置，或将坐标约化到整度。',
+    sunlineDescription:
+      '坐标与当前 UTC 时间会固化到分享链接。你可以保留精确位置，或将坐标约化到整度。',
     exact: '复制精确位置',
     approximate: '复制约略位置',
     close: '关闭',
@@ -18,6 +20,8 @@ const COPY = {
     title: 'Share this view',
     description:
       'Coordinates are included in the link. Keep the exact point or round it to whole degrees.',
+    sunlineDescription:
+      'Coordinates and the current UTC time are fixed in the link. Keep the exact point or round it to whole degrees.',
     exact: 'Copy exact location',
     approximate: 'Copy approximate location',
     close: 'Close',
@@ -39,17 +43,25 @@ export function ShareDialog({
     (state) => state.developmentIndicator,
   );
   const developmentYear = useAppStore((state) => state.developmentYear);
+  const sunlineTimeMs = useAppStore((state) => state.sunlineTimeMs);
+  const sunlineClockMode = useAppStore((state) => state.sunlineClockMode);
+  const shareableState = {
+    activeMode,
+    point,
+    developmentIndicator,
+    developmentYear,
+    sunlineTimeMs,
+    sunlineClockMode,
+  };
   const [preview, setPreview] = useState(() =>
-    createShareUrl(
-      window.location.href,
-      { activeMode, point, developmentIndicator, developmentYear },
-      'approximate',
-    ),
+    createShareUrl(window.location.href, shareableState, 'approximate'),
   );
   const [status, setStatus] = useState('');
   const dialog = useRef<HTMLElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const copy = COPY[locale];
+  const description =
+    activeMode === 'sunline' ? copy.sunlineDescription : copy.description;
 
   useEffect(() => {
     const restoreFocus = document.activeElement;
@@ -84,11 +96,7 @@ export function ShareDialog({
   }
 
   async function copyLink(precision: SharePrecision) {
-    const url = createShareUrl(
-      window.location.href,
-      { activeMode, point, developmentIndicator, developmentYear },
-      precision,
-    );
+    const url = createShareUrl(window.location.href, shareableState, precision);
     setPreview(url);
     try {
       await navigator.clipboard.writeText(url);
@@ -121,7 +129,7 @@ export function ShareDialog({
         </button>
         <p>URL / POSITION</p>
         <h2 id="share-title">{copy.title}</h2>
-        <p id="share-description">{copy.description}</p>
+        <p id="share-description">{description}</p>
         <code>{preview}</code>
         <div className={styles.actions}>
           <button type="button" onClick={() => copyLink('approximate')}>

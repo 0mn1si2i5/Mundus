@@ -2,6 +2,11 @@ import { z } from 'zod';
 import { normalizeLongitude, type GeoPoint } from '../features/globe/geo';
 import type { ModeId } from '../features/modes/modeRegistry';
 import type { DevelopmentIndicator } from '../features/development/developmentData';
+import {
+  clampSunlineTime,
+  formatSunlineTime,
+  parseSunlineTime,
+} from '../features/sunline/solar';
 
 export const DEFAULT_POINT: GeoPoint = {
   latitude: 31.2304,
@@ -10,12 +15,15 @@ export const DEFAULT_POINT: GeoPoint = {
 export const DEFAULT_MODE: ModeId = 'antipodes';
 export const DEFAULT_DEVELOPMENT_INDICATOR: DevelopmentIndicator = 'hdi';
 export const DEFAULT_DEVELOPMENT_YEAR = 2023;
+export type SunlineClockMode = 'live' | 'fixed';
 
 export interface ShareableState {
   activeMode: ModeId;
   point: GeoPoint;
   developmentIndicator: DevelopmentIndicator;
   developmentYear: number;
+  sunlineTimeMs: number;
+  sunlineClockMode: SunlineClockMode;
 }
 
 const modeSchema = z.enum(['antipodes', 'development', 'sunline']);
@@ -35,17 +43,26 @@ const coordinateSchema = z
       Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180,
   );
 
-export function parseUrlState(search: string): ShareableState {
+export function parseUrlState(
+  search: string,
+  nowMs = Date.now(),
+): ShareableState {
   const params = new URLSearchParams(search);
   const mode = modeSchema.safeParse(params.get('mode'));
+  const activeMode = mode.success ? mode.data : DEFAULT_MODE;
   const coordinate = coordinateSchema.safeParse(params.get('point'));
   const developmentIndicator = developmentIndicatorSchema.safeParse(
     params.get('indicator'),
   );
   const developmentYear = developmentYearSchema.safeParse(params.get('year'));
+  const parsedSunlineTime = params.get('time');
+  const sunlineTimeMs =
+    activeMode === 'sunline' && parsedSunlineTime
+      ? parseSunlineTime(parsedSunlineTime)
+      : null;
 
   return {
-    activeMode: mode.success ? mode.data : DEFAULT_MODE,
+    activeMode,
     point: coordinate.success
       ? {
           latitude: coordinate.data[0],
@@ -58,6 +75,8 @@ export function parseUrlState(search: string): ShareableState {
     developmentYear: developmentYear.success
       ? developmentYear.data
       : DEFAULT_DEVELOPMENT_YEAR,
+    sunlineTimeMs: sunlineTimeMs ?? clampSunlineTime(nowMs),
+    sunlineClockMode: sunlineTimeMs === null ? 'live' : 'fixed',
   };
 }
 
@@ -82,6 +101,9 @@ export function serializeUrlState(state: ShareableState): string {
     if (state.developmentYear !== DEFAULT_DEVELOPMENT_YEAR) {
       params.set('year', String(state.developmentYear));
     }
+  }
+  if (state.activeMode === 'sunline' && state.sunlineClockMode === 'fixed') {
+    params.set('time', formatSunlineTime(state.sunlineTimeMs));
   }
   if (params.size > 0) params.set('v', '1');
 

@@ -35,4 +35,20 @@ describe('mode registry', () => {
       schema.safeParse({ indicator: 'happiness', year: 2025 }).success,
     ).toBe(false);
   });
+
+  it('validates bounded and versioned Sunline time state', () => {
+    const schema = MODE_DEFINITIONS.sunline.stateSchema;
+    expect(
+      schema.safeParse({
+        timeMs: Date.parse('2026-07-14T09:37:00Z'),
+        clockMode: 'fixed',
+      }).success,
+    ).toBe(true);
+    expect(
+      schema.safeParse({
+        timeMs: Date.parse('2100-01-01T00:00:00Z'),
+        clockMode: 'playing',
+      }).success,
+    ).toBe(false);
+  });
 });

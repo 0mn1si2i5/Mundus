@@ -4,7 +4,7 @@ import {
   useFrame,
   useThree,
 } from '@react-three/fiber';
-import { Line, OrbitControls, Stars } from '@react-three/drei';
+import { Billboard, Line, OrbitControls, Stars } from '@react-three/drei';
 import {
   useEffect,
   useImperativeHandle,
@@ -14,7 +14,7 @@ import {
   type KeyboardEvent,
   type Ref,
 } from 'react';
-import type { Group } from 'three';
+import type { Group, ShaderMaterial } from 'three';
 import {
   AdditiveBlending,
   BackSide,
@@ -33,6 +33,7 @@ import {
 } from './interaction';
 import { detectQualityProfile, type QualityProfile } from './quality';
 import { supportsWebGL2 } from './webgl';
+import type { GeoPoint } from './geo';
 import styles from './GlobeViewport.module.css';
 
 interface GlobeViewportProps {
@@ -45,6 +46,11 @@ interface GlobeViewportProps {
   keyboardSelectedLabel: string;
   countryFills: ReadonlyMap<string, string> | null;
   showAntipodes: boolean;
+  sunline: SunlineRenderState | null;
+}
+
+export interface SunlineRenderState {
+  subsolarPoint: GeoPoint;
 }
 
 interface GlobeKeyboardController {
@@ -64,6 +70,7 @@ export function GlobeViewport({
   keyboardSelectedLabel,
   countryFills,
   showAntipodes,
+  sunline,
 }: GlobeViewportProps) {
   const [supported] = useState(supportsWebGL2);
   const [profile] = useState(detectQualityProfile);
@@ -174,6 +181,7 @@ export function GlobeViewport({
           keyboardController={keyboardController}
           countryFills={countryFills}
           showAntipodes={showAntipodes}
+          sunline={sunline}
         />
       </Canvas>
       {contextLost ? (
@@ -198,6 +206,7 @@ interface GlobeSceneProps {
   keyboardController: Ref<GlobeKeyboardController>;
   countryFills: ReadonlyMap<string, string> | null;
   showAntipodes: boolean;
+  sunline: SunlineRenderState | null;
 }
 
 function GlobeScene({
@@ -207,6 +216,7 @@ function GlobeScene({
   keyboardController,
   countryFills,
   showAntipodes,
+  sunline,
 }: GlobeSceneProps) {
   const point = useAppStore((state) => state.point);
   const selectedCountry = useAppStore((state) => state.selectedCountry);
@@ -245,6 +255,11 @@ function GlobeScene({
   const antipode = useMemo(
     () => geoToVector3(antipodeOf(point), 1.025),
     [point],
+  );
+  const sunDirection = useMemo(
+    () =>
+      sunline ? geoToVector3(sunline.subsolarPoint).normalize() : new Vector3(),
+    [sunline],
   );
 
   useImperativeHandle(keyboardController, () => {
@@ -359,8 +374,12 @@ function GlobeScene({
 
   return (
     <>
-      <ambientLight intensity={0.85} color="#8ca0a4" />
-      <directionalLight position={[-3, 2, 4]} intensity={3.2} color="#dfe7d5" />
+      <ambientLight intensity={sunline ? 0.58 : 0.85} color="#8ca0a4" />
+      <directionalLight
+        position={[-3, 2, 4]}
+        intensity={sunline ? 1.15 : 3.2}
+        color="#dfe7d5"
+      />
       <Stars
         radius={30}
         depth={18}
@@ -370,6 +389,13 @@ function GlobeScene({
         speed={0}
       />
       <group ref={group}>
+        {sunline ? (
+          <directionalLight
+            position={sunDirection.clone().multiplyScalar(4)}
+            intensity={2.5}
+            color="#f1d69a"
+          />
+        ) : null}
         <mesh
           onClick={handleSelect}
           onPointerMove={handleHover}
@@ -401,6 +427,12 @@ function GlobeScene({
             blending={AdditiveBlending}
           />
         </mesh>
+        {sunline ? (
+          <SunlineLayer
+            sunDirection={sunDirection}
+            sphereSegments={profile.sphereSegments}
+          />
+        ) : null}
         {showAntipodes ? (
           <>
             <Marker position={primary} color="#e8e0c8" />
@@ -428,6 +460,100 @@ function GlobeScene({
         }}
         onChange={() => invalidate()}
         makeDefault
+      />
+    </>
+  );
+}
+
+const SUNLINE_VERTEX_SHADER = `
+  varying vec3 vObjectNormal;
+  void main() {
+    vObjectNormal = normalize(normal);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const SUNLINE_FRAGMENT_SHADER = `
+  uniform vec3 uSunDirection;
+  varying vec3 vObjectNormal;
+  void main() {
+    float sunDot = clamp(dot(normalize(vObjectNormal), normalize(uSunDirection)), -1.0, 1.0);
+    float altitude = asin(sunDot);
+    float twilight = smoothstep(radians(-6.0), 0.0, altitude);
+    vec3 deepNight = vec3(0.015, 0.025, 0.055);
+    vec3 twilightBlue = vec3(0.10, 0.13, 0.20);
+    vec3 color = mix(deepNight, twilightBlue, twilight);
+    float alpha = mix(0.78, 0.0, twilight);
+    gl_FragColor = vec4(color, alpha);
+  }
+`;
+
+const AUXILIARY_LATITUDES = [
+  { latitude: 0, opacity: 0.45 },
+  { latitude: 23.436, opacity: 0.3 },
+  { latitude: -23.436, opacity: 0.3 },
+  { latitude: 66.564, opacity: 0.22 },
+  { latitude: -66.564, opacity: 0.22 },
+] as const;
+
+function SunlineLayer({
+  sunDirection,
+  sphereSegments,
+}: {
+  sunDirection: Vector3;
+  sphereSegments: [number, number];
+}) {
+  const material = useRef<ShaderMaterial>(null);
+  const uniforms = useMemo(
+    () => ({ uSunDirection: { value: new Vector3() } }),
+    [],
+  );
+  const latitudeLines = useMemo(
+    () =>
+      AUXILIARY_LATITUDES.map(({ latitude, opacity }) => ({
+        latitude,
+        opacity,
+        points: Array.from({ length: 121 }, (_, index) =>
+          geoToVector3({ latitude, longitude: -180 + index * 3 }, 1.014),
+        ),
+      })),
+    [],
+  );
+
+  useEffect(() => {
+    uniforms.uSunDirection.value.copy(sunDirection);
+    if (material.current) material.current.uniformsNeedUpdate = true;
+  }, [sunDirection, uniforms]);
+
+  useEffect(() => () => material.current?.dispose(), []);
+
+  return (
+    <>
+      <mesh scale={1.009} renderOrder={2}>
+        <sphereGeometry args={[1, ...sphereSegments]} />
+        <shaderMaterial
+          ref={material}
+          uniforms={uniforms}
+          vertexShader={SUNLINE_VERTEX_SHADER}
+          fragmentShader={SUNLINE_FRAGMENT_SHADER}
+          transparent
+          depthWrite={false}
+        />
+      </mesh>
+      {latitudeLines.map((line) => (
+        <Line
+          key={line.latitude}
+          points={line.points}
+          color="#d7c58c"
+          lineWidth={line.latitude === 0 ? 1.2 : 0.8}
+          transparent
+          opacity={line.opacity}
+          depthTest
+        />
+      ))}
+      <Marker
+        position={sunDirection.clone().multiplyScalar(1.028)}
+        color="#e1bd61"
       />
     </>
   );
@@ -463,10 +589,12 @@ function Marker({ position, color }: { position: Vector3; color: string }) {
         <sphereGeometry args={[0.025, 20, 20]} />
         <meshBasicMaterial color={color} />
       </mesh>
-      <mesh>
-        <ringGeometry args={[0.04, 0.052, 28]} />
-        <meshBasicMaterial color={color} transparent opacity={0.7} side={2} />
-      </mesh>
+      <Billboard>
+        <mesh>
+          <ringGeometry args={[0.04, 0.052, 28]} />
+          <meshBasicMaterial color={color} transparent opacity={0.7} side={2} />
+        </mesh>
+      </Billboard>
     </group>
   );
 }

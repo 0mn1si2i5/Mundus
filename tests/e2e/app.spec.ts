@@ -153,6 +153,58 @@ test('keeps development map, controls, URL and table synchronized', async ({
   await expect(table.getByRole('row').nth(1)).toContainText(/\d\.\d{3}/);
 });
 
+test('drives fixed, playing, and live Sunline time in UTC', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./?mode=sunline&point=0%2C0&time=2024-03-20T12%3A00Z&v=1');
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开日照线控件' }).click();
+  }
+
+  const timeline = page.getByRole('slider', { name: /UTC 时间/ });
+  await expect(timeline).toHaveValue('720');
+  await expect(page.getByText('白昼', { exact: true })).toBeVisible();
+  await expect(page.getByText('03-20 06:04 UTC')).toBeVisible();
+
+  await timeline.fill('0');
+  await expect(page).toHaveURL(/time=2024-03-20T00%3A00Z/);
+  await expect(page.getByText('夜晚', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: '播放一天' }).click();
+  await expect(page.getByRole('button', { name: '暂停' })).toBeVisible();
+  await expect(timeline).not.toHaveValue('0');
+  await page.getByRole('button', { name: '暂停' }).click();
+
+  await page.getByRole('button', { name: '回到此刻' }).click();
+  await expect(page).not.toHaveURL(/time=/);
+  await expect(page.getByText(/实时 · 1440×/)).toBeVisible();
+
+  await page.getByRole('button', { name: '分享' }).click();
+  await expect(page.getByRole('dialog')).toContainText(/time=/);
+});
+
+test('keeps mode lifecycle stable across repeated switching', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name === 'mobile', 'Desktop lifecycle coverage');
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  await page.goto('./?mode=sunline&time=2024-03-20T12%3A00Z&v=1');
+
+  for (let index = 0; index < 20; index += 1) {
+    const name =
+      index % 3 === 0
+        ? /地球另一端/
+        : index % 3 === 1
+          ? /发展的不同侧面/
+          : /日照线/;
+    await page.getByRole('button', { name }).click();
+  }
+
+  await expect(page.locator('canvas')).toBeVisible();
+  expect(pageErrors).toEqual([]);
+});
+
 test('offers explicit share precision choices', async ({ page }) => {
   await page.goto('./?point=30.25%2C120.75&v=1');
   await page.getByRole('button', { name: '分享' }).click();

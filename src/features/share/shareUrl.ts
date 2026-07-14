@@ -15,7 +15,12 @@ export function createShareUrl(
           latitude: Math.round(state.point.latitude),
           longitude: Math.round(state.point.longitude),
         };
-  url.search = serializeUrlState({ ...state, point });
+  url.search = serializeUrlState({
+    ...state,
+    point,
+    sunlineClockMode:
+      state.activeMode === 'sunline' ? 'fixed' : state.sunlineClockMode,
+  });
   url.hash = '';
   return url.toString();
 }

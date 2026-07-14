@@ -7,6 +7,8 @@ describe('share URL precision', () => {
     point: { latitude: 31.2304, longitude: 121.4737 },
     developmentIndicator: 'hdi' as const,
     developmentYear: 2023,
+    sunlineTimeMs: Date.parse('2026-07-14T09:37:00Z'),
+    sunlineClockMode: 'live' as const,
   };
 
   it('preserves exact coordinates only when requested', () => {
@@ -42,5 +44,14 @@ describe('share URL precision', () => {
     expect(url).toContain('mode=development');
     expect(url).toContain('indicator=income');
     expect(url).toContain('year=2010');
+  });
+
+  it('materializes live Sunline time into a reproducible share URL', () => {
+    const url = createShareUrl(
+      'https://example.com/path?mode=sunline',
+      { ...state, activeMode: 'sunline' },
+      'exact',
+    );
+    expect(url).toContain('time=2026-07-14T09%3A37Z');
   });
 });

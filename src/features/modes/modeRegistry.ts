@@ -1,5 +1,6 @@
 import type { Locale } from '../../i18n/messages';
 import { z } from 'zod';
+import { SUNLINE_MAX_TIME_MS, SUNLINE_MIN_TIME_MS } from '../sunline/solar';
 
 export type ModeId = 'antipodes' | 'development' | 'sunline';
 
@@ -82,7 +83,14 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
     },
     cameraPolicy: 'preserve',
     resources: [],
-    stateSchema: z.object({}),
+    stateSchema: z.object({
+      timeMs: z
+        .number()
+        .int()
+        .min(SUNLINE_MIN_TIME_MS)
+        .max(SUNLINE_MAX_TIME_MS),
+      clockMode: z.enum(['live', 'fixed']),
+    }),
   },
 };
 
