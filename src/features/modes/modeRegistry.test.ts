@@ -25,4 +25,14 @@ describe('mode registry', () => {
       schema.safeParse({ point: { latitude: 91, longitude: 0 } }).success,
     ).toBe(false);
   });
+
+  it('validates the bounded development state', () => {
+    const schema = MODE_DEFINITIONS.development.stateSchema;
+    expect(
+      schema.safeParse({ indicator: 'education', year: 2005 }).success,
+    ).toBe(true);
+    expect(
+      schema.safeParse({ indicator: 'happiness', year: 2025 }).success,
+    ).toBe(false);
+  });
 });

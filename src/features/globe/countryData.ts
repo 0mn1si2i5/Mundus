@@ -105,6 +105,7 @@ export function createCountryTexture(
   textureWidth: number,
   hoveredCountryId: string | null,
   selectedCountryId: string | null,
+  countryFills: ReadonlyMap<string, string> | null = null,
 ): CanvasTexture {
   const canvas = document.createElement('canvas');
   canvas.width = textureWidth;
@@ -125,6 +126,20 @@ export function createCountryTexture(
   path(dataset.countries);
   context.fillStyle = '#263b39';
   context.fill();
+
+  if (countryFills) {
+    for (const country of dataset.countries.features) {
+      const color = countryFills.get(country.properties.countryId);
+      if (!color) continue;
+      context.beginPath();
+      path(country);
+      context.fillStyle = color;
+      context.fill();
+    }
+  }
+
+  context.beginPath();
+  path(dataset.countries);
   context.strokeStyle = 'rgba(181, 205, 190, 0.34)';
   context.lineWidth = Math.max(0.55, textureWidth / 2048);
   context.stroke();

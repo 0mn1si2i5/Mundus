@@ -1,19 +1,31 @@
 import { z } from 'zod';
 import { normalizeLongitude, type GeoPoint } from '../features/globe/geo';
 import type { ModeId } from '../features/modes/modeRegistry';
+import type { DevelopmentIndicator } from '../features/development/developmentData';
 
 export const DEFAULT_POINT: GeoPoint = {
   latitude: 31.2304,
   longitude: 121.4737,
 };
 export const DEFAULT_MODE: ModeId = 'antipodes';
+export const DEFAULT_DEVELOPMENT_INDICATOR: DevelopmentIndicator = 'hdi';
+export const DEFAULT_DEVELOPMENT_YEAR = 2023;
 
 export interface ShareableState {
   activeMode: ModeId;
   point: GeoPoint;
+  developmentIndicator: DevelopmentIndicator;
+  developmentYear: number;
 }
 
 const modeSchema = z.enum(['antipodes', 'development', 'sunline']);
+const developmentIndicatorSchema = z.enum([
+  'hdi',
+  'health',
+  'education',
+  'income',
+]);
+const developmentYearSchema = z.coerce.number().int().min(1990).max(2023);
 const coordinateSchema = z
   .string()
   .regex(/^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$/)
@@ -27,6 +39,10 @@ export function parseUrlState(search: string): ShareableState {
   const params = new URLSearchParams(search);
   const mode = modeSchema.safeParse(params.get('mode'));
   const coordinate = coordinateSchema.safeParse(params.get('point'));
+  const developmentIndicator = developmentIndicatorSchema.safeParse(
+    params.get('indicator'),
+  );
+  const developmentYear = developmentYearSchema.safeParse(params.get('year'));
 
   return {
     activeMode: mode.success ? mode.data : DEFAULT_MODE,
@@ -36,6 +52,12 @@ export function parseUrlState(search: string): ShareableState {
           longitude: normalizeLongitude(coordinate.data[1]),
         }
       : DEFAULT_POINT,
+    developmentIndicator: developmentIndicator.success
+      ? developmentIndicator.data
+      : DEFAULT_DEVELOPMENT_INDICATOR,
+    developmentYear: developmentYear.success
+      ? developmentYear.data
+      : DEFAULT_DEVELOPMENT_YEAR,
   };
 }
 
@@ -53,7 +75,15 @@ export function serializeUrlState(state: ShareableState): string {
       `${formatCoordinate(state.point.latitude)},${formatCoordinate(state.point.longitude)}`,
     );
   }
-  if (hasMode || hasPoint) params.set('v', '1');
+  if (state.activeMode === 'development') {
+    if (state.developmentIndicator !== DEFAULT_DEVELOPMENT_INDICATOR) {
+      params.set('indicator', state.developmentIndicator);
+    }
+    if (state.developmentYear !== DEFAULT_DEVELOPMENT_YEAR) {
+      params.set('year', String(state.developmentYear));
+    }
+  }
+  if (params.size > 0) params.set('v', '1');
 
   const query = params.toString();
   return query ? `?${query}` : '';

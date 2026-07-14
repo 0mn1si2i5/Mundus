@@ -46,7 +46,7 @@ test('rotates and selects the globe from the keyboard', async ({ page }) => {
 test('restores shareable state and browser history', async ({ page }) => {
   await page.goto('./?mode=sunline&point=0%2C-140&v=1');
   await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
-  await expect(page.getByText('海洋或未知区域').first()).toBeVisible();
+  await expect(page).toHaveURL(/point=0%2C-140/);
 
   await page.getByRole('button', { name: /发展的不同侧面/ }).click();
   await expect(page).toHaveURL(/mode=development/);
@@ -86,6 +86,36 @@ test('loads the scoped Natural Earth nearest-place result', async ({
   await page.getByRole('button', { name: /地球另一端/ }).click();
   await expect(page.getByText('Santa Fe, Argentina')).toBeVisible();
   await expect(page.getByText(/非完整城市名录/)).toBeVisible();
+});
+
+test('keeps development map, controls, URL and table synchronized', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./?mode=development&indicator=education&year=2005&v=1');
+  await expect(
+    page.getByRole('heading', { name: '发展的不同侧面' }),
+  ).toBeVisible();
+
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开发展控件' }).click();
+  }
+
+  await expect(page.getByRole('button', { name: '教育' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.getByRole('slider', { name: /年份/ })).toHaveValue('2005');
+  await expect(page.getByText('0.540', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: '收入' }).click();
+  await expect(page).toHaveURL(/indicator=income/);
+  await page.getByRole('slider', { name: /年份/ }).fill('2010');
+  await expect(page).toHaveURL(/year=2010/);
+
+  await page.getByRole('button', { name: '表格视图' }).click();
+  const table = page.getByRole('complementary', { name: '表格视图' });
+  await expect(table).toBeVisible();
+  await expect(table.getByRole('row').nth(1)).toContainText(/\d\.\d{3}/);
 });
 
 test('offers explicit share precision choices', async ({ page }) => {

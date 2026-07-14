@@ -9,7 +9,9 @@ export function useUrlState() {
       if (
         applyingHistory ||
         (state.activeMode === previous.activeMode &&
-          state.point === previous.point)
+          state.point === previous.point &&
+          state.developmentIndicator === previous.developmentIndicator &&
+          state.developmentYear === previous.developmentYear)
       ) {
         return;
       }

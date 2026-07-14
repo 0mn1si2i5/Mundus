@@ -3,12 +3,15 @@ import type { Locale } from '../i18n/messages';
 import type { ModeId } from '../features/modes/modeRegistry';
 import type { CountryRef } from '../features/globe/countryData';
 import type { GeoPoint } from '../features/globe/geo';
+import type { DevelopmentIndicator } from '../features/development/developmentData';
 import { parseUrlState } from './urlState';
 
 interface AppState {
   locale: Locale;
   activeMode: ModeId;
   point: GeoPoint;
+  developmentIndicator: DevelopmentIndicator;
+  developmentYear: number;
   selectedCountry: CountryRef | null;
   antipodeCountry: CountryRef | null;
   hoveredCountry: CountryRef | null;
@@ -16,6 +19,8 @@ interface AppState {
   hasInteracted: boolean;
   selectMode: (mode: ModeId) => void;
   selectPoint: (point: GeoPoint) => void;
+  selectDevelopmentIndicator: (indicator: DevelopmentIndicator) => void;
+  selectDevelopmentYear: (year: number) => void;
   setLocale: (locale: Locale) => void;
   setSelectedCountry: (country: CountryRef | null) => void;
   setAntipodeCountry: (country: CountryRef | null) => void;
@@ -46,6 +51,9 @@ export const useAppStore = create<AppState>((set) => ({
   selectMode: (activeMode) => set({ activeMode }),
   selectPoint: (point) =>
     set({ point, cameraTarget: point, hasInteracted: true }),
+  selectDevelopmentIndicator: (developmentIndicator) =>
+    set({ developmentIndicator }),
+  selectDevelopmentYear: (developmentYear) => set({ developmentYear }),
   setLocale: (locale) => {
     document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en';
     set({ locale });

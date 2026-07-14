@@ -4,6 +4,7 @@ import {
   Suspense,
   type ErrorInfo,
   type ReactNode,
+  useMemo,
   useState,
 } from 'react';
 import { antipodeOf } from '../features/globe/geo';
@@ -17,6 +18,11 @@ import { ShareDialog } from '../features/share/ShareDialog';
 import { useAppStore } from '../state/appStore';
 import { useUrlState } from './useUrlState';
 import { messages } from '../i18n/messages';
+import {
+  developmentColor,
+  valuesByCountryId,
+} from '../features/development/developmentData';
+import { useDevelopmentDataset } from '../features/development/useDevelopmentDataset';
 import styles from './App.module.css';
 
 const GlobeViewport = lazy(() =>
@@ -28,6 +34,12 @@ const GlobeViewport = lazy(() =>
 const OtherSideControls = lazy(() =>
   import('../features/antipodes/OtherSideControls').then((module) => ({
     default: module.OtherSideControls,
+  })),
+);
+
+const DevelopmentControls = lazy(() =>
+  import('../features/development/DevelopmentControls').then((module) => ({
+    default: module.DevelopmentControls,
   })),
 );
 
@@ -61,6 +73,10 @@ export function App() {
   const locale = useAppStore((state) => state.locale);
   const activeMode = useAppStore((state) => state.activeMode);
   const point = useAppStore((state) => state.point);
+  const developmentIndicator = useAppStore(
+    (state) => state.developmentIndicator,
+  );
+  const developmentYear = useAppStore((state) => state.developmentYear);
   const selectedCountry = useAppStore((state) => state.selectedCountry);
   const antipodeCountry = useAppStore((state) => state.antipodeCountry);
   const hoveredCountry = useAppStore((state) => state.hoveredCountry);
@@ -73,6 +89,19 @@ export function App() {
     antipode,
     activeMode === 'antipodes',
   );
+  const developmentData = useDevelopmentDataset(activeMode === 'development');
+  const developmentFills = useMemo(() => {
+    if (developmentData.status !== 'ready') return null;
+    return new Map(
+      [
+        ...valuesByCountryId(
+          developmentData.data,
+          developmentIndicator,
+          developmentYear,
+        ),
+      ].map(([countryId, value]) => [countryId, developmentColor(value)]),
+    );
+  }, [developmentData, developmentIndicator, developmentYear]);
   const numberFormatter = new Intl.NumberFormat(
     locale === 'zh' ? 'zh-CN' : 'en-US',
     {
@@ -109,8 +138,14 @@ export function App() {
         </div>
       </header>
 
-      <section className={styles.intro} aria-labelledby="mode-title">
-        <p className={styles.index}>01 / 03</p>
+      <section
+        className={styles.intro}
+        data-mode={activeMode}
+        aria-labelledby="mode-title"
+      >
+        <p className={styles.index}>
+          0{Object.keys(MODE_DEFINITIONS).indexOf(activeMode) + 1} / 03
+        </p>
         <h1 id="mode-title">{mode.title[locale]}</h1>
         <p>{mode.question[locale]}</p>
       </section>
@@ -125,57 +160,65 @@ export function App() {
             keyboardMovedLabel={t.globeMoved}
             keyboardZoomedLabel={t.globeZoomed}
             keyboardSelectedLabel={t.globeSelected}
+            countryFills={developmentFills}
+            showAntipodes={activeMode === 'antipodes'}
           />
         </Suspense>
       </ErrorBoundary>
 
-      <aside className={styles.result} aria-live="polite" aria-label={t.result}>
-        <span>{t.selectedPoint}</span>
-        <em>{selectedCountry?.name ?? t.openOcean}</em>
-        <strong>
-          {point.latitude.toFixed(4)}°, {point.longitude.toFixed(4)}°
-        </strong>
-        <div className={styles.rule} />
-        <span>{t.antipode}</span>
-        <em>{antipodeCountry?.name ?? t.openOcean}</em>
-        <strong>
-          {antipode.latitude.toFixed(4)}°, {antipode.longitude.toFixed(4)}°
-        </strong>
-        {nearestPlace.status !== 'idle' ? (
-          <div className={styles.nearestPlace}>
-            <span>{t.nearestPlace}</span>
-            {nearestPlace.status === 'ready' ? (
-              <>
-                <em>
-                  {nearestPlace.result.place.name},{' '}
-                  {nearestPlace.result.place.country}
-                </em>
+      {activeMode === 'antipodes' ? (
+        <aside
+          className={styles.result}
+          aria-live="polite"
+          aria-label={t.result}
+        >
+          <span>{t.selectedPoint}</span>
+          <em>{selectedCountry?.name ?? t.openOcean}</em>
+          <strong>
+            {point.latitude.toFixed(4)}°, {point.longitude.toFixed(4)}°
+          </strong>
+          <div className={styles.rule} />
+          <span>{t.antipode}</span>
+          <em>{antipodeCountry?.name ?? t.openOcean}</em>
+          <strong>
+            {antipode.latitude.toFixed(4)}°, {antipode.longitude.toFixed(4)}°
+          </strong>
+          {nearestPlace.status !== 'idle' ? (
+            <div className={styles.nearestPlace}>
+              <span>{t.nearestPlace}</span>
+              {nearestPlace.status === 'ready' ? (
+                <>
+                  <em>
+                    {nearestPlace.result.place.name},{' '}
+                    {nearestPlace.result.place.country}
+                  </em>
+                  <strong>
+                    {t.nearestPlaceDistance}{' '}
+                    {numberFormatter.format(nearestPlace.result.distanceKm)} km
+                  </strong>
+                  <small>{t.nearestPlaceScope}</small>
+                </>
+              ) : (
                 <strong>
-                  {t.nearestPlaceDistance}{' '}
-                  {numberFormatter.format(nearestPlace.result.distanceKm)} km
+                  {nearestPlace.status === 'loading'
+                    ? t.nearestPlaceLoading
+                    : t.nearestPlaceUnavailable}
                 </strong>
-                <small>{t.nearestPlaceScope}</small>
-              </>
-            ) : (
-              <strong>
-                {nearestPlace.status === 'loading'
-                  ? t.nearestPlaceLoading
-                  : t.nearestPlaceUnavailable}
-              </strong>
-            )}
+              )}
+            </div>
+          ) : null}
+          <div className={styles.distanceRow}>
+            <span>{t.coreDistance}</span>
+            <strong>
+              {numberFormatter.format(chordDistanceKm(point, antipode))} km
+            </strong>
+            <span>{t.surfaceDistance}</span>
+            <strong>
+              {numberFormatter.format(surfaceDistanceKm(point, antipode))} km
+            </strong>
           </div>
-        ) : null}
-        <div className={styles.distanceRow}>
-          <span>{t.coreDistance}</span>
-          <strong>
-            {numberFormatter.format(chordDistanceKm(point, antipode))} km
-          </strong>
-          <span>{t.surfaceDistance}</span>
-          <strong>
-            {numberFormatter.format(surfaceDistanceKm(point, antipode))} km
-          </strong>
-        </div>
-      </aside>
+        </aside>
+      ) : null}
 
       {hoveredCountry ? (
         <p className={styles.hoverLabel}>{hoveredCountry.name}</p>
@@ -184,6 +227,16 @@ export function App() {
       {activeMode === 'antipodes' ? (
         <Suspense fallback={null}>
           <OtherSideControls locale={locale} />
+        </Suspense>
+      ) : null}
+
+      {activeMode === 'development' ? (
+        <Suspense fallback={null}>
+          <DevelopmentControls
+            locale={locale}
+            loadState={developmentData}
+            selectedCountry={selectedCountry}
+          />
         </Suspense>
       ) : null}
 

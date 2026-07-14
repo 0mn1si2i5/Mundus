@@ -99,6 +99,18 @@
   line-height: 1.7;
 }
 
+@media (min-width: 761px) {
+  .intro[data-mode='development'] {
+    top: 15%;
+    width: min(32rem, 42vw);
+  }
+
+  .intro[data-mode='development'] h1 {
+    max-width: 9em;
+    font-size: clamp(2.8rem, 4.5vw, 5.5rem);
+  }
+}
+
 .result {
   position: absolute;
   z-index: 4;

@@ -38,6 +38,8 @@ interface GlobeViewportProps {
   keyboardMovedLabel: string;
   keyboardZoomedLabel: string;
   keyboardSelectedLabel: string;
+  countryFills: ReadonlyMap<string, string> | null;
+  showAntipodes: boolean;
 }
 
 interface GlobeKeyboardController {
@@ -55,6 +57,8 @@ export function GlobeViewport({
   keyboardMovedLabel,
   keyboardZoomedLabel,
   keyboardSelectedLabel,
+  countryFills,
+  showAntipodes,
 }: GlobeViewportProps) {
   const [supported] = useState(supportsWebGL2);
   const [profile] = useState(detectQualityProfile);
@@ -163,6 +167,8 @@ export function GlobeViewport({
           benchmarkActive={benchmark.active}
           recordBenchmarkFrame={benchmark.recordFrame}
           keyboardController={keyboardController}
+          countryFills={countryFills}
+          showAntipodes={showAntipodes}
         />
       </Canvas>
       {contextLost ? (
@@ -185,6 +191,8 @@ interface GlobeSceneProps {
   benchmarkActive: boolean;
   recordBenchmarkFrame: (timestamp: number) => void;
   keyboardController: Ref<GlobeKeyboardController>;
+  countryFills: ReadonlyMap<string, string> | null;
+  showAntipodes: boolean;
 }
 
 function GlobeScene({
@@ -192,6 +200,8 @@ function GlobeScene({
   benchmarkActive,
   recordBenchmarkFrame,
   keyboardController,
+  countryFills,
+  showAntipodes,
 }: GlobeSceneProps) {
   const point = useAppStore((state) => state.point);
   const selectedCountry = useAppStore((state) => state.selectedCountry);
@@ -215,12 +225,14 @@ function GlobeScene({
         profile.textureWidth,
         hoveredCountry?.countryId ?? null,
         selectedCountry?.countryId ?? null,
+        countryFills,
       ),
     [
       countries,
       hoveredCountry?.countryId,
       profile.textureWidth,
       selectedCountry?.countryId,
+      countryFills,
     ],
   );
 
@@ -384,16 +396,20 @@ function GlobeScene({
             blending={AdditiveBlending}
           />
         </mesh>
-        <Marker position={primary} color="#e8e0c8" />
-        <Marker position={antipode} color="#9cc7b7" />
-        <Line
-          points={[primary, [0, 0, 0], antipode]}
-          color="#b8cfb9"
-          lineWidth={1}
-          transparent
-          opacity={0.4}
-          depthTest={false}
-        />
+        {showAntipodes ? (
+          <>
+            <Marker position={primary} color="#e8e0c8" />
+            <Marker position={antipode} color="#9cc7b7" />
+            <Line
+              points={[primary, [0, 0, 0], antipode]}
+              color="#b8cfb9"
+              lineWidth={1}
+              transparent
+              opacity={0.4}
+              depthTest={false}
+            />
+          </>
+        ) : null}
       </group>
       <OrbitControls
         enablePan={false}

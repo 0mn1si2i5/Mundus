@@ -35,8 +35,16 @@ export function ShareDialog({
 }) {
   const activeMode = useAppStore((state) => state.activeMode);
   const point = useAppStore((state) => state.point);
+  const developmentIndicator = useAppStore(
+    (state) => state.developmentIndicator,
+  );
+  const developmentYear = useAppStore((state) => state.developmentYear);
   const [preview, setPreview] = useState(() =>
-    createShareUrl(window.location.href, { activeMode, point }, 'approximate'),
+    createShareUrl(
+      window.location.href,
+      { activeMode, point, developmentIndicator, developmentYear },
+      'approximate',
+    ),
   );
   const [status, setStatus] = useState('');
   const dialog = useRef<HTMLElement>(null);
@@ -78,7 +86,7 @@ export function ShareDialog({
   async function copyLink(precision: SharePrecision) {
     const url = createShareUrl(
       window.location.href,
-      { activeMode, point },
+      { activeMode, point, developmentIndicator, developmentYear },
       precision,
     );
     setPreview(url);

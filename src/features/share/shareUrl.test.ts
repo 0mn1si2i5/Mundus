@@ -5,6 +5,8 @@ describe('share URL precision', () => {
   const state = {
     activeMode: 'antipodes' as const,
     point: { latitude: 31.2304, longitude: 121.4737 },
+    developmentIndicator: 'hdi' as const,
+    developmentYear: 2023,
   };
 
   it('preserves exact coordinates only when requested', () => {
@@ -24,5 +26,21 @@ describe('share URL precision', () => {
     expect(
       createShareUrl('https://example.com/path', state, 'approximate'),
     ).toContain('point=31%2C121');
+  });
+
+  it('preserves the selected development indicator and year', () => {
+    const url = createShareUrl(
+      'https://example.com/path',
+      {
+        ...state,
+        activeMode: 'development',
+        developmentIndicator: 'income',
+        developmentYear: 2010,
+      },
+      'exact',
+    );
+    expect(url).toContain('mode=development');
+    expect(url).toContain('indicator=income');
+    expect(url).toContain('year=2010');
   });
 });

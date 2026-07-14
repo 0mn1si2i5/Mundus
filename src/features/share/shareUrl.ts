@@ -1,12 +1,10 @@
-import type { ModeId } from '../modes/modeRegistry';
-import type { GeoPoint } from '../globe/geo';
-import { serializeUrlState } from '../../state/urlState';
+import { serializeUrlState, type ShareableState } from '../../state/urlState';
 
 export type SharePrecision = 'exact' | 'approximate';
 
 export function createShareUrl(
   baseUrl: string,
-  state: { activeMode: ModeId; point: GeoPoint },
+  state: ShareableState,
   precision: SharePrecision,
 ): string {
   const url = new URL(baseUrl);
