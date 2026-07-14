@@ -24,6 +24,33 @@
   transform: translate(-50%, -50%);
 }
 
+.benchmark {
+  position: absolute;
+  z-index: 9;
+  top: 1rem;
+  left: 50%;
+  display: grid;
+  gap: 0.25rem;
+  min-width: 17rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgb(184 207 185 / 35%);
+  color: var(--color-accent);
+  background: rgb(8 11 15 / 88%);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.benchmark span {
+  color: var(--color-muted);
+  text-transform: uppercase;
+}
+
+.benchmark strong {
+  font-weight: 500;
+}
+
 .unavailable {
   display: grid;
   place-items: center;

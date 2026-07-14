@@ -1,13 +1,19 @@
 import { expect, test } from '@playwright/test';
 
 test('reports and clears WebGL context interruption', async ({ page }) => {
-  await page.goto('./');
+  await page.goto('./?benchmark=1&benchmarkWarmup=100&benchmarkDuration=300');
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
+  const benchmark = page.locator('output[data-phase="complete"]');
+  await expect(benchmark).toContainText('fps');
+  await expect(benchmark).toContainText('p95');
   await canvas.dispatchEvent('webglcontextlost', { cancelable: true });
-  await expect(page.getByRole('status')).toContainText('图形上下文暂时中断');
+  const contextStatus = page.getByText(
+    '图形上下文暂时中断，正在等待浏览器恢复。',
+  );
+  await expect(contextStatus).toBeVisible();
   await canvas.dispatchEvent('webglcontextrestored');
-  await expect(page.getByText('图形上下文暂时中断')).toBeHidden();
+  await expect(contextStatus).toBeHidden();
 });
 
 test('loads the laboratory shell and switches language', async ({ page }) => {

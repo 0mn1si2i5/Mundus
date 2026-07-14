@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Group } from 'three';
 import { AdditiveBlending, BackSide, type Vector3 } from 'three';
 import { useAppStore } from '../../state/appStore';
+import { useFrameBenchmark } from '../performance/useFrameBenchmark';
 import { createCountryTexture, getCountryDataset } from './countryData';
 import { antipodeOf, geoToVector3, vector3ToGeo } from './geo';
 import { detectQualityProfile, type QualityProfile } from './quality';
@@ -28,6 +29,7 @@ export function GlobeViewport({
   const [profile] = useState(detectQualityProfile);
   const [contextLost, setContextLost] = useState(false);
   const viewport = useRef<HTMLDivElement>(null);
+  const benchmark = useFrameBenchmark(profile.level);
 
   useEffect(() => {
     const canvas = viewport.current?.querySelector('canvas');
@@ -73,12 +75,19 @@ export function GlobeViewport({
           powerPreference: 'high-performance',
         }}
       >
-        <GlobeScene profile={profile} />
+        <GlobeScene
+          profile={profile}
+          benchmarkActive={benchmark.active}
+          recordBenchmarkFrame={benchmark.recordFrame}
+        />
       </Canvas>
       {contextLost ? (
         <p className={styles.contextStatus} role="status">
           {contextLostLabel}
         </p>
+      ) : null}
+      {benchmark.enabled ? (
+        <BenchmarkPanel phase={benchmark.phase} result={benchmark.result} />
       ) : null}
     </div>
   );
@@ -86,9 +95,15 @@ export function GlobeViewport({
 
 interface GlobeSceneProps {
   profile: QualityProfile;
+  benchmarkActive: boolean;
+  recordBenchmarkFrame: (timestamp: number) => void;
 }
 
-function GlobeScene({ profile }: GlobeSceneProps) {
+function GlobeScene({
+  profile,
+  benchmarkActive,
+  recordBenchmarkFrame,
+}: GlobeSceneProps) {
   const point = useAppStore((state) => state.point);
   const selectedCountry = useAppStore((state) => state.selectedCountry);
   const hoveredCountry = useAppStore((state) => state.hoveredCountry);
@@ -130,6 +145,10 @@ function GlobeScene({ profile }: GlobeSceneProps) {
   }, [countries, point, setSelectedCountry]);
 
   useFrame((_, delta) => {
+    if (benchmarkActive) {
+      recordBenchmarkFrame(performance.now());
+      invalidate();
+    }
     if (!hasInteracted && !reducedMotion && group.current) {
       group.current.rotation.y += delta * 0.035;
       invalidate();
@@ -214,6 +233,28 @@ function GlobeScene({ profile }: GlobeSceneProps) {
         makeDefault
       />
     </>
+  );
+}
+
+function BenchmarkPanel({
+  phase,
+  result,
+}: {
+  phase: string;
+  result: ReturnType<typeof useFrameBenchmark>['result'];
+}) {
+  return (
+    <output className={styles.benchmark} data-phase={phase} aria-live="polite">
+      <span>Render benchmark · {phase}</span>
+      {result ? (
+        <strong>
+          {result.fps.toFixed(1)} fps · p95 {result.frameTimeP95Ms.toFixed(1)}{' '}
+          ms · {result.quality}
+        </strong>
+      ) : (
+        <strong>Collecting actual R3F frames…</strong>
+      )}
+    </output>
   );
 }
 
