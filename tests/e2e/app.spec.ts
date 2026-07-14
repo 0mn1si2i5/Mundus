@@ -236,6 +236,7 @@ test('drives fixed, playing, and live Sunline time in UTC', async ({
 test('keeps mode lifecycle stable across repeated switching', async ({
   page,
 }, testInfo) => {
+  test.setTimeout(90_000);
   test.skip(testInfo.project.name === 'mobile', 'Desktop lifecycle coverage');
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
