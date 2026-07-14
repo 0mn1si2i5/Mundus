@@ -1,10 +1,22 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { GlobeViewport } from '../features/globe/GlobeViewport';
+import {
+  Component,
+  lazy,
+  Suspense,
+  type ErrorInfo,
+  type ReactNode,
+} from 'react';
 import { antipodeOf } from '../features/globe/geo';
 import { MODE_DEFINITIONS } from '../features/modes/modeRegistry';
 import { useAppStore } from '../state/appStore';
+import { useUrlState } from './useUrlState';
 import { messages } from '../i18n/messages';
 import styles from './App.module.css';
+
+const GlobeViewport = lazy(() =>
+  import('../features/globe/GlobeViewport').then((module) => ({
+    default: module.GlobeViewport,
+  })),
+);
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -35,11 +47,14 @@ export function App() {
   const locale = useAppStore((state) => state.locale);
   const activeMode = useAppStore((state) => state.activeMode);
   const point = useAppStore((state) => state.point);
+  const selectedCountry = useAppStore((state) => state.selectedCountry);
+  const hoveredCountry = useAppStore((state) => state.hoveredCountry);
   const selectMode = useAppStore((state) => state.selectMode);
   const setLocale = useAppStore((state) => state.setLocale);
   const t = messages[locale];
   const mode = MODE_DEFINITIONS[activeMode];
   const antipode = antipodeOf(point);
+  useUrlState();
 
   return (
     <main className={styles.shell}>
@@ -72,11 +87,17 @@ export function App() {
       </section>
 
       <ErrorBoundary fallback={<GlobeFallback label={t.fallback} />}>
-        <GlobeViewport fallbackLabel={t.fallback} />
+        <Suspense fallback={<GlobeFallback label={t.loadingGlobe} />}>
+          <GlobeViewport
+            fallbackLabel={t.fallback}
+            contextLostLabel={t.contextLost}
+          />
+        </Suspense>
       </ErrorBoundary>
 
       <aside className={styles.result} aria-live="polite" aria-label={t.result}>
         <span>{t.selectedPoint}</span>
+        <em>{selectedCountry?.name ?? t.openOcean}</em>
         <strong>
           {point.latitude.toFixed(4)}°, {point.longitude.toFixed(4)}°
         </strong>
@@ -86,6 +107,10 @@ export function App() {
           {antipode.latitude.toFixed(4)}°, {antipode.longitude.toFixed(4)}°
         </strong>
       </aside>
+
+      {hoveredCountry ? (
+        <p className={styles.hoverLabel}>{hoveredCountry.name}</p>
+      ) : null}
 
       <nav className={styles.modeNav} aria-label={t.modes}>
         {Object.values(MODE_DEFINITIONS).map((item, index) => (

@@ -1,10 +1,10 @@
 export function supportsWebGL2(): boolean {
   try {
     const canvas = document.createElement('canvas');
-    return (
-      canvas.getContext('webgl2', { failIfMajorPerformanceCaveat: true }) !==
-      null
-    );
+    const context = canvas.getContext('webgl2');
+    if (!context) return false;
+    context.getExtension('WEBGL_lose_context')?.loseContext();
+    return true;
   } catch {
     return false;
   }

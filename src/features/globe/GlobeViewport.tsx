@@ -7,18 +7,45 @@ import {
 import { OrbitControls, Stars } from '@react-three/drei';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Group } from 'three';
-import { AdditiveBlending, BackSide, Color, type Vector3 } from 'three';
+import { AdditiveBlending, BackSide, type Vector3 } from 'three';
 import { useAppStore } from '../../state/appStore';
+import { createCountryTexture, getCountryDataset } from './countryData';
 import { antipodeOf, geoToVector3, vector3ToGeo } from './geo';
+import { detectQualityProfile, type QualityProfile } from './quality';
 import { supportsWebGL2 } from './webgl';
 import styles from './GlobeViewport.module.css';
 
 interface GlobeViewportProps {
   fallbackLabel: string;
+  contextLostLabel: string;
 }
 
-export function GlobeViewport({ fallbackLabel }: GlobeViewportProps) {
+export function GlobeViewport({
+  fallbackLabel,
+  contextLostLabel,
+}: GlobeViewportProps) {
   const [supported] = useState(supportsWebGL2);
+  const [profile] = useState(detectQualityProfile);
+  const [contextLost, setContextLost] = useState(false);
+  const viewport = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const canvas = viewport.current?.querySelector('canvas');
+    if (!canvas) return;
+    const lost = (event: Event) => {
+      event.preventDefault();
+      setContextLost(true);
+    };
+    const restored = () => {
+      setContextLost(false);
+    };
+    canvas.addEventListener('webglcontextlost', lost);
+    canvas.addEventListener('webglcontextrestored', restored);
+    return () => {
+      canvas.removeEventListener('webglcontextlost', lost);
+      canvas.removeEventListener('webglcontextrestored', restored);
+    };
+  }, []);
 
   if (!supported) {
     return (
@@ -30,9 +57,14 @@ export function GlobeViewport({ fallbackLabel }: GlobeViewportProps) {
   }
 
   return (
-    <div className={styles.viewport} aria-label="Interactive globe">
+    <div
+      ref={viewport}
+      className={styles.viewport}
+      aria-label="Interactive globe"
+      data-quality={profile.level}
+    >
       <Canvas
-        dpr={[1, 1.75]}
+        dpr={profile.dpr}
         frameloop="demand"
         camera={{ position: [0, 0.15, 3.25], fov: 38, near: 0.1, far: 100 }}
         gl={{
@@ -41,26 +73,61 @@ export function GlobeViewport({ fallbackLabel }: GlobeViewportProps) {
           powerPreference: 'high-performance',
         }}
       >
-        <GlobeScene />
+        <GlobeScene profile={profile} />
       </Canvas>
+      {contextLost ? (
+        <p className={styles.contextStatus} role="status">
+          {contextLostLabel}
+        </p>
+      ) : null}
     </div>
   );
 }
 
-function GlobeScene() {
+interface GlobeSceneProps {
+  profile: QualityProfile;
+}
+
+function GlobeScene({ profile }: GlobeSceneProps) {
   const point = useAppStore((state) => state.point);
+  const selectedCountry = useAppStore((state) => state.selectedCountry);
+  const hoveredCountry = useAppStore((state) => state.hoveredCountry);
   const hasInteracted = useAppStore((state) => state.hasInteracted);
   const selectPoint = useAppStore((state) => state.selectPoint);
   const markInteraction = useAppStore((state) => state.markInteraction);
+  const setSelectedCountry = useAppStore((state) => state.setSelectedCountry);
+  const setHoveredCountry = useAppStore((state) => state.setHoveredCountry);
   const group = useRef<Group>(null);
   const { invalidate } = useThree();
   const reducedMotion = useReducedMotion();
+  const countries = useMemo(() => getCountryDataset(), []);
+  const texture = useMemo(
+    () =>
+      createCountryTexture(
+        countries,
+        profile.textureWidth,
+        hoveredCountry?.countryId ?? null,
+        selectedCountry?.countryId ?? null,
+      ),
+    [
+      countries,
+      hoveredCountry?.countryId,
+      profile.textureWidth,
+      selectedCountry?.countryId,
+    ],
+  );
 
   const primary = useMemo(() => geoToVector3(point, 1.025), [point]);
   const antipode = useMemo(
     () => geoToVector3(antipodeOf(point), 1.025),
     [point],
   );
+
+  useEffect(() => () => texture.dispose(), [texture]);
+
+  useEffect(() => {
+    setSelectedCountry(countries.findCountry(point));
+  }, [countries, point, setSelectedCountry]);
 
   useFrame((_, delta) => {
     if (!hasInteracted && !reducedMotion && group.current) {
@@ -71,20 +138,45 @@ function GlobeScene() {
 
   function handleSelect(event: ThreeEvent<PointerEvent>) {
     event.stopPropagation();
-    selectPoint(vector3ToGeo(event.point));
+    if (!group.current) return;
+    const selectedPoint = vector3ToGeo(
+      group.current.worldToLocal(event.point.clone()),
+    );
+    selectPoint(selectedPoint);
+    setSelectedCountry(countries.findCountry(selectedPoint));
     invalidate();
+  }
+
+  function handleHover(event: ThreeEvent<PointerEvent>) {
+    event.stopPropagation();
+    if (!group.current) return;
+    const hoverPoint = vector3ToGeo(
+      group.current.worldToLocal(event.point.clone()),
+    );
+    setHoveredCountry(countries.findCountry(hoverPoint));
   }
 
   return (
     <>
       <ambientLight intensity={0.85} color="#8ca0a4" />
       <directionalLight position={[-3, 2, 4]} intensity={3.2} color="#dfe7d5" />
-      <Stars radius={30} depth={18} count={550} factor={1.1} fade speed={0} />
+      <Stars
+        radius={30}
+        depth={18}
+        count={profile.starCount}
+        factor={1.1}
+        fade
+        speed={0}
+      />
       <group ref={group}>
-        <mesh onClick={handleSelect}>
-          <sphereGeometry args={[1, 96, 64]} />
+        <mesh
+          onClick={handleSelect}
+          onPointerMove={handleHover}
+          onPointerOut={() => setHoveredCountry(null)}
+        >
+          <sphereGeometry args={[1, ...profile.sphereSegments]} />
           <meshStandardMaterial
-            color={new Color('#17262a')}
+            map={texture}
             roughness={0.9}
             metalness={0.05}
           />

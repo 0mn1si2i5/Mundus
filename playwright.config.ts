@@ -2,7 +2,10 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/e2e',
-  fullyParallel: true,
+  // WebGL browser tests share a finite GPU context budget; run them serially so
+  // capability-fallback coverage does not mask context lifecycle coverage.
+  fullyParallel: false,
+  workers: 1,
   reporter: 'html',
   use: {
     baseURL: 'http://127.0.0.1:4173',
