@@ -7,13 +7,33 @@ test('reports and clears WebGL context interruption', async ({ page }) => {
   const benchmark = page.locator('output[data-phase="complete"]');
   await expect(benchmark).toContainText('fps');
   await expect(benchmark).toContainText('p95');
-  await canvas.dispatchEvent('webglcontextlost', { cancelable: true });
+  const canLoseContext = await canvas.evaluate((element) => {
+    const context = (element as HTMLCanvasElement).getContext('webgl2');
+    const extension = context?.getExtension('WEBGL_lose_context');
+    if (!extension) return false;
+    extension.loseContext();
+    window.setTimeout(() => extension.restoreContext(), 500);
+    return true;
+  });
+  test.skip(!canLoseContext, 'WEBGL_lose_context is unavailable');
   const contextStatus = page.getByText(
     '图形上下文暂时中断，正在等待浏览器恢复。',
   );
   await expect(contextStatus).toBeVisible();
-  await canvas.dispatchEvent('webglcontextrestored');
   await expect(contextStatus).toBeHidden();
+});
+
+test('keeps country semantics when WebGL2 is unavailable', async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (contextId, ...options) {
+      if (contextId === 'webgl2') return null;
+      return Reflect.apply(original, this, [contextId, ...options]);
+    } as typeof original;
+  });
+  await page.goto('./?point=31.2304%2C121.4737&v=1');
+  await expect(page.getByText(/无法启用 WebGL2/)).toBeVisible();
+  await expect(page.getByText('China', { exact: true })).toBeVisible();
 });
 
 test('loads the laboratory shell and switches language', async ({ page }) => {
@@ -21,6 +41,17 @@ test('loads the laboratory shell and switches language', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '地球另一端' })).toBeVisible();
   await page.getByRole('button', { name: '切换为英文' }).click();
   await expect(page.getByRole('heading', { name: 'Other Side' })).toBeVisible();
+});
+
+test('matches the document language to an English browser', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ locale: 'en-US' });
+  const page = await context.newPage();
+  await page.goto('./');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page).toHaveTitle(/Interactive terrestrial laboratory/);
+  await context.close();
 });
 
 test('keeps all observation modes keyboard accessible', async ({ page }) => {
@@ -110,6 +141,25 @@ test('selects a local city and validates coordinate input', async ({
   await page.getByLabel('经度').fill('0');
   await page.getByRole('button', { name: '前往' }).click();
   await expect(page.getByRole('alert')).toContainText('纬度需在');
+
+  await page.getByLabel('纬度').fill('');
+  await page.getByLabel('经度').fill('');
+  await page.getByRole('button', { name: '前往' }).click();
+  await expect(page.getByRole('alert')).toContainText('纬度需在');
+});
+
+test('keeps controls reachable after crossing the mobile breakpoint', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('./?mode=sunline&v=1');
+  await expect(
+    page.getByRole('button', { name: '展开日照线控件' }),
+  ).toBeVisible();
+
+  await page.setViewportSize({ width: 915, height: 412 });
+  await expect(page.getByLabel('UTC 日期')).toBeVisible();
+  await expect(page.getByRole('slider', { name: /UTC 时间/ })).toBeVisible();
 });
 
 test('loads the scoped Natural Earth nearest-place result', async ({

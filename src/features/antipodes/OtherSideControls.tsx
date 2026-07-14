@@ -2,13 +2,21 @@ import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { z } from 'zod';
 import type { Locale } from '../../i18n/messages';
 import { useAppStore } from '../../state/appStore';
+import { useResponsivePanel } from '../controls/useResponsivePanel';
 import { antipodeOf } from '../globe/geo';
 import { FEATURED_CITIES, searchCities, type CityEntry } from './cities';
 import styles from './OtherSideControls.module.css';
 
+const requiredCoordinate = (minimum: number, maximum: number) =>
+  z.preprocess(
+    (value) =>
+      typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z.coerce.number().min(minimum).max(maximum),
+  );
+
 const coordinateSchema = z.object({
-  latitude: z.coerce.number().min(-90).max(90),
-  longitude: z.coerce.number().min(-180).max(180),
+  latitude: requiredCoordinate(-90, 90),
+  longitude: requiredCoordinate(-180, 180),
 });
 
 const COPY = {
@@ -57,7 +65,7 @@ export function OtherSideControls({ locale }: { locale: Locale }) {
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [locating, setLocating] = useState(false);
-  const [expanded, setExpanded] = useState(() => window.innerWidth > 760);
+  const { desktop, expanded, setExpanded } = useResponsivePanel();
   const toggle = useRef<HTMLButtonElement>(null);
   const copy = COPY[locale];
   const results = useMemo(() => searchCities(query, locale), [locale, query]);
@@ -67,7 +75,7 @@ export function OtherSideControls({ locale }: { locale: Locale }) {
     selectPoint(city.point);
     setQuery('');
     setError('');
-    if (window.innerWidth <= 760) collapse();
+    if (!desktop) collapse();
   }
 
   function collapse() {
@@ -116,7 +124,7 @@ export function OtherSideControls({ locale }: { locale: Locale }) {
       data-expanded={expanded}
       aria-labelledby="place-controls-title"
       onKeyDown={(event) => {
-        if (event.key === 'Escape' && expanded && window.innerWidth <= 760) {
+        if (event.key === 'Escape' && expanded && !desktop) {
           event.preventDefault();
           collapse();
         }

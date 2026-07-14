@@ -26,6 +26,8 @@ export const messages = {
     fallback: '此设备无法启用 WebGL2；坐标与数据界面仍然可用。',
     loadingGlobe: '正在准备地球…',
     contextLost: '图形上下文暂时中断，正在等待浏览器恢复。',
+    componentFailed: '这一部分暂时无法载入，其他功能仍可使用。',
+    retry: '重新载入',
     sunlineResult: '太阳位置结果',
     solarAltitude: '太阳高度',
     daylightState: '光照状态',
@@ -65,6 +67,9 @@ export const messages = {
     loadingGlobe: 'Preparing Earth…',
     contextLost:
       'The graphics context was interrupted; waiting for the browser to restore it.',
+    componentFailed:
+      'This part could not load. The rest of the laboratory is still available.',
+    retry: 'Reload',
     sunlineResult: 'Solar position result',
     solarAltitude: 'Solar altitude',
     daylightState: 'Light state',

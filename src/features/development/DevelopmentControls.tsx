@@ -1,7 +1,8 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Locale } from '../../i18n/messages';
 import { useAppStore } from '../../state/appStore';
 import type { CountryRef } from '../globe/countryData';
+import { useResponsivePanel } from '../controls/useResponsivePanel';
 import {
   DEVELOPMENT_INDICATORS,
   developmentColor,
@@ -33,6 +34,9 @@ const COPY = {
     methodText:
       'HDI 为 UNDP 报告值；健康、教育和收入按 HDR 2025 技术说明从组成字段派生。缺失值不会转为零。',
     source: 'UNDP HDR 2025 来源页',
+    license: 'CC BY 3.0 IGO 许可',
+    attribution:
+      '来源：UNDP《2025 人类发展报告》；由 Mundus 转换并标注派生指标。',
     scope: '195 个国家和地区 · 1990–2023',
     expand: '展开发展控件',
     collapse: '收起发展控件',
@@ -63,6 +67,9 @@ const COPY = {
     methodText:
       'HDI is reported by UNDP. Health, education and income are derived from component fields using HDR 2025 Technical Note 1. Missing values never become zero.',
     source: 'UNDP HDR 2025 source',
+    license: 'CC BY 3.0 IGO license',
+    attribution:
+      'Source: UNDP Human Development Report 2025; transformed by Mundus with derived indicators identified.',
     scope: '195 countries and territories · 1990–2023',
     expand: 'Expand development controls',
     collapse: 'Collapse development controls',
@@ -92,9 +99,10 @@ export function DevelopmentControls({
     (state) => state.selectDevelopmentIndicator,
   );
   const selectYear = useAppStore((state) => state.selectDevelopmentYear);
-  const [expanded, setExpanded] = useState(() => window.innerWidth > 760);
+  const { desktop, expanded, setExpanded } = useResponsivePanel();
   const [tableOpen, setTableOpen] = useState(false);
   const toggle = useRef<HTMLButtonElement>(null);
+  const tableButton = useRef<HTMLButtonElement>(null);
   const copy = COPY[locale];
   const country = selectedCountry
     ? (loadState.data?.countriesById.get(selectedCountry.countryId) ?? null)
@@ -114,7 +122,7 @@ export function DevelopmentControls({
         data-expanded={expanded}
         aria-labelledby="development-controls-title"
         onKeyDown={(event) => {
-          if (event.key === 'Escape' && window.innerWidth <= 760) {
+          if (event.key === 'Escape' && !desktop) {
             event.preventDefault();
             collapse();
           }
@@ -211,6 +219,7 @@ export function DevelopmentControls({
 
                 <div className={styles.footerActions}>
                   <button
+                    ref={tableButton}
                     type="button"
                     aria-expanded={tableOpen}
                     onClick={() => setTableOpen((current) => !current)}
@@ -220,12 +229,21 @@ export function DevelopmentControls({
                   <details>
                     <summary>{copy.method}</summary>
                     <p>{copy.methodText}</p>
+                    <p>{copy.attribution}</p>
                     <a
                       href="https://hdr.undp.org/data-center/documentation-and-downloads"
                       target="_blank"
                       rel="noreferrer"
                     >
                       {copy.source} ↗
+                    </a>
+                    {' · '}
+                    <a
+                      href="https://creativecommons.org/licenses/by/3.0/igo/"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {copy.license} ↗
                     </a>
                   </details>
                 </div>
@@ -242,7 +260,10 @@ export function DevelopmentControls({
           indicator={indicator}
           year={year}
           selectedCountryId={selectedCountry?.countryId ?? null}
-          onClose={() => setTableOpen(false)}
+          onClose={() => {
+            setTableOpen(false);
+            window.requestAnimationFrame(() => tableButton.current?.focus());
+          }}
         />
       ) : null}
     </>
@@ -265,6 +286,7 @@ function DevelopmentTable({
   onClose: () => void;
 }) {
   const copy = COPY[locale];
+  const closeButton = useRef<HTMLButtonElement>(null);
   const rows = useMemo(
     () =>
       countries
@@ -280,10 +302,18 @@ function DevelopmentTable({
     [countries, indicator, year],
   );
 
+  useEffect(() => closeButton.current?.focus(), []);
+
   return (
     <aside
       className={styles.tablePanel}
       aria-labelledby="development-table-title"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onClose();
+        }
+      }}
     >
       <div className={styles.tableHeading}>
         <div>
@@ -292,7 +322,12 @@ function DevelopmentTable({
             {copy.indicators[indicator]} · {year}
           </strong>
         </div>
-        <button type="button" onClick={onClose} aria-label={copy.closeTable}>
+        <button
+          ref={closeButton}
+          type="button"
+          onClick={onClose}
+          aria-label={copy.closeTable}
+        >
           ×
         </button>
       </div>

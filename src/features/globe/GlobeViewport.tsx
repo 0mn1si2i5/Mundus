@@ -226,7 +226,6 @@ function GlobeScene({
   const selectPoint = useAppStore((state) => state.selectPoint);
   const markInteraction = useAppStore((state) => state.markInteraction);
   const setSelectedCountry = useAppStore((state) => state.setSelectedCountry);
-  const setAntipodeCountry = useAppStore((state) => state.setAntipodeCountry);
   const setHoveredCountry = useAppStore((state) => state.setHoveredCountry);
   const clearCameraTarget = useAppStore((state) => state.clearCameraTarget);
   const group = useRef<Group>(null);
@@ -306,11 +305,6 @@ function GlobeScene({
   ]);
 
   useEffect(() => () => texture.dispose(), [texture]);
-
-  useEffect(() => {
-    setSelectedCountry(countries.findCountry(point));
-    setAntipodeCountry(countries.findCountry(antipodeOf(point)));
-  }, [countries, point, setAntipodeCountry, setSelectedCountry]);
 
   useFrame((_, delta) => {
     if (benchmarkActive) {

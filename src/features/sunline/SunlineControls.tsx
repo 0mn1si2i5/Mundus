@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import type { Locale } from '../../i18n/messages';
 import { useAppStore } from '../../state/appStore';
+import { useResponsivePanel } from '../controls/useResponsivePanel';
 import { clampSunlineTime } from './solar';
 import styles from './SunlineControls.module.css';
 
@@ -50,7 +51,7 @@ export function SunlineControls({ locale }: { locale: Locale }) {
   const syncLiveTime = useAppStore((state) => state.syncSunlineLiveTime);
   const setPlaying = useAppStore((state) => state.setSunlinePlaying);
   const returnToLive = useAppStore((state) => state.returnSunlineToLive);
-  const [expanded, setExpanded] = useState(() => window.innerWidth > 760);
+  const { desktop, expanded, setExpanded } = useResponsivePanel();
   const toggle = useRef<HTMLButtonElement>(null);
   const copy = COPY[locale];
   const date = new Date(timeMs);
@@ -121,7 +122,7 @@ export function SunlineControls({ locale }: { locale: Locale }) {
       data-expanded={expanded}
       aria-labelledby="sunline-controls-title"
       onKeyDown={(event) => {
-        if (event.key === 'Escape' && expanded && window.innerWidth <= 760) {
+        if (event.key === 'Escape' && expanded && !desktop) {
           event.preventDefault();
           collapse();
         }

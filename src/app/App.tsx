@@ -4,6 +4,7 @@ import {
   Suspense,
   type ErrorInfo,
   type ReactNode,
+  useEffect,
   useMemo,
   useState,
 } from 'react';
@@ -29,6 +30,7 @@ import {
   solarPosition,
 } from '../features/sunline/solar';
 import styles from './App.module.css';
+import { useCountrySelection } from '../features/globe/useCountrySelection';
 
 const GlobeViewport = lazy(() =>
   import('../features/globe/GlobeViewport').then((module) => ({
@@ -57,6 +59,8 @@ const SunlineControls = lazy(() =>
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback: ReactNode;
+  resetKey: string;
+  scope: string;
 }
 
 interface ErrorBoundaryState {
@@ -71,7 +75,13 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('Globe viewport failed', error, info);
+    console.error(`${this.props.scope} failed`, error, info);
+  }
+
+  componentDidUpdate(previous: ErrorBoundaryProps) {
+    if (this.state.failed && previous.resetKey !== this.props.resetKey) {
+      this.setState({ failed: false });
+    }
   }
 
   render() {
@@ -129,6 +139,23 @@ export function App() {
     },
   );
   useUrlState();
+  useCountrySelection();
+
+  useEffect(() => {
+    document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en';
+    document.title =
+      locale === 'zh'
+        ? 'Mundus · 交互式三维地球实验室'
+        : 'Mundus · Interactive terrestrial laboratory';
+    document
+      .querySelector('meta[name="description"]')
+      ?.setAttribute(
+        'content',
+        locale === 'zh'
+          ? 'Mundus — 用不同的观察方式重新认识地球。'
+          : 'Mundus — See Earth again through different ways of observing.',
+      );
+  }, [locale]);
 
   return (
     <main className={styles.shell}>
@@ -171,7 +198,17 @@ export function App() {
         <p>{mode.question[locale]}</p>
       </section>
 
-      <ErrorBoundary fallback={<GlobeFallback label={t.fallback} />}>
+      <ErrorBoundary
+        resetKey={activeMode}
+        scope="Globe viewport"
+        fallback={
+          <RecoverableFallback
+            label={t.componentFailed}
+            retryLabel={t.retry}
+            globe
+          />
+        }
+      >
         <Suspense fallback={<GlobeFallback label={t.loadingGlobe} />}>
           <GlobeViewport
             fallbackLabel={t.fallback}
@@ -297,25 +334,43 @@ export function App() {
       ) : null}
 
       {activeMode === 'antipodes' ? (
-        <Suspense fallback={null}>
-          <OtherSideControls locale={locale} />
-        </Suspense>
+        <ModeBoundary
+          mode={activeMode}
+          label={t.componentFailed}
+          retry={t.retry}
+        >
+          <Suspense fallback={null}>
+            <OtherSideControls locale={locale} />
+          </Suspense>
+        </ModeBoundary>
       ) : null}
 
       {activeMode === 'development' ? (
-        <Suspense fallback={null}>
-          <DevelopmentControls
-            locale={locale}
-            loadState={developmentData}
-            selectedCountry={selectedCountry}
-          />
-        </Suspense>
+        <ModeBoundary
+          mode={activeMode}
+          label={t.componentFailed}
+          retry={t.retry}
+        >
+          <Suspense fallback={null}>
+            <DevelopmentControls
+              locale={locale}
+              loadState={developmentData}
+              selectedCountry={selectedCountry}
+            />
+          </Suspense>
+        </ModeBoundary>
       ) : null}
 
       {activeMode === 'sunline' ? (
-        <Suspense fallback={null}>
-          <SunlineControls locale={locale} />
-        </Suspense>
+        <ModeBoundary
+          mode={activeMode}
+          label={t.componentFailed}
+          retry={t.retry}
+        >
+          <Suspense fallback={null}>
+            <SunlineControls locale={locale} />
+          </Suspense>
+        </ModeBoundary>
       ) : null}
 
       <nav className={styles.modeNav} aria-label={t.modes}>
@@ -350,6 +405,50 @@ function GlobeFallback({ label }: { label: string }) {
     <section className={styles.fallback} role="img" aria-label={label}>
       <div />
       <p>{label}</p>
+    </section>
+  );
+}
+
+function ModeBoundary({
+  mode,
+  label,
+  retry,
+  children,
+}: {
+  mode: string;
+  label: string;
+  retry: string;
+  children: ReactNode;
+}) {
+  return (
+    <ErrorBoundary
+      resetKey={mode}
+      scope={`${mode} controls`}
+      fallback={<RecoverableFallback label={label} retryLabel={retry} />}
+    >
+      {children}
+    </ErrorBoundary>
+  );
+}
+
+function RecoverableFallback({
+  label,
+  retryLabel,
+  globe = false,
+}: {
+  label: string;
+  retryLabel: string;
+  globe?: boolean;
+}) {
+  return (
+    <section
+      className={globe ? styles.recoverableGlobe : styles.recoverableMode}
+      role="alert"
+    >
+      <p>{label}</p>
+      <button type="button" onClick={() => window.location.reload()}>
+        {retryLabel}
+      </button>
     </section>
   );
 }
