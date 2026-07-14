@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+.playwright-cli/
+output/
+.vite/
+*.local
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
