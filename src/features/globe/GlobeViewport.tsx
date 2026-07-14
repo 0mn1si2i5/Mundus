@@ -5,9 +5,23 @@ import {
   useThree,
 } from '@react-three/fiber';
 import { Line, OrbitControls, Stars } from '@react-three/drei';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type Ref,
+} from 'react';
 import type { Group } from 'three';
-import { AdditiveBlending, BackSide, Quaternion, type Vector3 } from 'three';
+import {
+  AdditiveBlending,
+  BackSide,
+  MathUtils,
+  Quaternion,
+  Vector3,
+} from 'three';
 import { useAppStore } from '../../state/appStore';
 import { useFrameBenchmark } from '../performance/useFrameBenchmark';
 import { createCountryTexture, getCountryDataset } from './countryData';
@@ -19,17 +33,79 @@ import styles from './GlobeViewport.module.css';
 interface GlobeViewportProps {
   fallbackLabel: string;
   contextLostLabel: string;
+  ariaLabel: string;
+  keyboardInstructions: string;
+  keyboardMovedLabel: string;
+  keyboardZoomedLabel: string;
+  keyboardSelectedLabel: string;
+}
+
+interface GlobeKeyboardController {
+  rotateHorizontal: (radians: number) => void;
+  rotateVertical: (radians: number) => void;
+  zoom: (factor: number) => void;
+  selectCenter: () => void;
 }
 
 export function GlobeViewport({
   fallbackLabel,
   contextLostLabel,
+  ariaLabel,
+  keyboardInstructions,
+  keyboardMovedLabel,
+  keyboardZoomedLabel,
+  keyboardSelectedLabel,
 }: GlobeViewportProps) {
   const [supported] = useState(supportsWebGL2);
   const [profile] = useState(detectQualityProfile);
   const [contextLost, setContextLost] = useState(false);
   const viewport = useRef<HTMLDivElement>(null);
+  const keyboardController = useRef<GlobeKeyboardController>(null);
+  const [keyboardStatus, setKeyboardStatus] = useState('');
   const benchmark = useFrameBenchmark(profile.level);
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const controller = keyboardController.current;
+    if (!controller) return;
+    const rotationStep = MathUtils.degToRad(event.shiftKey ? 15 : 5);
+
+    switch (event.key) {
+      case 'ArrowLeft':
+        controller.rotateHorizontal(rotationStep);
+        setKeyboardStatus(keyboardMovedLabel);
+        break;
+      case 'ArrowRight':
+        controller.rotateHorizontal(-rotationStep);
+        setKeyboardStatus(keyboardMovedLabel);
+        break;
+      case 'ArrowUp':
+        controller.rotateVertical(-rotationStep);
+        setKeyboardStatus(keyboardMovedLabel);
+        break;
+      case 'ArrowDown':
+        controller.rotateVertical(rotationStep);
+        setKeyboardStatus(keyboardMovedLabel);
+        break;
+      case '+':
+      case '=':
+        controller.zoom(0.88);
+        setKeyboardStatus(keyboardZoomedLabel);
+        break;
+      case '-':
+      case '_':
+        controller.zoom(1.14);
+        setKeyboardStatus(keyboardZoomedLabel);
+        break;
+      case 'Enter':
+        controller.selectCenter();
+        setKeyboardStatus(keyboardSelectedLabel);
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+  }
 
   useEffect(() => {
     const canvas = viewport.current?.querySelector('canvas');
@@ -62,9 +138,16 @@ export function GlobeViewport({
     <div
       ref={viewport}
       className={styles.viewport}
-      aria-label="Interactive globe"
+      role="region"
+      aria-label={ariaLabel}
+      aria-describedby="globe-keyboard-instructions"
       data-quality={profile.level}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
     >
+      <p id="globe-keyboard-instructions" className={styles.visuallyHidden}>
+        {keyboardInstructions}
+      </p>
       <Canvas
         dpr={profile.dpr}
         frameloop="demand"
@@ -79,6 +162,7 @@ export function GlobeViewport({
           profile={profile}
           benchmarkActive={benchmark.active}
           recordBenchmarkFrame={benchmark.recordFrame}
+          keyboardController={keyboardController}
         />
       </Canvas>
       {contextLost ? (
@@ -89,6 +173,9 @@ export function GlobeViewport({
       {benchmark.enabled ? (
         <BenchmarkPanel phase={benchmark.phase} result={benchmark.result} />
       ) : null}
+      <output className={styles.visuallyHidden} aria-live="polite">
+        {keyboardStatus}
+      </output>
     </div>
   );
 }
@@ -97,12 +184,14 @@ interface GlobeSceneProps {
   profile: QualityProfile;
   benchmarkActive: boolean;
   recordBenchmarkFrame: (timestamp: number) => void;
+  keyboardController: Ref<GlobeKeyboardController>;
 }
 
 function GlobeScene({
   profile,
   benchmarkActive,
   recordBenchmarkFrame,
+  keyboardController,
 }: GlobeSceneProps) {
   const point = useAppStore((state) => state.point);
   const selectedCountry = useAppStore((state) => state.selectedCountry);
@@ -140,6 +229,52 @@ function GlobeScene({
     () => geoToVector3(antipodeOf(point), 1.025),
     [point],
   );
+
+  useImperativeHandle(keyboardController, () => {
+    function finishCameraMove() {
+      camera.lookAt(0, 0, 0);
+      clearCameraTarget();
+      markInteraction();
+      invalidate();
+    }
+
+    return {
+      rotateHorizontal(radians) {
+        camera.position.applyAxisAngle(new Vector3(0, 1, 0), radians);
+        finishCameraMove();
+      },
+      rotateVertical(radians) {
+        const right = new Vector3(1, 0, 0)
+          .applyQuaternion(camera.quaternion)
+          .normalize();
+        camera.position.applyAxisAngle(right, radians);
+        finishCameraMove();
+      },
+      zoom(factor) {
+        camera.position.setLength(
+          MathUtils.clamp(camera.position.length() * factor, 2.15, 5),
+        );
+        finishCameraMove();
+      },
+      selectCenter() {
+        if (!group.current) return;
+        const center = vector3ToGeo(
+          group.current.worldToLocal(camera.position.clone()).normalize(),
+        );
+        selectPoint(center);
+        setSelectedCountry(countries.findCountry(center));
+        invalidate();
+      },
+    };
+  }, [
+    camera,
+    clearCameraTarget,
+    countries,
+    invalidate,
+    markInteraction,
+    selectPoint,
+    setSelectedCountry,
+  ]);
 
   useEffect(() => () => texture.dispose(), [texture]);
 

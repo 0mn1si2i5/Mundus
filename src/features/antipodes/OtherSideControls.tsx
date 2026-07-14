@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { z } from 'zod';
 import type { Locale } from '../../i18n/messages';
 import { useAppStore } from '../../state/appStore';
@@ -58,6 +58,7 @@ export function OtherSideControls({ locale }: { locale: Locale }) {
   const [error, setError] = useState('');
   const [locating, setLocating] = useState(false);
   const [expanded, setExpanded] = useState(() => window.innerWidth > 760);
+  const toggle = useRef<HTMLButtonElement>(null);
   const copy = COPY[locale];
   const results = useMemo(() => searchCities(query, locale), [locale, query]);
   const examples = FEATURED_CITIES.filter((city) => EXAMPLE_IDS.has(city.id));
@@ -66,7 +67,12 @@ export function OtherSideControls({ locale }: { locale: Locale }) {
     selectPoint(city.point);
     setQuery('');
     setError('');
-    if (window.innerWidth <= 760) setExpanded(false);
+    if (window.innerWidth <= 760) collapse();
+  }
+
+  function collapse() {
+    setExpanded(false);
+    window.requestAnimationFrame(() => toggle.current?.focus());
   }
 
   function submitCoordinates(event: FormEvent<HTMLFormElement>) {
@@ -109,15 +115,23 @@ export function OtherSideControls({ locale }: { locale: Locale }) {
       className={styles.panel}
       data-expanded={expanded}
       aria-labelledby="place-controls-title"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && expanded && window.innerWidth <= 760) {
+          event.preventDefault();
+          collapse();
+        }
+      }}
     >
       <div className={styles.heading}>
         <h2 id="place-controls-title">{copy.title}</h2>
         <div className={styles.headingActions}>
           <button
+            ref={toggle}
             type="button"
             className={styles.toggle}
             onClick={() => setExpanded((current) => !current)}
             aria-expanded={expanded}
+            aria-controls="place-controls-body"
             aria-label={expanded ? copy.hide : copy.show}
           >
             <span aria-hidden="true">{expanded ? '–' : '+'}</span>
@@ -133,7 +147,7 @@ export function OtherSideControls({ locale }: { locale: Locale }) {
       </div>
 
       {expanded ? (
-        <div className={styles.body}>
+        <div id="place-controls-body" className={styles.body}>
           <label className={styles.search}>
             <span>{copy.search}</span>
             <input

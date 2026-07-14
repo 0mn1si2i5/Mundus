@@ -32,6 +32,17 @@ test('keeps all observation modes keyboard accessible', async ({ page }) => {
   ).toBeVisible();
 });
 
+test('rotates and selects the globe from the keyboard', async ({ page }) => {
+  await page.goto('./');
+  const globe = page.getByRole('region', { name: '交互式三维地球' });
+  await globe.focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('=');
+  await page.keyboard.press('Enter');
+  await expect(page).not.toHaveURL(/point=31.2304%2C121.4737/);
+  await expect(globe).toBeFocused();
+});
+
 test('restores shareable state and browser history', async ({ page }) => {
   await page.goto('./?mode=sunline&point=0%2C-140&v=1');
   await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
@@ -56,7 +67,9 @@ test('selects a local city and validates coordinate input', async ({
   await expect(page).toHaveURL(/point=35.6762%2C139.6503/);
 
   if (testInfo.project.name === 'mobile') {
-    await page.getByRole('button', { name: '展开地点控件' }).click();
+    const expand = page.getByRole('button', { name: '展开地点控件' });
+    await expect(expand).toBeFocused();
+    await expand.click();
   }
   await page.getByLabel('纬度').fill('91');
   await page.getByLabel('经度').fill('0');
@@ -87,4 +100,8 @@ test('offers explicit share precision choices', async ({ page }) => {
   await expect(
     dialog.getByRole('button', { name: '复制约略位置' }),
   ).toBeVisible();
+  await expect(dialog.getByRole('button', { name: '关闭' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('button', { name: '分享' })).toBeFocused();
 });

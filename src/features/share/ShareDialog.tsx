@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { Locale } from '../../i18n/messages';
 import { useAppStore } from '../../state/appStore';
 import { createShareUrl, type SharePrecision } from './shareUrl';
@@ -39,7 +39,41 @@ export function ShareDialog({
     createShareUrl(window.location.href, { activeMode, point }, 'approximate'),
   );
   const [status, setStatus] = useState('');
+  const dialog = useRef<HTMLElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
   const copy = COPY[locale];
+
+  useEffect(() => {
+    const restoreFocus = document.activeElement;
+    closeButton.current?.focus();
+    return () => {
+      if (restoreFocus instanceof HTMLElement) restoreFocus.focus();
+    };
+  }, []);
+
+  function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      onClose();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+
+    const buttons = dialog.current?.querySelectorAll<HTMLButtonElement>(
+      'button:not([disabled])',
+    );
+    const first = buttons?.[0];
+    const last = buttons?.[buttons.length - 1];
+    if (!first || !last) return;
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 
   async function copyLink(precision: SharePrecision) {
     const url = createShareUrl(
@@ -59,13 +93,17 @@ export function ShareDialog({
   return (
     <div className={styles.backdrop} onMouseDown={onClose}>
       <section
+        ref={dialog}
         className={styles.dialog}
         role="dialog"
         aria-modal="true"
         aria-labelledby="share-title"
+        aria-describedby="share-description"
         onMouseDown={(event) => event.stopPropagation()}
+        onKeyDown={handleKeyDown}
       >
         <button
+          ref={closeButton}
           className={styles.close}
           type="button"
           onClick={onClose}
@@ -75,7 +113,7 @@ export function ShareDialog({
         </button>
         <p>URL / POSITION</p>
         <h2 id="share-title">{copy.title}</h2>
-        <p>{copy.description}</p>
+        <p id="share-description">{copy.description}</p>
         <code>{preview}</code>
         <div className={styles.actions}>
           <button type="button" onClick={() => copyLink('approximate')}>

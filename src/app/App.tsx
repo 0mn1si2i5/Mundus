@@ -120,6 +120,11 @@ export function App() {
           <GlobeViewport
             fallbackLabel={t.fallback}
             contextLostLabel={t.contextLost}
+            ariaLabel={t.globeLabel}
+            keyboardInstructions={t.globeKeyboard}
+            keyboardMovedLabel={t.globeMoved}
+            keyboardZoomedLabel={t.globeZoomed}
+            keyboardSelectedLabel={t.globeSelected}
           />
         </Suspense>
       </ErrorBoundary>
