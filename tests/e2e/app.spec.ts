@@ -35,10 +35,45 @@ test('keeps all observation modes keyboard accessible', async ({ page }) => {
 test('restores shareable state and browser history', async ({ page }) => {
   await page.goto('./?mode=sunline&point=0%2C-140&v=1');
   await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
-  await expect(page.getByText('海洋或未知区域')).toBeVisible();
+  await expect(page.getByText('海洋或未知区域').first()).toBeVisible();
 
   await page.getByRole('button', { name: /发展的不同侧面/ }).click();
   await expect(page).toHaveURL(/mode=development/);
   await page.goBack();
   await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
+});
+
+test('selects a local city and validates coordinate input', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./');
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开地点控件' }).click();
+  }
+  await page.getByLabel('搜索本地城市').fill('Tokyo');
+  await page.getByRole('button', { name: /东京/ }).click();
+  await expect(page.getByText('Japan', { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/point=35.6762%2C139.6503/);
+
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开地点控件' }).click();
+  }
+  await page.getByLabel('纬度').fill('91');
+  await page.getByLabel('经度').fill('0');
+  await page.getByRole('button', { name: '前往' }).click();
+  await expect(page.getByRole('alert')).toContainText('纬度需在');
+});
+
+test('offers explicit share precision choices', async ({ page }) => {
+  await page.goto('./?point=30.25%2C120.75&v=1');
+  await page.getByRole('button', { name: '分享' }).click();
+  const dialog = page.getByRole('dialog', { name: '分享这一视角' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText(/point=30%2C121/)).toBeVisible();
+  await expect(
+    dialog.getByRole('button', { name: '复制精确位置' }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole('button', { name: '复制约略位置' }),
+  ).toBeVisible();
 });

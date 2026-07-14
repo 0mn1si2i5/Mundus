@@ -1,0 +1,211 @@
+import { useMemo, useState, type FormEvent } from 'react';
+import { z } from 'zod';
+import type { Locale } from '../../i18n/messages';
+import { useAppStore } from '../../state/appStore';
+import { antipodeOf } from '../globe/geo';
+import { FEATURED_CITIES, searchCities, type CityEntry } from './cities';
+import styles from './OtherSideControls.module.css';
+
+const coordinateSchema = z.object({
+  latitude: z.coerce.number().min(-90).max(90),
+  longitude: z.coerce.number().min(-180).max(180),
+});
+
+const COPY = {
+  zh: {
+    title: '选择一个起点',
+    search: '搜索本地城市',
+    searchPlaceholder: '城市或国家',
+    coordinates: '坐标',
+    latitude: '纬度',
+    longitude: '经度',
+    apply: '前往',
+    locate: '使用我的位置',
+    locating: '正在定位…',
+    locationError: '无法读取位置，请检查浏览器权限。',
+    invalid: '纬度需在 ±90°、经度需在 ±180° 内。',
+    flip: '翻到另一端',
+    examples: '精选起点',
+    show: '展开地点控件',
+    hide: '收起地点控件',
+  },
+  en: {
+    title: 'Choose a starting point',
+    search: 'Search local cities',
+    searchPlaceholder: 'City or country',
+    coordinates: 'Coordinates',
+    latitude: 'Latitude',
+    longitude: 'Longitude',
+    apply: 'Go',
+    locate: 'Use my location',
+    locating: 'Locating…',
+    locationError: 'Location is unavailable. Check browser permission.',
+    invalid: 'Latitude must be within ±90° and longitude within ±180°.',
+    flip: 'See the other side',
+    examples: 'Featured starts',
+    show: 'Expand place controls',
+    hide: 'Collapse place controls',
+  },
+} as const;
+
+const EXAMPLE_IDS = new Set(['shanghai', 'madrid', 'honolulu']);
+
+export function OtherSideControls({ locale }: { locale: Locale }) {
+  const point = useAppStore((state) => state.point);
+  const selectPoint = useAppStore((state) => state.selectPoint);
+  const requestCameraFocus = useAppStore((state) => state.requestCameraFocus);
+  const [query, setQuery] = useState('');
+  const [error, setError] = useState('');
+  const [locating, setLocating] = useState(false);
+  const [expanded, setExpanded] = useState(() => window.innerWidth > 760);
+  const copy = COPY[locale];
+  const results = useMemo(() => searchCities(query, locale), [locale, query]);
+  const examples = FEATURED_CITIES.filter((city) => EXAMPLE_IDS.has(city.id));
+
+  function chooseCity(city: CityEntry) {
+    selectPoint(city.point);
+    setQuery('');
+    setError('');
+    if (window.innerWidth <= 760) setExpanded(false);
+  }
+
+  function submitCoordinates(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const parsed = coordinateSchema.safeParse({
+      latitude: data.get('latitude'),
+      longitude: data.get('longitude'),
+    });
+    if (!parsed.success) {
+      setError(copy.invalid);
+      return;
+    }
+    selectPoint(parsed.data);
+    setError('');
+  }
+
+  function locate() {
+    if (!navigator.geolocation) {
+      setError(copy.locationError);
+      return;
+    }
+    setLocating(true);
+    setError('');
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        selectPoint({ latitude: coords.latitude, longitude: coords.longitude });
+        setLocating(false);
+      },
+      () => {
+        setError(copy.locationError);
+        setLocating(false);
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
+    );
+  }
+
+  return (
+    <section
+      className={styles.panel}
+      data-expanded={expanded}
+      aria-labelledby="place-controls-title"
+    >
+      <div className={styles.heading}>
+        <h2 id="place-controls-title">{copy.title}</h2>
+        <div className={styles.headingActions}>
+          <button
+            type="button"
+            className={styles.toggle}
+            onClick={() => setExpanded((current) => !current)}
+            aria-expanded={expanded}
+            aria-label={expanded ? copy.hide : copy.show}
+          >
+            <span aria-hidden="true">{expanded ? '–' : '+'}</span>
+          </button>
+          <button
+            type="button"
+            className={styles.flip}
+            onClick={() => requestCameraFocus(antipodeOf(point))}
+          >
+            {copy.flip} <span aria-hidden="true">↗</span>
+          </button>
+        </div>
+      </div>
+
+      {expanded ? (
+        <div className={styles.body}>
+          <label className={styles.search}>
+            <span>{copy.search}</span>
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={copy.searchPlaceholder}
+              autoComplete="off"
+            />
+          </label>
+          {results.length > 0 ? (
+            <ul className={styles.results} aria-label={copy.search}>
+              {results.map((city) => (
+                <li key={city.id}>
+                  <button type="button" onClick={() => chooseCity(city)}>
+                    <strong>{city.name[locale]}</strong>
+                    <span>{city.country[locale]}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          <form
+            key={`${point.latitude},${point.longitude}`}
+            className={styles.coordinates}
+            onSubmit={submitCoordinates}
+          >
+            <span>{copy.coordinates}</span>
+            <label>
+              <span>{copy.latitude}</span>
+              <input
+                name="latitude"
+                inputMode="decimal"
+                defaultValue={point.latitude.toFixed(4)}
+              />
+            </label>
+            <label>
+              <span>{copy.longitude}</span>
+              <input
+                name="longitude"
+                inputMode="decimal"
+                defaultValue={point.longitude.toFixed(4)}
+              />
+            </label>
+            <button type="submit">{copy.apply}</button>
+          </form>
+
+          <div className={styles.secondary}>
+            <button type="button" onClick={locate} disabled={locating}>
+              {locating ? copy.locating : copy.locate}
+            </button>
+            <div className={styles.examples} aria-label={copy.examples}>
+              <span>{copy.examples}</span>
+              {examples.map((city) => (
+                <button
+                  key={city.id}
+                  type="button"
+                  onClick={() => chooseCity(city)}
+                >
+                  {city.name[locale]}
+                </button>
+              ))}
+            </div>
+          </div>
+          {error ? (
+            <p className={styles.error} role="alert">
+              {error}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
+  );
+}

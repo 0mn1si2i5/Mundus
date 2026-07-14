@@ -1,0 +1,96 @@
+.backdrop {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(3 5 7 / 72%);
+  backdrop-filter: blur(10px);
+}
+
+.dialog {
+  position: relative;
+  width: min(31rem, 100%);
+  padding: 1.5rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-panel);
+}
+
+.dialog > p:first-of-type {
+  margin: 0 0 0.7rem;
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+}
+
+.dialog h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 400;
+}
+
+.dialog h2 + p {
+  color: var(--color-subtle);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.dialog code {
+  display: block;
+  overflow-wrap: anywhere;
+  padding: 0.8rem;
+  border: 1px solid var(--color-line);
+  color: var(--color-muted);
+  font-size: 0.65rem;
+}
+
+.close {
+  position: absolute;
+  top: 0.8rem;
+  right: 0.8rem;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--color-line);
+  border-radius: 50%;
+  color: var(--color-text);
+  background: transparent;
+  cursor: pointer;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.actions button {
+  min-height: 2.7rem;
+  padding: 0.6rem;
+  border: 1px solid var(--color-line);
+  color: var(--color-text);
+  background: transparent;
+  cursor: pointer;
+}
+
+.actions button:last-child {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.dialog output {
+  display: block;
+  min-height: 1em;
+  margin-top: 0.7rem;
+  color: var(--color-accent);
+  font-size: 0.7rem;
+}
+
+@media (max-width: 520px) {
+  .actions {
+    grid-template-columns: 1fr;
+  }
+}

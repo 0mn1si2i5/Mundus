@@ -2,25 +2,26 @@ import { create } from 'zustand';
 import type { Locale } from '../i18n/messages';
 import type { ModeId } from '../features/modes/modeRegistry';
 import type { CountryRef } from '../features/globe/countryData';
+import type { GeoPoint } from '../features/globe/geo';
 import { parseUrlState } from './urlState';
-
-interface GeoPoint {
-  latitude: number;
-  longitude: number;
-}
 
 interface AppState {
   locale: Locale;
   activeMode: ModeId;
   point: GeoPoint;
   selectedCountry: CountryRef | null;
+  antipodeCountry: CountryRef | null;
   hoveredCountry: CountryRef | null;
+  cameraTarget: GeoPoint | null;
   hasInteracted: boolean;
   selectMode: (mode: ModeId) => void;
   selectPoint: (point: GeoPoint) => void;
   setLocale: (locale: Locale) => void;
   setSelectedCountry: (country: CountryRef | null) => void;
+  setAntipodeCountry: (country: CountryRef | null) => void;
   setHoveredCountry: (country: CountryRef | null) => void;
+  requestCameraFocus: (point: GeoPoint) => void;
+  clearCameraTarget: () => void;
   markInteraction: () => void;
 }
 
@@ -38,10 +39,13 @@ export const useAppStore = create<AppState>((set) => ({
   locale: preferredLocale(),
   ...initialUrlState,
   selectedCountry: null,
+  antipodeCountry: null,
   hoveredCountry: null,
+  cameraTarget: null,
   hasInteracted: false,
   selectMode: (activeMode) => set({ activeMode }),
-  selectPoint: (point) => set({ point, hasInteracted: true }),
+  selectPoint: (point) =>
+    set({ point, cameraTarget: point, hasInteracted: true }),
   setLocale: (locale) => {
     document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en';
     set({ locale });
@@ -52,11 +56,20 @@ export const useAppStore = create<AppState>((set) => ({
         ? state
         : { selectedCountry },
     ),
+  setAntipodeCountry: (antipodeCountry) =>
+    set((state) =>
+      state.antipodeCountry?.countryId === antipodeCountry?.countryId
+        ? state
+        : { antipodeCountry },
+    ),
   setHoveredCountry: (hoveredCountry) =>
     set((state) =>
       state.hoveredCountry?.countryId === hoveredCountry?.countryId
         ? state
         : { hoveredCountry },
     ),
+  requestCameraFocus: (cameraTarget) =>
+    set({ cameraTarget, hasInteracted: true }),
+  clearCameraTarget: () => set({ cameraTarget: null }),
   markInteraction: () => set({ hasInteracted: true }),
 }));

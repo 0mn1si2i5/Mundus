@@ -4,9 +4,15 @@ import {
   Suspense,
   type ErrorInfo,
   type ReactNode,
+  useState,
 } from 'react';
 import { antipodeOf } from '../features/globe/geo';
+import {
+  chordDistanceKm,
+  surfaceDistanceKm,
+} from '../features/antipodes/distance';
 import { MODE_DEFINITIONS } from '../features/modes/modeRegistry';
+import { ShareDialog } from '../features/share/ShareDialog';
 import { useAppStore } from '../state/appStore';
 import { useUrlState } from './useUrlState';
 import { messages } from '../i18n/messages';
@@ -15,6 +21,12 @@ import styles from './App.module.css';
 const GlobeViewport = lazy(() =>
   import('../features/globe/GlobeViewport').then((module) => ({
     default: module.GlobeViewport,
+  })),
+);
+
+const OtherSideControls = lazy(() =>
+  import('../features/antipodes/OtherSideControls').then((module) => ({
+    default: module.OtherSideControls,
   })),
 );
 
@@ -44,16 +56,24 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 }
 
 export function App() {
+  const [shareOpen, setShareOpen] = useState(false);
   const locale = useAppStore((state) => state.locale);
   const activeMode = useAppStore((state) => state.activeMode);
   const point = useAppStore((state) => state.point);
   const selectedCountry = useAppStore((state) => state.selectedCountry);
+  const antipodeCountry = useAppStore((state) => state.antipodeCountry);
   const hoveredCountry = useAppStore((state) => state.hoveredCountry);
   const selectMode = useAppStore((state) => state.selectMode);
   const setLocale = useAppStore((state) => state.setLocale);
   const t = messages[locale];
   const mode = MODE_DEFINITIONS[activeMode];
   const antipode = antipodeOf(point);
+  const numberFormatter = new Intl.NumberFormat(
+    locale === 'zh' ? 'zh-CN' : 'en-US',
+    {
+      maximumFractionDigits: 0,
+    },
+  );
   useUrlState();
 
   return (
@@ -66,7 +86,11 @@ export function App() {
           <p className={styles.eyebrow}>{t.laboratory}</p>
         </div>
         <div className={styles.actions}>
-          <button className={styles.textButton} type="button" disabled>
+          <button
+            className={styles.textButton}
+            type="button"
+            onClick={() => setShareOpen(true)}
+          >
             {t.share}
           </button>
           <button
@@ -103,13 +127,30 @@ export function App() {
         </strong>
         <div className={styles.rule} />
         <span>{t.antipode}</span>
+        <em>{antipodeCountry?.name ?? t.openOcean}</em>
         <strong>
           {antipode.latitude.toFixed(4)}°, {antipode.longitude.toFixed(4)}°
         </strong>
+        <div className={styles.distanceRow}>
+          <span>{t.coreDistance}</span>
+          <strong>
+            {numberFormatter.format(chordDistanceKm(point, antipode))} km
+          </strong>
+          <span>{t.surfaceDistance}</span>
+          <strong>
+            {numberFormatter.format(surfaceDistanceKm(point, antipode))} km
+          </strong>
+        </div>
       </aside>
 
       {hoveredCountry ? (
         <p className={styles.hoverLabel}>{hoveredCountry.name}</p>
+      ) : null}
+
+      {activeMode === 'antipodes' ? (
+        <Suspense fallback={null}>
+          <OtherSideControls locale={locale} />
+        </Suspense>
       ) : null}
 
       <nav className={styles.modeNav} aria-label={t.modes}>
@@ -128,6 +169,9 @@ export function App() {
       </nav>
 
       <p className={styles.hint}>{t.hint}</p>
+      {shareOpen ? (
+        <ShareDialog locale={locale} onClose={() => setShareOpen(false)} />
+      ) : null}
     </main>
   );
 }

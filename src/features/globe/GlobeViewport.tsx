@@ -4,10 +4,10 @@ import {
   useFrame,
   useThree,
 } from '@react-three/fiber';
-import { OrbitControls, Stars } from '@react-three/drei';
+import { Line, OrbitControls, Stars } from '@react-three/drei';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Group } from 'three';
-import { AdditiveBlending, BackSide, type Vector3 } from 'three';
+import { AdditiveBlending, BackSide, Quaternion, type Vector3 } from 'three';
 import { useAppStore } from '../../state/appStore';
 import { useFrameBenchmark } from '../performance/useFrameBenchmark';
 import { createCountryTexture, getCountryDataset } from './countryData';
@@ -107,13 +107,16 @@ function GlobeScene({
   const point = useAppStore((state) => state.point);
   const selectedCountry = useAppStore((state) => state.selectedCountry);
   const hoveredCountry = useAppStore((state) => state.hoveredCountry);
+  const cameraTarget = useAppStore((state) => state.cameraTarget);
   const hasInteracted = useAppStore((state) => state.hasInteracted);
   const selectPoint = useAppStore((state) => state.selectPoint);
   const markInteraction = useAppStore((state) => state.markInteraction);
   const setSelectedCountry = useAppStore((state) => state.setSelectedCountry);
+  const setAntipodeCountry = useAppStore((state) => state.setAntipodeCountry);
   const setHoveredCountry = useAppStore((state) => state.setHoveredCountry);
+  const clearCameraTarget = useAppStore((state) => state.clearCameraTarget);
   const group = useRef<Group>(null);
-  const { invalidate } = useThree();
+  const { camera, invalidate } = useThree();
   const reducedMotion = useReducedMotion();
   const countries = useMemo(() => getCountryDataset(), []);
   const texture = useMemo(
@@ -142,7 +145,8 @@ function GlobeScene({
 
   useEffect(() => {
     setSelectedCountry(countries.findCountry(point));
-  }, [countries, point, setSelectedCountry]);
+    setAntipodeCountry(countries.findCountry(antipodeOf(point)));
+  }, [countries, point, setAntipodeCountry, setSelectedCountry]);
 
   useFrame((_, delta) => {
     if (benchmarkActive) {
@@ -151,6 +155,32 @@ function GlobeScene({
     }
     if (!hasInteracted && !reducedMotion && group.current) {
       group.current.rotation.y += delta * 0.035;
+      invalidate();
+    }
+    if (cameraTarget && group.current) {
+      const cameraDistance = camera.position.length();
+      const currentDirection = camera.position.clone().normalize();
+      const targetDirection = geoToVector3(cameraTarget)
+        .applyQuaternion(group.current.quaternion)
+        .normalize();
+      const remaining = currentDirection.angleTo(targetDirection);
+      if (remaining < 0.003 || reducedMotion) {
+        camera.position.copy(targetDirection.multiplyScalar(cameraDistance));
+        clearCameraTarget();
+      } else {
+        const rotation = new Quaternion().setFromUnitVectors(
+          currentDirection,
+          targetDirection,
+        );
+        const partial = new Quaternion().slerp(
+          rotation,
+          1 - Math.exp(-delta * 3.2),
+        );
+        camera.position
+          .copy(currentDirection.applyQuaternion(partial))
+          .multiplyScalar(cameraDistance);
+      }
+      camera.lookAt(0, 0, 0);
       invalidate();
     }
   });
@@ -221,6 +251,14 @@ function GlobeScene({
         </mesh>
         <Marker position={primary} color="#e8e0c8" />
         <Marker position={antipode} color="#9cc7b7" />
+        <Line
+          points={[primary, [0, 0, 0], antipode]}
+          color="#b8cfb9"
+          lineWidth={1}
+          transparent
+          opacity={0.4}
+          depthTest={false}
+        />
       </group>
       <OrbitControls
         enablePan={false}
