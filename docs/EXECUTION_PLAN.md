@@ -1,0 +1,213 @@
+# Mundus V1 → V1.1 execution plan
+
+- Status: active
+- Updated: 2026-07-15
+- Active branch: `codex/v1-product-completion`
+- Product plan: [PROJECT_PLAN.md](PROJECT_PLAN.md)
+- Implementation record: [IMPLEMENTATION.md](IMPLEMENTATION.md)
+
+This file is the operating plan for the current release goal. It records order,
+review gates, and evidence without replacing the stable product decisions in
+`PROJECT_PLAN.md`.
+
+## Goal boundary
+
+Deliver a public, deployed V1 whose three modes complete their promised product
+loops, then deliver V1.1 with a licensed GHSL Human Terrain vertical slice.
+Pleiades/Wikidata cultural work remains a later goal.
+
+The goal is complete only when the release is public, deployed, documented,
+reviewed, and reproducible. A green local build alone is not completion.
+
+## Operating loop
+
+Every batch follows the same finite loop:
+
+1. **Plan** — state the product outcome, file boundaries, risks, and tests.
+2. **Implement** — keep the batch single-purpose and preserve lazy data/GPU
+   boundaries.
+3. **Verify** — run formatting, lint, types, data hashes, unit tests, build, and
+   proportionate browser tests.
+4. **Review** — obtain independent architecture, product/accessibility, and
+   release/security review. P0/P1 findings return to implementation.
+5. **Correct and re-verify** — test the exact failure path, not only the happy
+   path. A timeout or flaky result is investigated before any budget changes.
+6. **Publish gradually** — push a small branch/PR, wait for remote CI, then
+   merge only when all required checks and reviews are green.
+7. **Record** — update `IMPLEMENTATION.md` and this plan with delivered evidence
+   and remaining non-blocking validation.
+
+Repository rules for every batch:
+
+- no generated build, browser report, secret, cache, or local evidence files;
+- no new general framework unless the next committed feature needs it;
+- data manifests and derived hashes fail closed;
+- data, controls, and renderer resources stay mode-gated;
+- no public visibility, deployment, or release tag before its explicit gate.
+
+## Milestone 0 — stable private baseline
+
+Status: **complete** at `1d627e6` on private `main`.
+
+- Stages 1–4 and Sunline are synced to GitHub.
+- WebGL fallback semantics, mode-local failure recovery, responsive panels,
+  WCAG muted text, document language, visible UNDP licensing, and generated
+  asset verification are hardened.
+- Local gate: 57 unit tests; 31 browser tests passed and one intended skip.
+- Remote gate: quality and Chromium browser jobs passed for `1d627e6`.
+- Medium-range Android hardware sampling remains non-blocking because no device
+  is currently available.
+
+## Milestone 1 — V1 product completion
+
+Status: **in progress**.
+
+### 1A. Discovery and scalable navigation
+
+- Keep `ModeDefinition` as pure static metadata. Add explicit `MODE_ORDER`, a
+  shared `ModePanel` shell, and one exhaustive presentation/controls dispatch so
+  `App` does not grow a new set of literal branches per mode. Do not put React
+  hooks, loaders, renderer access, or camera callbacks in the registry.
+- Add a versioned, dismissible first-interaction hint stored only in
+  `localStorage`. Only a drag beyond the selection threshold, wheel/pinch zoom,
+  point selection, or keyboard globe action dismisses it; pointerdown and hover
+  do not. Storage failure degrades to session-only display and never blocks App.
+- Add a keyboard-complete Mode Atlas dialog rendered entirely from
+  `MODE_DEFINITIONS`.
+- Add a permanent Mode Atlas button to the right side of the Header. Keep the
+  current three direct bottom navigation targets in V1; redesign that navigation
+  only when Human Terrain makes a fourth target real.
+- Preserve the current point, camera policy, URL history, and direct first
+  screen. The Atlas is not a route, landing page, tutorial, or plugin market.
+- Restore focus to the opener on close and move focus to the new mode title
+  after an Atlas selection.
+
+Acceptance:
+
+- first visit → one operation → hint disappears → refresh keeps it dismissed;
+- Atlas supports focus containment, Escape, opener restoration, mode selection,
+  back/forward, Chinese/English, reduced motion, and 320–390 px layouts;
+- on mobile it is the only active modal layer: background controls/navigation
+  are inert or equivalently isolated, Share is mutually exclusive, every touch
+  target is at least 44 px, and closing restores the prior layout and focus;
+- opening/closing Atlas never mutates a shared URL;
+- initial entry bundle grows by no more than 15 kB gzip.
+
+### 1B. Development evidence and narrative
+
+- Add pure, null-safe equal-weight global median calculations for the selected
+  indicator/year, including observed count.
+- Show the selected value, difference from median, and change since that
+  country's earliest earlier observation. Use absolute index-point differences,
+  never percentages or causal language.
+- Sort the semantic table alphabetically and add median/history evidence,
+  removing the current implicit ranking.
+- Add a deterministic same-year algorithmic structural contrast. Exclude the
+  selected country; require HDI, health, education, and income for both rows and
+  `abs(candidate.hdi - selected.hdi) <= 0.020`. Choose the candidate with the
+  largest equal-weight L1 structural distance
+  `|Δhealth| + |Δeducation| + |Δincome|`, tie-breaking by ascending ISO3. Compute
+  with source precision and round only for display. Never widen the window or
+  impute missing values.
+- Call it an “algorithmically selected contrast”, not a peer: it is deliberately
+  selected to reveal a structural difference and does not imply typicality,
+  similar social conditions, or causation.
+- Keep all calculations derived from the existing HDR 2025 snapshot. Add no
+  store state, URL parameter, or new data asset.
+
+Acceptance:
+
+- tests cover even/odd/empty medians, invalid years, missing endpoints, non-1990
+  baselines, negative change, contrast ties, and unavailable comparisons;
+- fixed asset baselines include 2023 HDI median `0.762` (`n=193`) and China 2005
+  education `0.540`, median difference `-0.066`, change since 1990 `+0.163`;
+- fixed contrast baselines include China 2005 → Gabon (`L1=0.3861`) and China
+  2023 → Palau (`L1=0.3177`), plus missing/no-candidate/ISO-tie fixtures;
+- result, method, and semantic table agree in both languages and mobile layout;
+- table columns are country, selected value, delta to median, and historical
+  endpoint change; unknown history remains unknown;
+- the UNDP chunk remains lazy and absent from an Other Side-only request trace.
+
+### 1C. Milestone gate
+
+- full local `pnpm check` and desktop/mobile Playwright;
+- architecture review for mode boundaries and bundle/data gating;
+- product/accessibility review for the 10-second loop, focus, copy, and mobile;
+- data/release review for calculations, visible methods, license, and clean tree;
+- reviewed PR merged only after required remote checks are green.
+
+## Milestone 2 — public V1 release
+
+Status: **pending Milestone 1**.
+
+- English canonical README plus full Chinese README.
+- `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, data-source overview,
+  mode proposal template, issue/PR templates, and a contribution walkthrough
+  using the existing Other Side mode. No fake/example mode is registered,
+  bundled, or presented as a plugin contract.
+- Visible Natural Earth attribution and complete third-party license inventory.
+- CI: full desktop/mobile browser matrix, production dependency audit, generated
+  asset hashes, pinned maintained Actions, and production deployment smoke.
+- Dedicated full-history secret scan; enable Dependabot, secret scanning/code
+  scanning where available; protect `main` with required checks.
+- GitHub Pages deployment, repository description/homepage/social preview,
+  intentional production source-map policy, public visibility, V1 tag/release,
+  and live URL verification.
+
+Publication is atomic and ordered: release-candidate version/changelog → required
+CI plus security/license review and Pages artifact rehearsal → public visibility
+→ enable available protection/scanning → deploy → Pages live smoke → set homepage
+→ `v1.0.0` tag/release. The tag target SHA must equal the live-verified Pages
+deployment SHA and must not precede the successful smoke. If private Pages is
+unavailable, the rehearsal gate is a built and inspected Pages artifact, not a
+skipped gate.
+
+Gate: do not switch the repository public until security, licensing, governance,
+CI, deployment rehearsal, and final clean-tree reviews all pass.
+
+## Milestone 3 — GHSL Human Terrain data foundation
+
+Status: **pending Milestone 2**.
+
+- Product contract: answer “How does human settlement form a continuous terrain
+  across Earth?” with global 2020 population density in people/km². V1.1 has one
+  fixed year, a documented logarithmic color transform, explicit zero/nodata and
+  ocean semantics, and numeric point results; built-up surface and time playback
+  remain later work.
+- Before the first transform, set budgets: a downsampled/compressed global asset
+  (never a regional sample for the curated mode), at most 4 MB transferred and
+  16 MB decoded GPU texture memory, with a mode switch feedback target under
+  500 ms after cache. Then lock the exact GHSL R2023A product, global resolution,
+  license/attribution, redistribution policy, DOI/source URL, and upstream hash.
+- Build a resumable, checksum-verified source → transform → derived-asset
+  pipeline with coverage, nodata, range, and deterministic-output tests.
+- Extend the verifier by manifest discovery or declared asset paths so the new
+  dataset cannot be omitted from integrity checks.
+- Produce the budgeted globally downsampled reviewed asset; do not commit large
+  raw rasters. Download cache and resume state remain ignored; the manifest pins
+  transform version and source/derived checksums.
+
+Gate: independent data/license review, reproducible rebuild, hash match, global
+coverage, user-visible units/transform, nodata policy, and size/GPU budgets.
+
+## Milestone 4 — Human Terrain V1.1
+
+Status: **pending Milestone 3**.
+
+- Add the fourth curated observation mode through the finite mode orchestration
+  boundary; do not expose renderer/camera internals.
+- Adapt bottom navigation for four modes only in this milestone, with Atlas
+  retaining direct access and mobile targets remaining at least 44 px.
+- Deliver globe layer, legend, point result, accessible semantic alternative,
+  data/method note, loading/error/retry, URL state, mobile controls, and Atlas
+  entry as one vertical slice.
+- Measure cached switch feedback, frame profile, memory/resource lifecycle, and
+  real-device behavior available at release time.
+- Review, merge, deploy, tag `v1.1.0`, and verify using the same publication loop.
+
+## Deferred after this goal
+
+- Pleiades/Wikidata cultural mode discovery and licensing spike.
+- General plugin/runtime marketplace.
+- 50m country-boundary upgrade, place-name basemap, time zones, weather, or
+  street-level GIS features.
