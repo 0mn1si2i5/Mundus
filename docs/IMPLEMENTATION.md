@@ -16,7 +16,7 @@
 
 当前构建基线：App Shell 约 18 kB gzip；完整首屏模块约 375 kB gzip。Three.js、R3F 和地理数据各自独立缓存。真实 FPS 不使用无头浏览器结果代替，需在目标设备上采样后关闭阶段门槛。
 
-采样证据见 [桌面报告](performance/2026-07-14-desktop.md) 与 [iPhone 17 报告](performance/2026-07-14-iphone-17.md)。
+采样证据见 [桌面报告](performance/2026-07-14-desktop.md)、[iPhone 17 报告](performance/2026-07-14-iphone-17.md) 与 [阶段 2 回归](performance/2026-07-14-stage-2.md)。
 
 ## 当前：阶段 2 · Other Side
 
@@ -27,4 +27,4 @@
 - [x] 分享 URL 与精确/约略坐标选择
 - [x] Natural Earth 50m populated places 可复现索引与最近收录聚居点
 - [x] 键盘地球旋转/缩放/选择、对话框焦点管理和移动端抽屉语义
-- [ ] 阶段 2 性能回归与发布级视觉验收
+- [x] 阶段 2 性能回归与桌面/移动发布级视觉验收
