@@ -306,6 +306,20 @@ test('keeps controls reachable after crossing the mobile breakpoint', async ({
   await page.setViewportSize({ width: 915, height: 412 });
   await expect(page.getByLabel('UTC 日期')).toBeVisible();
   await expect(page.getByRole('slider', { name: /UTC 时间/ })).toBeVisible();
+
+  await page.getByRole('button', { name: '模式图鉴' }).click();
+  const developmentEntry = page
+    .getByRole('listitem')
+    .filter({ hasText: '发展的不同侧面' });
+  await developmentEntry
+    .getByRole('button', { name: '用这种方式观察' })
+    .click();
+  await expect(
+    page.getByRole('heading', { name: '发展的不同侧面' }),
+  ).toBeFocused();
+  await expect(
+    page.locator('[data-mode-panel="development-controls"]'),
+  ).toBeVisible();
 });
 
 test('loads the scoped Natural Earth nearest-place result', async ({
@@ -330,23 +344,133 @@ test('keeps development map, controls, URL and table synchronized', async ({
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开发展控件' }).click();
   }
+  const panel = page.locator('[data-mode-panel="development-controls"]');
 
-  await expect(page.getByRole('button', { name: '教育' })).toHaveAttribute(
+  await expect(panel.getByRole('button', { name: '教育' })).toHaveAttribute(
     'aria-pressed',
     'true',
   );
-  await expect(page.getByRole('slider', { name: /年份/ })).toHaveValue('2005');
-  await expect(page.getByText('0.540', { exact: true })).toBeVisible();
+  await expect(panel.getByRole('slider', { name: /年份/ })).toHaveValue('2005');
+  await expect(panel.getByText('0.540', { exact: true }).first()).toBeVisible();
+  await expect(panel.getByText('0.607', { exact: true })).toBeVisible();
+  await expect(panel).toContainText('187 个有观测值的国家和地区');
+  await expect(panel).toContainText('−0.066 指数点');
+  await expect(panel).toContainText('+0.163 指数点');
+  await expect(panel).toContainText('1990–2005');
+  await expect(panel).toContainText('Gabon');
+  await expect(panel).toContainText('结构差异值 0.386');
+  await expect(panel).toContainText('不代表典型性、相似社会条件或因果关系');
+  if (testInfo.project.name === 'chromium') {
+    for (const surface of [
+      page.locator('header').first(),
+      page.locator('section[data-mode="development"]'),
+      page.getByRole('navigation', { name: '观察模式' }),
+    ]) {
+      expect(
+        overlaps(await panel.boundingBox(), await surface.boundingBox()),
+      ).toBe(false);
+    }
+    expect(
+      await panel.evaluate(
+        (element) => element.scrollHeight > element.clientHeight,
+      ),
+    ).toBe(true);
+  } else {
+    expect(
+      overlaps(
+        await panel.boundingBox(),
+        await page.getByRole('navigation', { name: '观察模式' }).boundingBox(),
+      ),
+    ).toBe(false);
+    expect(
+      await panel.evaluate(
+        (element) => element.scrollHeight > element.clientHeight,
+      ),
+    ).toBe(true);
+  }
 
-  await page.getByRole('button', { name: '收入' }).click();
-  await expect(page).toHaveURL(/indicator=income/);
-  await page.getByRole('slider', { name: /年份/ }).fill('2010');
-  await expect(page).toHaveURL(/year=2010/);
-
-  await page.getByRole('button', { name: '表格视图' }).click();
-  const table = page.getByRole('complementary', { name: '表格视图' });
+  const tableButton = panel.getByRole('button', { name: '表格视图' });
+  await tableButton.click();
+  const table = page.getByRole('dialog', { name: '表格视图' });
   await expect(table).toBeVisible();
-  await expect(table.getByRole('row').nth(1)).toContainText(/\d\.\d{3}/);
+  await expect(page.locator('#root')).toHaveAttribute('inert', '');
+  const closeTable = table.getByRole('button', { name: '关闭表格' });
+  await expect(closeTable).toBeFocused();
+  expect((await closeTable.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  const tableScroll = table.getByRole('region', {
+    name: '发展数据表滚动区',
+  });
+  await page.keyboard.press('Tab');
+  await expect(tableScroll).toBeFocused();
+  await page.keyboard.press('PageDown');
+  expect(
+    await tableScroll.evaluate((element) => element.scrollTop),
+  ).toBeGreaterThan(0);
+  if (testInfo.project.name === 'mobile') {
+    await page.keyboard.press('ArrowRight');
+    expect(
+      await tableScroll.evaluate((element) => element.scrollLeft),
+    ).toBeGreaterThan(0);
+  }
+  await expect(table.getByRole('columnheader')).toHaveText([
+    '国家或地区',
+    '指数',
+    '相对中位数',
+    '历史端点变化',
+  ]);
+  await expect(table.getByRole('row').nth(1)).toContainText('Afghanistan');
+  await expect(table.getByRole('row', { name: /^China / })).toContainText(
+    /0\.540.*−0\.066.*\+0\.163.*1990–2005/,
+  );
+  await page.keyboard.press('Tab');
+  await expect(closeTable).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(table).toBeHidden();
+  await expect(tableButton).toBeFocused();
+
+  await panel.getByRole('button', { name: '收入' }).click();
+  await expect(page).toHaveURL(/indicator=income/);
+  await panel.getByRole('slider', { name: /年份/ }).fill('2010');
+  await expect(page).toHaveURL(/year=2010/);
+});
+
+test('keeps Development data lazy and cached across mode switches', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === 'mobile',
+    'One request trace is sufficient',
+  );
+  const requests: string[] = [];
+  page.on('request', (request) => requests.push(request.url()));
+  await page.goto('./');
+  await expect(page.locator('canvas')).toBeVisible();
+  expect(requests.some((url) => url.includes('undp-hdr'))).toBe(false);
+
+  await page.getByRole('button', { name: /发展的不同侧面/ }).click();
+  await expect(page.getByText('全球中位数', { exact: true })).toBeVisible();
+  expect(requests.filter((url) => url.includes('undp-hdr'))).toHaveLength(1);
+  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await page.getByRole('button', { name: /发展的不同侧面/ }).click();
+  await expect(page.getByText('全球中位数', { exact: true })).toBeVisible();
+  expect(requests.filter((url) => url.includes('undp-hdr'))).toHaveLength(1);
+});
+
+test('explains Development evidence consistently in English', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name === 'mobile', 'Desktop copy coverage');
+  await page.goto('./?mode=development&indicator=education&year=2005&v=1');
+  await page.getByRole('button', { name: '切换为英文' }).click();
+  const panel = page.locator('[data-mode-panel="development-controls"]');
+  await expect(panel).toContainText('Global median');
+  await expect(panel).toContainText('187 observed countries and territories');
+  await expect(panel).toContainText('−0.066 index points');
+  await expect(panel).toContainText('Algorithmic structural contrast');
+  await expect(panel).toContainText('Gabon');
+  await expect(panel).toContainText(
+    'not evidence of typicality, similar social conditions, or causation',
+  );
 });
 
 test('drives fixed, playing, and live Sunline time in UTC', async ({

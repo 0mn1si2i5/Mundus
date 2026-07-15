@@ -288,6 +288,17 @@
   }
 }
 
+@media (min-width: 761px) and (max-height: 520px) {
+  .intro[data-mode='development'] {
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .intro {
     animation: none;

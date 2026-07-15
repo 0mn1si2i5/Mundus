@@ -5,7 +5,15 @@ import {
   developmentColor,
   valueFor,
   valuesByCountryId,
+  type DevelopmentCountry,
+  type DevelopmentDataset,
 } from './developmentData';
+import {
+  findStructuralContrast,
+  globalIndicatorMedian,
+  historicalIndicatorChange,
+  median,
+} from './developmentEvidence';
 
 const dataset = decodeDevelopmentDataset(generatedDataset);
 
@@ -65,4 +73,226 @@ describe('UNDP development dataset', () => {
     expect(developmentColor(null)).toBe('#182126');
     expect(developmentColor(0.3)).not.toBe(developmentColor(0.95));
   });
+
+  it('computes null-safe equal-weight medians', () => {
+    expect(median([3, null, 0, 2])).toEqual({ median: 2, observedCount: 3 });
+    expect(median([4, 1, undefined, 2, 3])).toEqual({
+      median: 2.5,
+      observedCount: 4,
+    });
+    expect(median([null, undefined])).toEqual({
+      median: null,
+      observedCount: 0,
+    });
+  });
+
+  it('matches fixed global and Chinese evidence baselines', () => {
+    expect(globalIndicatorMedian(dataset, 'hdi', 2023)).toEqual({
+      status: 'available',
+      median: 0.762,
+      observedCount: 193,
+    });
+    const china = dataset.countries.find((country) => country.iso3 === 'CHN')!;
+    expect(globalIndicatorMedian(dataset, 'education', 2005)).toEqual({
+      status: 'available',
+      median: 0.6065,
+      observedCount: 187,
+    });
+    expect(
+      historicalIndicatorChange(dataset, china, 'education', 2005),
+    ).toEqual({
+      status: 'available',
+      baselineYear: 1990,
+      baselineValue: 0.377,
+      currentYear: 2005,
+      currentValue: 0.5403,
+      change: 0.1633,
+    });
+  });
+
+  it('uses the earliest earlier observation and preserves unknown history', () => {
+    const country = makeCountry('AAA', {
+      hdi: { 1991: 0.4, 1992: 0.35 },
+    });
+    const fixture = makeDataset([country]);
+    expect(historicalIndicatorChange(fixture, country, 'hdi', 1992)).toEqual({
+      status: 'available',
+      baselineYear: 1991,
+      baselineValue: 0.4,
+      currentYear: 1992,
+      currentValue: 0.35,
+      change: expect.closeTo(-0.05, 10),
+    });
+    expect(historicalIndicatorChange(fixture, country, 'hdi', 1991)).toEqual({
+      status: 'unavailable',
+      reason: 'no-earlier-observation',
+    });
+    expect(historicalIndicatorChange(fixture, country, 'hdi', 1989)).toEqual({
+      status: 'unavailable',
+      reason: 'invalid-year',
+    });
+  });
+
+  it('selects deterministic same-year structural contrasts', () => {
+    const china = dataset.countries.find((country) => country.iso3 === 'CHN')!;
+    const gabon = findStructuralContrast(dataset, china, 2005);
+    expect(gabon.status).toBe('available');
+    if (gabon.status !== 'available') throw new Error('Expected contrast');
+    expect(gabon.country.iso3).toBe('GAB');
+    expect(gabon.structuralDistance).toBeCloseTo(0.3861, 10);
+    expect(gabon.dominantDimension).toBe('income');
+    expect(gabon.dimensions.health.difference).toBeCloseTo(-0.1709, 10);
+    expect(gabon.dimensions.education.difference).toBeCloseTo(0.0162, 10);
+    expect(gabon.dimensions.income.difference).toBeCloseTo(0.199, 10);
+    const palau = findStructuralContrast(dataset, china, 2023);
+    expect(palau.status).toBe('available');
+    if (palau.status !== 'available') throw new Error('Expected contrast');
+    expect(palau.country.iso3).toBe('PLW');
+    expect(palau.country.countryId).toBeNull();
+    expect(palau.structuralDistance).toBeCloseTo(0.3177, 10);
+    expect(palau.dominantDimension).toBe('education');
+  });
+
+  it('rejects incomplete contrasts and breaks equal-distance ties by ISO3', () => {
+    const selected = makeCountry('SEL', {
+      hdi: { 1990: 0.5 },
+      health: { 1990: 0.5 },
+      education: { 1990: 0.5 },
+      income: { 1990: 0.5 },
+    });
+    const laterIso = makeCountry('ZZZ', {
+      hdi: { 1990: 0.51 },
+      health: { 1990: 0.6 },
+      education: { 1990: 0.5 },
+      income: { 1990: 0.5 },
+    });
+    const earlierIso = makeCountry('AAA', {
+      hdi: { 1990: 0.49 },
+      health: { 1990: 0.4 },
+      education: { 1990: 0.5 },
+      income: { 1990: 0.5 },
+    });
+    expect(
+      findStructuralContrast(
+        makeDataset([selected, laterIso, earlierIso]),
+        selected,
+        1990,
+      ),
+    ).toMatchObject({
+      status: 'available',
+      country: { iso3: 'AAA' },
+    });
+
+    const incomplete = makeCountry('MIS', { hdi: { 1990: 0.5 } });
+    expect(
+      findStructuralContrast(
+        makeDataset([selected, incomplete]),
+        selected,
+        1990,
+      ),
+    ).toEqual({ status: 'unavailable', reason: 'no-candidate' });
+    expect(
+      findStructuralContrast(
+        makeDataset([incomplete, selected]),
+        incomplete,
+        1990,
+      ),
+    ).toEqual({ status: 'unavailable', reason: 'selected-incomplete' });
+  });
+
+  it('includes the exact HDI window and excludes candidates beyond it', () => {
+    const selected = completeCountry('SEL', 0.5, 0.5, 0.5, 0.5);
+    const boundary = completeCountry('AAA', 0.52, 0.6, 0.5, 0.5);
+    const outside = completeCountry('ZZZ', 0.5201, 0.9, 0.1, 0.9);
+    expect(
+      findStructuralContrast(
+        makeDataset([selected, boundary, outside]),
+        selected,
+        1990,
+      ),
+    ).toMatchObject({ status: 'available', country: { iso3: 'AAA' } });
+  });
+
+  it('breaks dominant-dimension ties in stable dimension order', () => {
+    const selected = completeCountry('SEL', 0.5, 0.5, 0.5, 0.5);
+    const candidate = completeCountry('AAA', 0.5, 0.6, 0.4, 0.5);
+    expect(
+      findStructuralContrast(
+        makeDataset([selected, candidate]),
+        selected,
+        1990,
+      ),
+    ).toMatchObject({ status: 'available', dominantDimension: 'health' });
+  });
+
+  it('distinguishes invalid years, empty distributions and missing current values', () => {
+    const empty = makeCountry('EMP', {});
+    const fixture = makeDataset([empty]);
+    expect(globalIndicatorMedian(fixture, 'hdi', 1990)).toEqual({
+      status: 'unavailable',
+      reason: 'no-observations',
+      observedCount: 0,
+    });
+    expect(globalIndicatorMedian(fixture, 'hdi', 1989)).toEqual({
+      status: 'unavailable',
+      reason: 'invalid-year',
+      observedCount: 0,
+    });
+    expect(historicalIndicatorChange(fixture, empty, 'hdi', 1990)).toEqual({
+      status: 'unavailable',
+      reason: 'current-missing',
+    });
+    expect(findStructuralContrast(fixture, empty, 1989)).toEqual({
+      status: 'unavailable',
+      reason: 'invalid-year',
+    });
+  });
 });
+
+function makeCountry(
+  iso3: string,
+  values: Partial<
+    Record<'hdi' | 'health' | 'education' | 'income', Record<number, number>>
+  >,
+): DevelopmentCountry {
+  const series = (indicator: keyof typeof values) =>
+    Array.from(
+      { length: 34 },
+      (_, index) => values[indicator]?.[1990 + index] ?? null,
+    );
+  return {
+    iso3,
+    name: iso3,
+    countryId: null,
+    series: {
+      hdi: series('hdi'),
+      health: series('health'),
+      education: series('education'),
+      income: series('income'),
+    },
+  };
+}
+
+function makeDataset(countries: DevelopmentCountry[]): DevelopmentDataset {
+  return {
+    edition: 'HDR 2025',
+    years: Array.from({ length: 34 }, (_, index) => 1990 + index),
+    countries,
+    countriesById: new Map(),
+  };
+}
+
+function completeCountry(
+  iso3: string,
+  hdi: number,
+  health: number,
+  education: number,
+  income: number,
+): DevelopmentCountry {
+  return makeCountry(iso3, {
+    hdi: { 1990: hdi },
+    health: { 1990: health },
+    education: { 1990: education },
+    income: { 1990: income },
+  });
+}

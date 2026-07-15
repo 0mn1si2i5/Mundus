@@ -62,6 +62,12 @@ Status: **complete** at `1d627e6` on private `main`.
 
 Status: **in progress**.
 
+Round checkpoint (2026-07-15): 1A and 1B are implemented on
+`codex/v1-product-completion`. Local gates pass with 66 unit tests and 43
+browser tests plus 3 intentional project skips. The branch remains private and
+unmerged; 1C remote review/CI is the next resumable gate. No release or V1.1
+data work has started.
+
 ### 1A. Discovery and scalable navigation
 
 - Keep `ModeDefinition` as pure static metadata. Add explicit `MODE_ORDER`, a
