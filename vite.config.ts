@@ -6,7 +6,10 @@ export default defineConfig({
   base: './',
   build: {
     target: 'es2022',
-    sourcemap: true,
+    // The public V1 artifact intentionally excludes browser source maps.
+    sourcemap: false,
+    // Vite emits the exact bundled dependency notices into the deployed artifact.
+    license: { fileName: 'THIRD_PARTY_NOTICES.md' },
     // Three.js is intentionally isolated as a cacheable 190 kB gzip vendor chunk.
     chunkSizeWarningLimit: 750,
     rollupOptions: {
