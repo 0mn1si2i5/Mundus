@@ -146,6 +146,12 @@ Acceptance:
 
 Status: **pending Milestone 1**.
 
+The smallest responsible public-showcase slice is defined in
+[MVP_RELEASE_PLAN.md](MVP_RELEASE_PLAN.md). Execute that plan first. The
+contribution templates, extended repository automation, and other open-source
+maturity work below may follow the live MVP unless a release review promotes a
+specific item to P0/P1.
+
 - English canonical README plus full Chinese README.
 - `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, data-source overview,
   mode proposal template, issue/PR templates, and a contribution walkthrough
