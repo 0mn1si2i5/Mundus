@@ -330,7 +330,9 @@ test('loads the scoped Natural Earth nearest-place result', async ({
 
   await page.getByRole('button', { name: /地球另一端/ }).click();
   await expect(page.getByText('Santa Fe, Argentina')).toBeVisible();
-  await expect(page.getByText(/非完整城市名录/)).toBeVisible();
+  await expect(
+    page.getByText('Natural Earth 50m 选点，非完整城市名录', { exact: true }),
+  ).toBeVisible();
 });
 
 test('shows the Other Side method and Natural Earth attribution', async ({
