@@ -1,18 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { MODE_DEFINITIONS } from './modeRegistry';
+import { MODE_DEFINITIONS, MODE_ORDER, modeIndex } from './modeRegistry';
 
 describe('mode registry', () => {
   it('defines a versioned contract for every compile-time mode', () => {
-    expect(Object.keys(MODE_DEFINITIONS)).toEqual([
-      'antipodes',
-      'development',
-      'sunline',
-    ]);
+    expect(Object.keys(MODE_DEFINITIONS)).toEqual(MODE_ORDER);
     expect(
       Object.values(MODE_DEFINITIONS).every(
         (mode) => mode.version === 1 && mode.cameraPolicy === 'preserve',
       ),
     ).toBe(true);
+  });
+
+  it('provides one explicit product order', () => {
+    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2]);
+    expect(new Set(MODE_ORDER).size).toBe(MODE_ORDER.length);
   });
 
   it('validates Other Side coordinates', () => {

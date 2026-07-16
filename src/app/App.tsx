@@ -5,54 +5,29 @@ import {
   type ErrorInfo,
   type ReactNode,
   useEffect,
-  useMemo,
   useState,
 } from 'react';
-import { antipodeOf } from '../features/globe/geo';
 import {
-  chordDistanceKm,
-  surfaceDistanceKm,
-} from '../features/antipodes/distance';
-import { useNearestPopulatedPlace } from '../features/antipodes/populatedPlaces';
-import { MODE_DEFINITIONS } from '../features/modes/modeRegistry';
+  MODE_DEFINITIONS,
+  MODE_ORDER,
+  modeIndex,
+  type ModeId,
+} from '../features/modes/modeRegistry';
+import { ModeAtlas } from '../features/modes/ModeAtlas';
+import { ModeControls } from '../features/modes/ModeControls';
+import { ModeResult } from '../features/modes/ModeResult';
+import { useModePresentation } from '../features/modes/useModePresentation';
+import { FirstInteractionHint } from '../features/discovery/FirstInteractionHint';
 import { ShareDialog } from '../features/share/ShareDialog';
 import { useAppStore } from '../state/appStore';
 import { useUrlState } from './useUrlState';
 import { messages } from '../i18n/messages';
-import {
-  developmentColor,
-  valuesByCountryId,
-} from '../features/development/developmentData';
-import { useDevelopmentDataset } from '../features/development/useDevelopmentDataset';
-import {
-  observeSun,
-  solarEventsUtc,
-  solarPosition,
-} from '../features/sunline/solar';
 import styles from './App.module.css';
 import { useCountrySelection } from '../features/globe/useCountrySelection';
 
 const GlobeViewport = lazy(() =>
   import('../features/globe/GlobeViewport').then((module) => ({
     default: module.GlobeViewport,
-  })),
-);
-
-const OtherSideControls = lazy(() =>
-  import('../features/antipodes/OtherSideControls').then((module) => ({
-    default: module.OtherSideControls,
-  })),
-);
-
-const DevelopmentControls = lazy(() =>
-  import('../features/development/DevelopmentControls').then((module) => ({
-    default: module.DevelopmentControls,
-  })),
-);
-
-const SunlineControls = lazy(() =>
-  import('../features/sunline/SunlineControls').then((module) => ({
-    default: module.SunlineControls,
   })),
 );
 
@@ -91,55 +66,25 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
 export function App() {
   const [shareOpen, setShareOpen] = useState(false);
+  const [atlasOpen, setAtlasOpen] = useState(false);
   const locale = useAppStore((state) => state.locale);
   const activeMode = useAppStore((state) => state.activeMode);
-  const point = useAppStore((state) => state.point);
-  const developmentIndicator = useAppStore(
-    (state) => state.developmentIndicator,
-  );
-  const developmentYear = useAppStore((state) => state.developmentYear);
-  const sunlineTimeMs = useAppStore((state) => state.sunlineTimeMs);
-  const selectedCountry = useAppStore((state) => state.selectedCountry);
-  const antipodeCountry = useAppStore((state) => state.antipodeCountry);
   const hoveredCountry = useAppStore((state) => state.hoveredCountry);
   const selectMode = useAppStore((state) => state.selectMode);
   const setLocale = useAppStore((state) => state.setLocale);
   const t = messages[locale];
   const mode = MODE_DEFINITIONS[activeMode];
-  const antipode = antipodeOf(point);
-  const nearestPlace = useNearestPopulatedPlace(
-    antipode,
-    activeMode === 'antipodes',
-  );
-  const developmentData = useDevelopmentDataset(activeMode === 'development');
-  const developmentFills = useMemo(() => {
-    if (developmentData.status !== 'ready') return null;
-    return new Map(
-      [
-        ...valuesByCountryId(
-          developmentData.data,
-          developmentIndicator,
-          developmentYear,
-        ),
-      ].map(([countryId, value]) => [countryId, developmentColor(value)]),
-    );
-  }, [developmentData, developmentIndicator, developmentYear]);
-  const sunline = useMemo(() => {
-    const position = solarPosition(sunlineTimeMs);
-    return {
-      position,
-      observation: observeSun(point, sunlineTimeMs),
-      events: solarEventsUtc(point, sunlineTimeMs),
-    };
-  }, [point, sunlineTimeMs]);
-  const numberFormatter = new Intl.NumberFormat(
-    locale === 'zh' ? 'zh-CN' : 'en-US',
-    {
-      maximumFractionDigits: 0,
-    },
-  );
+  const presentation = useModePresentation();
   useUrlState();
   useCountrySelection();
+
+  function chooseModeFromAtlas(selectedMode: ModeId) {
+    selectMode(selectedMode);
+    setAtlasOpen(false);
+    window.requestAnimationFrame(() => {
+      document.getElementById('mode-title')?.focus();
+    });
+  }
 
   useEffect(() => {
     document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en';
@@ -170,7 +115,20 @@ export function App() {
           <button
             className={styles.textButton}
             type="button"
-            onClick={() => setShareOpen(true)}
+            onClick={() => {
+              setShareOpen(false);
+              setAtlasOpen(true);
+            }}
+          >
+            {t.modeAtlas}
+          </button>
+          <button
+            className={styles.textButton}
+            type="button"
+            onClick={() => {
+              setAtlasOpen(false);
+              setShareOpen(true);
+            }}
           >
             {t.share}
           </button>
@@ -192,9 +150,11 @@ export function App() {
         aria-labelledby="mode-title"
       >
         <p className={styles.index}>
-          0{Object.keys(MODE_DEFINITIONS).indexOf(activeMode) + 1} / 03
+          0{modeIndex(activeMode) + 1} / 0{MODE_ORDER.length}
         </p>
-        <h1 id="mode-title">{mode.title[locale]}</h1>
+        <h1 id="mode-title" tabIndex={-1}>
+          {mode.title[locale]}
+        </h1>
         <p>{mode.question[locale]}</p>
       </section>
 
@@ -218,186 +178,55 @@ export function App() {
             keyboardMovedLabel={t.globeMoved}
             keyboardZoomedLabel={t.globeZoomed}
             keyboardSelectedLabel={t.globeSelected}
-            countryFills={developmentFills}
-            showAntipodes={activeMode === 'antipodes'}
-            sunline={
-              activeMode === 'sunline'
-                ? { subsolarPoint: sunline.position.subsolarPoint }
-                : null
-            }
+            countryFills={presentation.globe.countryFills}
+            showAntipodes={presentation.globe.showAntipodes}
+            sunline={presentation.globe.sunline}
           />
         </Suspense>
       </ErrorBoundary>
 
-      {activeMode === 'antipodes' ? (
-        <aside
-          className={styles.result}
-          aria-live="polite"
-          aria-label={t.result}
-        >
-          <span>{t.selectedPoint}</span>
-          <em>{selectedCountry?.name ?? t.openOcean}</em>
-          <strong>
-            {point.latitude.toFixed(4)}°, {point.longitude.toFixed(4)}°
-          </strong>
-          <div className={styles.rule} />
-          <span>{t.antipode}</span>
-          <em>{antipodeCountry?.name ?? t.openOcean}</em>
-          <strong>
-            {antipode.latitude.toFixed(4)}°, {antipode.longitude.toFixed(4)}°
-          </strong>
-          {nearestPlace.status !== 'idle' ? (
-            <div className={styles.nearestPlace}>
-              <span>{t.nearestPlace}</span>
-              {nearestPlace.status === 'ready' ? (
-                <>
-                  <em>
-                    {nearestPlace.result.place.name},{' '}
-                    {nearestPlace.result.place.country}
-                  </em>
-                  <strong>
-                    {t.nearestPlaceDistance}{' '}
-                    {numberFormatter.format(nearestPlace.result.distanceKm)} km
-                  </strong>
-                  <small>{t.nearestPlaceScope}</small>
-                </>
-              ) : (
-                <strong>
-                  {nearestPlace.status === 'loading'
-                    ? t.nearestPlaceLoading
-                    : t.nearestPlaceUnavailable}
-                </strong>
-              )}
-            </div>
-          ) : null}
-          <div className={styles.distanceRow}>
-            <span>{t.coreDistance}</span>
-            <strong>
-              {numberFormatter.format(chordDistanceKm(point, antipode))} km
-            </strong>
-            <span>{t.surfaceDistance}</span>
-            <strong>
-              {numberFormatter.format(surfaceDistanceKm(point, antipode))} km
-            </strong>
-          </div>
-        </aside>
-      ) : null}
-
-      {activeMode === 'sunline' ? (
-        <aside
-          className={`${styles.result} ${styles.sunlineResult}`}
-          aria-live="polite"
-          aria-label={t.sunlineResult}
-        >
-          <span>{t.selectedPoint}</span>
-          <em>{selectedCountry?.name ?? t.openOcean}</em>
-          <strong>
-            {point.latitude.toFixed(2)}°, {point.longitude.toFixed(2)}°
-          </strong>
-          <div className={styles.rule} />
-          <span>{t.solarAltitude}</span>
-          <strong>{sunline.observation.altitudeDegrees.toFixed(1)}°</strong>
-          <span>{t.daylightState}</span>
-          <em>
-            {sunline.observation.daylight === 'day'
-              ? t.daylightDay
-              : sunline.observation.daylight === 'civil-twilight'
-                ? t.daylightTwilight
-                : t.daylightNight}
-          </em>
-          {sunline.events.status === 'normal' ? (
-            <div className={styles.distanceRow}>
-              <span>{t.sunrise}</span>
-              <strong>{formatUtcEvent(sunline.events.sunriseMs)}</strong>
-              <span>{t.sunset}</span>
-              <strong>{formatUtcEvent(sunline.events.sunsetMs)}</strong>
-            </div>
-          ) : (
-            <strong className={styles.polarState}>
-              {sunline.events.status === 'polar-day'
-                ? t.polarDay
-                : t.polarNight}
-            </strong>
-          )}
-          <div className={styles.subsolar}>
-            <span>{t.subsolarPoint}</span>
-            <strong>
-              {sunline.position.subsolarPoint.latitude.toFixed(2)}°,{' '}
-              {sunline.position.subsolarPoint.longitude.toFixed(2)}°
-            </strong>
-          </div>
-        </aside>
-      ) : null}
+      <ModeResult locale={locale} presentation={presentation} />
 
       {hoveredCountry ? (
         <p className={styles.hoverLabel}>{hoveredCountry.name}</p>
       ) : null}
 
-      {activeMode === 'antipodes' ? (
-        <ModeBoundary
-          mode={activeMode}
-          label={t.componentFailed}
-          retry={t.retry}
-        >
-          <Suspense fallback={null}>
-            <OtherSideControls locale={locale} />
-          </Suspense>
-        </ModeBoundary>
-      ) : null}
-
-      {activeMode === 'development' ? (
-        <ModeBoundary
-          mode={activeMode}
-          label={t.componentFailed}
-          retry={t.retry}
-        >
-          <Suspense fallback={null}>
-            <DevelopmentControls
-              locale={locale}
-              loadState={developmentData}
-              selectedCountry={selectedCountry}
-            />
-          </Suspense>
-        </ModeBoundary>
-      ) : null}
-
-      {activeMode === 'sunline' ? (
-        <ModeBoundary
-          mode={activeMode}
-          label={t.componentFailed}
-          retry={t.retry}
-        >
-          <Suspense fallback={null}>
-            <SunlineControls locale={locale} />
-          </Suspense>
-        </ModeBoundary>
-      ) : null}
+      <ModeBoundary mode={activeMode} label={t.componentFailed} retry={t.retry}>
+        <ModeControls locale={locale} presentation={presentation} />
+      </ModeBoundary>
 
       <nav className={styles.modeNav} aria-label={t.modes}>
-        {Object.values(MODE_DEFINITIONS).map((item, index) => (
-          <button
-            key={item.id}
-            className={item.id === activeMode ? styles.activeMode : undefined}
-            type="button"
-            onClick={() => selectMode(item.id)}
-            aria-current={item.id === activeMode ? 'page' : undefined}
-          >
-            <span>0{index + 1}</span>
-            {item.title[locale]}
-          </button>
-        ))}
+        {MODE_ORDER.map((modeId, index) => {
+          const item = MODE_DEFINITIONS[modeId];
+          return (
+            <button
+              key={item.id}
+              className={item.id === activeMode ? styles.activeMode : undefined}
+              type="button"
+              onClick={() => selectMode(item.id)}
+              aria-current={item.id === activeMode ? 'page' : undefined}
+            >
+              <span>0{index + 1}</span>
+              {item.title[locale]}
+            </button>
+          );
+        })}
       </nav>
 
-      <p className={styles.hint}>{t.hint}</p>
+      <FirstInteractionHint locale={locale} />
       {shareOpen ? (
         <ShareDialog locale={locale} onClose={() => setShareOpen(false)} />
       ) : null}
+      {atlasOpen ? (
+        <ModeAtlas
+          locale={locale}
+          activeMode={activeMode}
+          onSelectMode={chooseModeFromAtlas}
+          onClose={() => setAtlasOpen(false)}
+        />
+      ) : null}
     </main>
   );
-}
-
-function formatUtcEvent(timestampMs: number): string {
-  return `${new Date(timestampMs).toISOString().slice(5, 16).replace('T', ' ')} UTC`;
 }
 
 function GlobeFallback({ label }: { label: string }) {

@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import type { Locale } from '../../i18n/messages';
 import { useAppStore } from '../../state/appStore';
-import { useResponsivePanel } from '../controls/useResponsivePanel';
+import { ModePanel } from '../controls/ModePanel';
 import { clampSunlineTime } from './solar';
 import styles from './SunlineControls.module.css';
 
@@ -51,8 +51,6 @@ export function SunlineControls({ locale }: { locale: Locale }) {
   const syncLiveTime = useAppStore((state) => state.syncSunlineLiveTime);
   const setPlaying = useAppStore((state) => state.setSunlinePlaying);
   const returnToLive = useAppStore((state) => state.returnSunlineToLive);
-  const { desktop, expanded, setExpanded } = useResponsivePanel();
-  const toggle = useRef<HTMLButtonElement>(null);
   const copy = COPY[locale];
   const date = new Date(timeMs);
   const dateValue = date.toISOString().slice(0, 10);
@@ -111,92 +109,62 @@ export function SunlineControls({ locale }: { locale: Locale }) {
     );
   }
 
-  function collapse() {
-    setExpanded(false);
-    window.requestAnimationFrame(() => toggle.current?.focus());
-  }
-
   return (
-    <section
+    <ModePanel
+      id="sunline-controls"
       className={styles.panel}
-      data-expanded={expanded}
-      aria-labelledby="sunline-controls-title"
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && expanded && !desktop) {
-          event.preventDefault();
-          collapse();
-        }
-      }}
+      title={copy.title}
+      subtitle={`${clockMode === 'live' ? copy.live : copy.fixed} · ${copy.speed}`}
+      expandLabel={copy.expand}
+      collapseLabel={copy.collapse}
     >
-      <div className={styles.heading}>
-        <div>
-          <h2 id="sunline-controls-title">{copy.title}</h2>
-          <p>
-            {clockMode === 'live' ? copy.live : copy.fixed} · {copy.speed}
-          </p>
-        </div>
-        <button
-          ref={toggle}
-          className={styles.toggle}
-          type="button"
-          aria-expanded={expanded}
-          aria-controls="sunline-controls-body"
-          aria-label={expanded ? copy.collapse : copy.expand}
-          onClick={() => setExpanded((current) => !current)}
-        >
-          {expanded ? '–' : '+'}
-        </button>
-      </div>
-
-      {expanded ? (
-        <div id="sunline-controls-body" className={styles.body}>
-          <div className={styles.primaryControls}>
-            <label>
-              <span>{copy.date}</span>
-              <input
-                type="date"
-                min="2000-01-01"
-                max="2099-12-31"
-                value={dateValue}
-                onChange={(event) => updateDate(event.target.value)}
-              />
-            </label>
-            <div className={styles.actions}>
-              <button type="button" onClick={() => setPlaying(!playing)}>
-                {playing ? copy.pause : copy.play}
-              </button>
-              <button type="button" onClick={() => returnToLive()}>
-                {copy.now}
-              </button>
-            </div>
-          </div>
-
-          <label className={styles.timeline}>
-            <span>{copy.time}</span>
-            <strong>{timeLabel}</strong>
+      <>
+        <div className={styles.primaryControls}>
+          <label>
+            <span>{copy.date}</span>
             <input
-              type="range"
-              min="0"
-              max="1439"
-              step="1"
-              value={minuteOfDay}
-              onChange={(event) => updateMinute(Number(event.target.value))}
+              type="date"
+              min="2000-01-01"
+              max="2099-12-31"
+              value={dateValue}
+              onChange={(event) => updateDate(event.target.value)}
             />
           </label>
-
-          <details className={styles.method}>
-            <summary>{copy.method}</summary>
-            <p>{copy.methodText}</p>
-            <a
-              href="https://www.gml.noaa.gov/grad/solcalc/calcdetails.html"
-              target="_blank"
-              rel="noreferrer"
-            >
-              {copy.source} ↗
-            </a>
-          </details>
+          <div className={styles.actions}>
+            <button type="button" onClick={() => setPlaying(!playing)}>
+              {playing ? copy.pause : copy.play}
+            </button>
+            <button type="button" onClick={() => returnToLive()}>
+              {copy.now}
+            </button>
+          </div>
         </div>
-      ) : null}
-    </section>
+
+        <label className={styles.timeline}>
+          <span>{copy.time}</span>
+          <strong>{timeLabel}</strong>
+          <input
+            type="range"
+            min="0"
+            max="1439"
+            step="1"
+            value={minuteOfDay}
+            onChange={(event) => updateMinute(Number(event.target.value))}
+          />
+        </label>
+
+        <details className={styles.method}>
+          <summary>{copy.method}</summary>
+          <p>{copy.methodText}</p>
+          <a
+            href="https://www.gml.noaa.gov/grad/solcalc/calcdetails.html"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {copy.source} ↗
+          </a>
+        </details>
+      </>
+    </ModePanel>
   );
 }

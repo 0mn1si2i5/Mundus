@@ -1,20 +1,18 @@
-.panel,
 .tablePanel {
-  position: absolute;
-  z-index: 7;
+  position: fixed;
+  z-index: 30;
   bottom: 7rem;
   border: 1px solid var(--color-line);
   background: rgb(8 11 15 / 90%);
   backdrop-filter: blur(18px);
 }
 
-.panel {
-  left: 2.5rem;
-  width: min(31rem, calc(100vw - 5rem));
-  padding: 1rem;
+.developmentPanel {
+  max-height: 46svh;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
-.heading,
 .timeline,
 .footerActions,
 .tableHeading {
@@ -24,39 +22,12 @@
   gap: 1rem;
 }
 
-.heading h2 {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.05rem;
-  font-weight: 400;
-}
-
-.heading p {
-  margin: 0.3rem 0 0;
-  color: var(--color-muted);
-  font-size: 0.58rem;
-  letter-spacing: 0.08em;
-}
-
-.panel button,
 .tablePanel button {
   border: 1px solid var(--color-line);
   color: var(--color-text);
   background: transparent;
   font: inherit;
   cursor: pointer;
-}
-
-.toggle {
-  display: none;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  color: var(--color-accent) !important;
-}
-
-.body {
-  margin-top: 0.8rem;
 }
 
 .status {
@@ -154,6 +125,111 @@
   font-style: normal;
 }
 
+.evidence {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--color-line);
+}
+
+.evidenceGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.evidenceGrid > div {
+  display: grid;
+  align-content: start;
+  gap: 0.2rem;
+}
+
+.evidence span,
+.contrast h3 {
+  color: var(--color-muted);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.evidence strong {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 400;
+}
+
+.evidence small,
+.contrast p {
+  color: var(--color-muted);
+  font-size: 0.62rem;
+  line-height: 1.4;
+}
+
+.contrast {
+  display: grid;
+  gap: 0.28rem;
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--color-line);
+}
+
+.contrast > strong {
+  color: var(--color-accent);
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+}
+
+.contrast h3 {
+  margin: 0;
+  font-weight: 400;
+}
+
+.contrastGrid {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.contrastGrid th,
+.contrastGrid td {
+  overflow: hidden;
+  padding: 0.16rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contrastGrid th {
+  color: var(--color-muted);
+  text-align: left;
+}
+
+.contrastGrid th:not(:first-child),
+.contrastGrid td {
+  text-align: right;
+}
+
+.contrast > em {
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-style: normal;
+}
+
+.contrast p {
+  margin: 0.1rem 0 0;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .legend {
   margin-top: 0.65rem;
 }
@@ -213,8 +289,9 @@
   right: 2.5rem;
   bottom: 7rem;
   display: grid;
-  width: min(22rem, calc(100vw - 5rem));
+  width: min(52rem, calc(100vw - 5rem));
   grid-template-rows: auto 1fr;
+  box-shadow: 0 0 0 100vmax rgb(3 5 7 / 58%);
 }
 
 .tableHeading {
@@ -234,8 +311,8 @@
 }
 
 .tableHeading button {
-  width: 2rem;
-  height: 2rem;
+  width: 2.75rem;
+  height: 2.75rem;
 }
 
 .tableScroll {
@@ -244,8 +321,16 @@
 
 .tablePanel table {
   width: 100%;
+  min-width: 48rem;
   border-collapse: collapse;
   font-size: 0.66rem;
+}
+
+.tablePanel caption {
+  padding: 0.55rem 0.8rem;
+  color: var(--color-muted);
+  font-size: 0.58rem;
+  text-align: left;
 }
 
 .tablePanel th,
@@ -255,9 +340,9 @@
   text-align: left;
 }
 
-.tablePanel th:last-child,
-.tablePanel td:last-child {
-  width: 5rem;
+.tablePanel th:not(:first-child),
+.tablePanel td:not(:first-child) {
+  width: 8.5rem;
   font-family: var(--font-mono);
   text-align: right;
 }
@@ -276,18 +361,8 @@
 }
 
 @media (max-width: 760px) {
-  .panel {
-    right: 1rem;
-    bottom: 5.4rem;
-    left: 1rem;
-    width: auto;
+  .developmentPanel {
     max-height: 48svh;
-    overflow-y: auto;
-    padding: 0.8rem;
-  }
-
-  .toggle {
-    display: block;
   }
 
   .tablePanel {
@@ -305,6 +380,10 @@
 
   .indicators button:nth-child(2) {
     border-right: 1px solid var(--color-line);
+  }
+
+  .evidenceGrid {
+    grid-template-columns: 1fr;
   }
 
   .footerActions {

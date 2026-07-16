@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
   type Ref,
 } from 'react';
 import type { Group, ShaderMaterial } from 'three';
@@ -27,6 +28,7 @@ import { useFrameBenchmark } from '../performance/useFrameBenchmark';
 import { createCountryTexture, getCountryDataset } from './countryData';
 import { antipodeOf, geoToVector3, vector3ToGeo } from './geo';
 import {
+  CLICK_DRAG_THRESHOLD_PX,
   isSelectionGesture,
   rotateCameraVertically,
   TOUCH_CLICK_DRAG_THRESHOLD_PX,
@@ -77,8 +79,34 @@ export function GlobeViewport({
   const [contextLost, setContextLost] = useState(false);
   const viewport = useRef<HTMLDivElement>(null);
   const keyboardController = useRef<GlobeKeyboardController>(null);
+  const pointerStarts = useRef(new Map<number, { x: number; y: number }>());
   const [keyboardStatus, setKeyboardStatus] = useState('');
   const benchmark = useFrameBenchmark(profile.level);
+  const markMeaningfulInteraction = useAppStore(
+    (state) => state.markMeaningfulInteraction,
+  );
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    pointerStarts.current.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+    });
+  }
+
+  function handlePointerUp(event: ReactPointerEvent<HTMLDivElement>) {
+    const start = pointerStarts.current.get(event.pointerId);
+    pointerStarts.current.delete(event.pointerId);
+    if (!start) return;
+    const distance = Math.hypot(
+      event.clientX - start.x,
+      event.clientY - start.y,
+    );
+    const threshold =
+      event.pointerType === 'touch'
+        ? TOUCH_CLICK_DRAG_THRESHOLD_PX
+        : CLICK_DRAG_THRESHOLD_PX;
+    if (distance > threshold) markMeaningfulInteraction();
+  }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const controller = keyboardController.current;
@@ -160,6 +188,10 @@ export function GlobeViewport({
       data-quality={profile.level}
       tabIndex={0}
       onKeyDown={handleKeyDown}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={(event) => pointerStarts.current.delete(event.pointerId)}
+      onWheel={markMeaningfulInteraction}
     >
       <p id="globe-keyboard-instructions" className={styles.visuallyHidden}>
         {keyboardInstructions}
@@ -225,10 +257,14 @@ function GlobeScene({
   const hasInteracted = useAppStore((state) => state.hasInteracted);
   const selectPoint = useAppStore((state) => state.selectPoint);
   const markInteraction = useAppStore((state) => state.markInteraction);
+  const markMeaningfulInteraction = useAppStore(
+    (state) => state.markMeaningfulInteraction,
+  );
   const setSelectedCountry = useAppStore((state) => state.setSelectedCountry);
   const setHoveredCountry = useAppStore((state) => state.setHoveredCountry);
   const clearCameraTarget = useAppStore((state) => state.clearCameraTarget);
   const group = useRef<Group>(null);
+  const interactionStart = useRef<Vector3>(null);
   const { camera, invalidate } = useThree();
   const reducedMotion = useReducedMotion();
   const countries = useMemo(() => getCountryDataset(), []);
@@ -265,7 +301,7 @@ function GlobeScene({
     function finishCameraMove() {
       camera.lookAt(0, 0, 0);
       clearCameraTarget();
-      markInteraction();
+      markMeaningfulInteraction();
       invalidate();
     }
 
@@ -299,7 +335,7 @@ function GlobeScene({
     clearCameraTarget,
     countries,
     invalidate,
-    markInteraction,
+    markMeaningfulInteraction,
     selectPoint,
     setSelectedCountry,
   ]);
@@ -347,7 +383,10 @@ function GlobeScene({
     event.stopPropagation();
     const threshold =
       event.pointerType === 'touch' ? TOUCH_CLICK_DRAG_THRESHOLD_PX : undefined;
-    if (!isSelectionGesture(event.delta, threshold)) return;
+    if (!isSelectionGesture(event.delta, threshold)) {
+      markMeaningfulInteraction();
+      return;
+    }
     if (!group.current) return;
     const selectedPoint = vector3ToGeo(
       group.current.worldToLocal(event.point.clone()),
@@ -449,10 +488,20 @@ function GlobeScene({
         rotateSpeed={0.55}
         zoomSpeed={0.65}
         onStart={() => {
+          interactionStart.current = camera.position.clone();
           clearCameraTarget();
           markInteraction();
         }}
         onChange={() => invalidate()}
+        onEnd={() => {
+          if (
+            interactionStart.current &&
+            interactionStart.current.distanceToSquared(camera.position) > 1e-8
+          ) {
+            markMeaningfulInteraction();
+          }
+          interactionStart.current = null;
+        }}
         makeDefault
       />
     </>

@@ -24,14 +24,20 @@ const countryRowSchema = z.tuple([
 const developmentDatasetSchema = z.object({
   formatVersion: z.literal(1),
   edition: z.literal('HDR 2025'),
-  years: z.array(z.number().int().min(1990).max(2023)).length(34),
+  years: z
+    .array(z.number().int().min(1990).max(2023))
+    .length(34)
+    .refine(
+      (years) => years.every((year, index) => year === 1990 + index),
+      'Development years must cover 1990–2023 in order.',
+    ),
   indicators: z.tuple([
     z.literal('hdi'),
     z.literal('health'),
     z.literal('education'),
     z.literal('income'),
   ]),
-  countries: z.array(countryRowSchema).min(190),
+  countries: z.array(countryRowSchema).length(195),
 });
 
 export interface DevelopmentCountry {
