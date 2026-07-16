@@ -34,6 +34,12 @@ const COPY = {
     invalid: '纬度需在 ±90°、经度需在 ±180° 内。',
     flip: '翻到另一端',
     examples: '精选起点',
+    method: '数据与方法',
+    methodText:
+      '对跖点通过纬度取反并将经度旋转 180° 计算。国家或海洋判断使用 Natural Earth 110m；最近聚居地使用 Natural Earth 50m 精选点，并非完整城市名录。边界是制图表达，不是领土法律权威。',
+    attribution: 'Made with Natural Earth · 公共领域数据',
+    source: 'Natural Earth 来源',
+    terms: '使用条款',
     show: '展开地点控件',
     hide: '收起地点控件',
   },
@@ -51,6 +57,12 @@ const COPY = {
     invalid: 'Latitude must be within ±90° and longitude within ±180°.',
     flip: 'See the other side',
     examples: 'Featured starts',
+    method: 'Data and method',
+    methodText:
+      'The antipode negates latitude and rotates longitude by 180°. Country or ocean lookup uses Natural Earth 110m; the nearest populated place uses the selected Natural Earth 50m index, not a complete gazetteer. Boundaries are a cartographic view, not a legal authority on territorial status.',
+    attribution: 'Made with Natural Earth · public domain data',
+    source: 'Natural Earth source',
+    terms: 'Terms of use',
     show: 'Expand place controls',
     hide: 'Collapse place controls',
   },
@@ -201,6 +213,26 @@ export function OtherSideControls({ locale }: { locale: Locale }) {
             {error}
           </p>
         ) : null}
+        <details className={styles.method}>
+          <summary>{copy.method}</summary>
+          <p>{copy.methodText}</p>
+          <p>{copy.attribution}</p>
+          <a
+            href="https://www.naturalearthdata.com/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {copy.source} ↗
+          </a>
+          {' · '}
+          <a
+            href="https://www.naturalearthdata.com/about/terms-of-use/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {copy.terms} ↗
+          </a>
+        </details>
       </>
     </ModePanel>
   );

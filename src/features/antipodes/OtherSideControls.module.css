@@ -133,6 +133,28 @@
   font-size: 0.68rem;
 }
 
+.method {
+  margin-top: 0.65rem;
+  color: var(--color-muted);
+  font-size: 0.62rem;
+}
+
+.method summary {
+  width: fit-content;
+  padding: 0.35rem 0;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.method p {
+  margin: 0.45rem 0;
+  line-height: 1.55;
+}
+
+.method a {
+  color: var(--color-accent);
+}
+
 @media (max-width: 760px) {
   .coordinates {
     flex-wrap: wrap;

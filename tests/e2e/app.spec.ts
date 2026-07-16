@@ -333,6 +333,23 @@ test('loads the scoped Natural Earth nearest-place result', async ({
   await expect(page.getByText(/非完整城市名录/)).toBeVisible();
 });
 
+test('shows the Other Side method and Natural Earth attribution', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./');
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开地点控件' }).click();
+  }
+  await page.getByText('数据与方法', { exact: true }).click();
+  const panel = page.locator('[data-mode-panel="place-controls"]');
+  await expect(panel).toContainText('Natural Earth 110m');
+  await expect(panel).toContainText('Natural Earth 50m');
+  await expect(panel).toContainText('Made with Natural Earth · 公共领域数据');
+  await expect(
+    panel.getByRole('link', { name: /Natural Earth 来源/ }),
+  ).toHaveAttribute('href', 'https://www.naturalearthdata.com/');
+});
+
 test('keeps development map, controls, URL and table synchronized', async ({
   page,
 }, testInfo) => {
