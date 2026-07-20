@@ -68,8 +68,20 @@ for (const sourcePath of [...files].filter((path) =>
   if (/sourceMappingURL\s*=/.test(source)) {
     throw new Error(`Inline source-map reference in ${sourcePath}`);
   }
+  const rootRelativeReferences = [
+    ...source.matchAll(
+      /["'(]((?:\/(?!\/))[^"'()`?#\s]+\.(?:js|css|svg|json|png|jpe?g|webp|avif|gif|ico|woff2?|ttf|otf|wasm))(?:[?#][^"'()`\s]*)?["')]/gi,
+    ),
+  ].map((match) => match[1]);
+  if (rootRelativeReferences.length > 0) {
+    throw new Error(
+      `Root-relative asset breaks project Pages in ${sourcePath}: ${rootRelativeReferences.join(', ')}`,
+    );
+  }
   const relativeReferences = [
-    ...source.matchAll(/(\.\.?\/[A-Za-z0-9_./-]+\.(?:js|css|svg|json))\b/g),
+    ...source.matchAll(
+      /(\.\.?\/[A-Za-z0-9_./-]+\.(?:js|css|svg|json|png|jpe?g|webp|avif|gif|ico|woff2?|ttf|otf|wasm))\b/gi,
+    ),
   ].map((match) => match[1]);
   const sourceDirectory = resolve(root, sourcePath, '..');
 
@@ -91,6 +103,9 @@ if (![...files].some((path) => /^assets\/.+\.css$/.test(path))) {
 }
 
 const notices = await readFile(resolve(root, 'THIRD_PARTY_NOTICES.md'), 'utf8');
+if (notices.trim().length === 0) {
+  throw new Error('Bundled dependency notices are empty.');
+}
 const emptyNotices = [...notices.matchAll(/^## (.+)\n\n(?=## |$)/gm)];
 if (emptyNotices.length > 0) {
   throw new Error(

@@ -20,9 +20,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "test:release": "node --test scripts/verify-pages-artifact.test.mjs",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm data:verify && pnpm test && pnpm build && pnpm release:verify"
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm data:verify && pnpm test && pnpm test:release && pnpm build && pnpm release:verify"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

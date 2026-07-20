@@ -24,8 +24,9 @@ inventory, and exact bundled dependency notices.
 ## Private rehearsal
 
 Before public visibility, a successful pull-request `pages-artifact` job is the
-accepted rehearsal when private Pages is unavailable. Download that workflow
-artifact and run:
+accepted rehearsal when private Pages is unavailable. Download and unzip that
+workflow artifact, extract the enclosed `artifact.tar`, and run the verifier on
+the directory containing the extracted `index.html`:
 
 ```bash
 pnpm release:verify /path/to/unpacked-artifact
