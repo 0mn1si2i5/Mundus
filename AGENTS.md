@@ -155,7 +155,7 @@ git log -12 --oneline --decorate
 git remote -v
 gh repo view --json nameWithOwner,visibility,isPrivate,url,homepageUrl,defaultBranchRef
 gh pr status
-gh pr view 3 --json number,title,url,state,isDraft,mergeable,mergeStateStatus,reviewDecision,headRefOid,baseRefOid,statusCheckRollup
+gh pr view 4 --json number,title,url,state,isDraft,mergeable,mergeStateStatus,reviewDecision,headRefOid,baseRefOid,statusCheckRollup
 gh run list --limit 12
 gh release list --limit 10
 git tag --list --sort=-creatordate
@@ -561,8 +561,8 @@ release is incomplete and identify the exact blocker.
    private, the main deploy may need enablement plus a rerun of the same SHA.
 4. **Tagging too early.** The post-live documentation PR changes the production
    SHA. Tag only after its deployment succeeds.
-5. **Treating README links as evidence.** The URL is currently described as
-   planned. Only a successful live workflow plus manual smoke makes it live.
+5. **Treating README links as evidence.** README now identifies the verified
+   host, but only deployment and product-smoke evidence validates a release SHA.
 6. **Overbuilding open-source governance.** Contribution walkthroughs,
    marketplace contracts, Dependabot, and CodeQL are not MVP blockers unless a
    concrete review promotes them to P0/P1.
