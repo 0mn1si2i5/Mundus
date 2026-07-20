@@ -2,7 +2,7 @@
 
 - Status: active
 - Updated: 2026-07-20
-- Active branch: `codex/v1-pages-release`
+- Active branch: `codex/v1-release-evidence`
 - Product plan: [PROJECT_PLAN.md](PROJECT_PLAN.md)
 - Implementation record: [IMPLEMENTATION.md](IMPLEMENTATION.md)
 

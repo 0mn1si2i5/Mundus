@@ -73,7 +73,7 @@ become stale. Run the refresh commands in Section 5 before acting.
 
 - Repository: `0mn1si2i5/Mundus`
 - Visibility: **public**
-- Homepage URL: pending final evidence update
+- Homepage URL: `https://0mn1si2i5.github.io/Mundus/`
 - Pages site: enabled with GitHub Actions and HTTPS at
   `https://0mn1si2i5.github.io/Mundus/`
 - `main` branch protection: enabled with strict `quality`, `browser-smoke`, and
@@ -416,83 +416,21 @@ Do not repeat this work unless a regression or current diff invalidates it:
 - automated post-deploy desktop/mobile live smoke;
 - rollback runbook.
 
-The remaining work is release-state coordination, settings, live validation,
-and final evidence—not another feature batch.
+The remaining work is the final evidence PR, complete public-site validation,
+the matching tag/Release, and final SHA readback—not another feature batch.
 
 ## 11. Exact remaining execution plan
 
-### Phase 0 — refresh and review PR #3
+### Phase 0 — completed release-path setup
 
-1. Run the Section 5 checks.
-2. Confirm PR #3 still targets the current `main`, is mergeable, and has green
-   `quality`, `browser-smoke`, and `pages-artifact` checks.
-3. Inspect `git diff main...codex/v1-pages-release`; ensure it still contains
-   only the Pages/release-path scope.
-4. Run `pnpm check` and `pnpm test:e2e` if the head, lockfile, runtime, or base
-   changed since the recorded evidence.
-5. Confirm there are no unresolved P0/P1 review findings.
-6. Do not merge yet if the repository is private and Pages cannot be enabled,
-   unless you have a verified plan to enable Pages and rerun the exact main
-   workflow immediately after merge.
+PR #3 merged as `40c4ab2fdc7ff570924ff5f5c9ed6b024b7a1a77` after
+review and green required checks. The repository is public, `main` protection
+is active, private vulnerability reporting is enabled, and GitHub Actions Pages
+is enabled with HTTPS. The first production Pages run and automated desktop and
+mobile live smoke passed. Do not repeat these steps unless current GitHub state
+shows a regression.
 
-### Phase 1 — final pre-public audit
-
-Before asking for visibility approval:
-
-1. Inspect tracked and ignored files. Confirm generated/local folders are not
-   tracked.
-2. Recheck the entire Git history for credentials and private material. Use a
-   reputable secret scanner if available; supplement it with targeted history
-   searches. Do not paste suspected secrets into chat or terminal output.
-3. Run the production dependency audit and license inventory. Investigate every
-   actionable production issue; do not dismiss findings solely because this is
-   a static site.
-4. Verify Natural Earth and UNDP attribution in the built UI, not just Markdown.
-5. Verify `SECURITY.md` does not promise an unavailable reporting channel before
-   launch; private vulnerability reporting must be enabled and tested promptly
-   after the repository becomes public.
-6. Confirm the repository has no release tag or Pages site that would conflict
-   with the proposed first release.
-7. Prepare a compact owner-gate report using Section 2.
-
-### Phase 2 — mandatory product-owner gate
-
-Stop and request explicit approval to make
-`https://github.com/0mn1si2i5/Mundus` public.
-
-Do not combine the approval question with unrelated feature choices. State that
-public visibility exposes the full repository history and enables the remaining
-Pages/security configuration. Wait for an affirmative response.
-
-### Phase 3 — configure the public repository and merge the release path
-
-After approval:
-
-1. Reconfirm the intended repository and visibility command before executing
-   it. Make only `0mn1si2i5/Mundus` public.
-2. Enable private vulnerability reporting and verify the public Security tab
-   offers the private report path described in `SECURITY.md`.
-3. Configure `main` protection for the solo-maintainer workflow:
-   - changes arrive through pull requests;
-   - stale approvals are dismissed if approvals are used;
-   - required checks include `quality`, `browser-smoke`, and `pages-artifact`;
-   - status checks must be current with `main`;
-   - do not require an impossible independent approval if the repository has
-     only one maintainer;
-   - do not grant broad workflow write permissions.
-4. Select GitHub Actions as the Pages publishing source and use the
-   `github-pages` environment. Do not publish from a `gh-pages` branch and do
-   not commit `dist/`.
-5. If GitHub will not create the Pages site until the workflow exists on
-   default `main`, merge PR #3 after all required PR checks, enable Pages, then
-   rerun the exact failed/skipped Pages workflow for that merge SHA. Do not make
-   a meaningless source commit merely to retrigger deployment.
-6. Merge PR #3 without modifying its reviewed scope. Record the merge SHA and
-   PR URL.
-7. Watch the `Pages` workflow through `pages-artifact`, `deploy-pages`, and
-   `live-smoke`. Do not infer success from `pages-artifact` alone.
-
-### Phase 4 — validate the first live deployment
+### Phase 1 — complete live product validation
 
 Use the URL returned by `actions/deploy-pages`, expected to be
 `https://0mn1si2i5.github.io/Mundus/`. Verify the actual output; do not hardcode
@@ -527,38 +465,22 @@ Manual product smoke in both a desktop and mobile viewport:
 12. Inspect console/page errors. Any release-blocking error is P1.
 
 Record the Pages workflow URL, deployed SHA, final URL, date/time, viewports,
-browser version, automated results, manual checklist, and P2 limitations.
+browser version, automated results, product checklist, and P2 limitations. The
+existing automated live smoke proves only the host, initial Other Side canvas,
+core requests, and frame sample; it does not close this broader checklist.
 
-### Phase 5 — final evidence/documentation PR
+### Phase 2 — merge the final evidence PR
 
-The first live deployment is not automatically the final release SHA because
-the repository still describes the URL as “planned” and current tracking docs
-contain older checkpoints.
-
-Create a small branch from the now-current `main` and update only durable release
-evidence:
-
-- `README.md` and `README.zh-CN.md`: change the planned URL wording to verified
-  live-site wording;
-- `docs/IMPLEMENTATION.md`: mark product completion, public surface, Pages
-  workflow, live smoke, and remaining P2 items accurately;
-- `docs/MVP_RELEASE_PLAN.md`: mark Packets A–D and checklist items with actual
-  evidence, not optimistic checkmarks;
-- `docs/EXECUTION_PLAN.md`: mark Milestones 1 and 2 complete only if their real
-  gates passed; record that V1.1 is still pending;
-- repository homepage/description: point at the verified live URL and concise
-  product positioning;
-- optionally add a concise release evidence section or file if links and SHAs
-  do not fit cleanly in `IMPLEMENTATION.md`.
-
-Run `pnpm check` and `pnpm test:e2e`, open the PR, wait for required checks, and
-merge. That merge creates a new candidate production SHA. Wait for its Pages
-deployment and live smoke to pass again.
+PR #4, `codex/v1-release-evidence`, contains only durable release evidence and
+the verified live-site links. Review its final diff, require green `quality`,
+`browser-smoke`, and `pages-artifact`, resolve valid conversations, and merge
+through protected `main`. That merge creates the final candidate production
+SHA. Wait for its CI, Pages deployment, and live smoke to pass again.
 
 Do not tag the earlier first-deployment SHA if the final evidence PR changes
 `main`.
 
-### Phase 6 — tag and GitHub Release
+### Phase 3 — tag and GitHub Release
 
 Only after the final evidence merge has deployed successfully:
 
@@ -578,7 +500,7 @@ Only after the final evidence merge has deployed successfully:
 7. Read back the tag target, release target, `main` SHA, Pages deployment SHA,
    live URL, README link, and repository homepage. They must agree.
 
-### Phase 7 — completion report
+### Phase 4 — completion report
 
 Report the outcome rather than a list of commands. Include:
 

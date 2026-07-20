@@ -246,10 +246,10 @@ launch gate.
 - [ ] Gates A, B, C, and D have complete evidence.
 - [x] `pnpm check` and full Playwright pass on the first deployed commit.
 - [x] Remote CI and first Pages deployment pass.
-- [x] No unresolved P0/P1 product, accessibility, data, license, or security
+- [ ] No unresolved P0/P1 product, accessibility, data, license, or security
       finding remains.
 - [x] Automated live desktop and mobile smoke pass.
-- [x] The three V1 modes, bilingual UI, sharing, attribution, and fallback paths
+- [ ] The three V1 modes, bilingual UI, sharing, attribution, and fallback paths
       are available on the public URL.
 - [ ] README and repository homepage point to the live site from final `main`.
 - [ ] Pages deployment SHA = `main` release commit SHA = `v1.0.0` target SHA.
@@ -257,12 +257,8 @@ launch gate.
 
 ## 6. Handoff instruction for the execution thread
 
-Use Packets A and B as completed acceptance evidence, review and merge the
-already implemented Packet C through the Packet D sequence, then execute Packet
-D. Work autonomously inside the release scope, but stop for product-owner
-confirmation immediately before making the repository public. Do not start
-V1.1, add product features, or broaden the open-source contribution system.
-When a gate fails, correct the failure and rerun the relevant gate. At
-completion, update [IMPLEMENTATION.md](IMPLEMENTATION.md) with the live URL,
-release/tag SHA, validation counts, known P2 limitations, and links to durable
-remote evidence.
+Packets A-C and the first public deployment are complete. Resume at PR #4:
+review and merge the final evidence change, wait for its exact merge SHA to pass
+CI, Pages deployment, automated live smoke, and the remaining public-site
+product checklist, then create `v1.0.0` and the GitHub Release at that same SHA.
+Do not start V1.1, add product features, or broaden the contribution system.
