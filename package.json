@@ -13,15 +13,17 @@
     "data:places": "node scripts/build-populated-places.mjs",
     "data:development": "node scripts/build-undp-development.mjs",
     "data:verify": "node scripts/verify-generated-data.mjs",
+    "release:verify": "node scripts/verify-pages-artifact.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b --pretty false",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "test:release": "node --test scripts/verify-pages-artifact.test.mjs",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm data:verify && pnpm test && pnpm build"
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm data:verify && pnpm test && pnpm test:release && pnpm build && pnpm release:verify"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
