@@ -1,8 +1,8 @@
 # Mundus V1 → V1.1 execution plan
 
 - Status: active
-- Updated: 2026-07-15
-- Active branch: `codex/v1-product-completion`
+- Updated: 2026-07-20
+- Active branch: `codex/v1-release-evidence`
 - Product plan: [PROJECT_PLAN.md](PROJECT_PLAN.md)
 - Implementation record: [IMPLEMENTATION.md](IMPLEMENTATION.md)
 
@@ -60,13 +60,11 @@ Status: **complete** at `1d627e6` on private `main`.
 
 ## Milestone 1 — V1 product completion
 
-Status: **in progress**.
+Status: **complete** through merged PR #1 (`70572bf`).
 
-Round checkpoint (2026-07-15): 1A and 1B are implemented on
-`codex/v1-product-completion`. Local gates pass with 66 unit tests and 43
-browser tests plus 3 intentional project skips. The branch remains private and
-unmerged; 1C remote review/CI is the next resumable gate. No release or V1.1
-data work has started.
+PR #1 merged the completed discovery loop and Development evidence narrative to
+`main`. Its corrected head passed 66 unit tests and the complete desktop/mobile
+browser gate before merge. No V1.1 data work has started.
 
 ### 1A. Discovery and scalable navigation
 
@@ -144,13 +142,19 @@ Acceptance:
 
 ## Milestone 2 — public V1 release
 
-Status: **pending Milestone 1**.
+Status: **in progress**. Public surface PR #2 and Pages-path PR #3 are merged.
+The first public deployment at `40c4ab2` passed CI, Pages deployment, and
+desktop/mobile live smoke; final evidence, redeployment, tag, and Release remain.
 
 The smallest responsible public-showcase slice is defined in
 [MVP_RELEASE_PLAN.md](MVP_RELEASE_PLAN.md). Execute that plan first. The
 contribution templates, extended repository automation, and other open-source
 maturity work below may follow the live MVP unless a release review promotes a
 specific item to P0/P1.
+
+Zero-context execution agents must begin with the repository root
+[`AGENTS.md`](../AGENTS.md), which records the current GitHub state, remaining
+sequence, mandatory visibility pause, final evidence PR, and SHA-identity gate.
 
 - English canonical README plus full Chinese README.
 - `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, data-source overview,
