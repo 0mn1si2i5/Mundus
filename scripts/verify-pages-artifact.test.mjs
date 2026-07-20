@@ -66,5 +66,8 @@ test('Pages workflow serializes the complete production deployment', async () =>
   const jobs = workflow.indexOf('\njobs:');
 
   assert.ok(workflowConcurrency > 0 && workflowConcurrency < jobs);
+  assert.match(workflow, /github-pages-production/);
+  assert.match(workflow, /github-pages-pr-\{0\}/);
+  assert.match(workflow, /github\.event\.pull_request\.number/);
   assert.match(workflow, /cancel-in-progress: true/);
 });
