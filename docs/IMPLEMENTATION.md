@@ -4,18 +4,45 @@
 
 当前执行目标、批次门槛和审阅循环见 [EXECUTION_PLAN.md](EXECUTION_PLAN.md)。
 
-## V1 产品收口：进行中
+## V1 MVP 发布：首次 Pages 部署已验证，最终发布证据待合并
 
 - [x] 阶段 1–4 私有基线完成三方审阅、纠错复验与远端 CI 同步
 - [x] 一次性首次操作提示与 Mode Atlas
 - [x] 右上 Mode Atlas 与三模式底部直达导航
 - [x] Development 全球中位数、相对中位数与历史变化
 - [x] Development 同年相近 HDI 的结构对照叙事
-- [ ] V1 开源治理、安全 CI、Pages 部署与公开发布
+- [x] V1 产品收口分支通过审阅并由 PR #1 合并到 `main`
+- [x] 最小公开发布文档、安全策略、数据来源与许可证清单由 PR #2 合并
+- [x] GitHub Pages 构建、产物验证、部署与线上冒烟路径已在 PR #3 实现并通过远端演练
+- [x] PR #3 通过发布审阅并合并到 `main`
+- [x] 仓库已公开，Pages、`main` 保护和私密漏洞报告已启用
+- [x] 首次 Pages 部署和桌面/移动自动线上冒烟通过
+- [ ] 合并最终证据 PR，再次部署验证并创建 `v1.0.0` 与 GitHub Release
+
+2026-07-20 合并前历史检查点：私有 `main` 位于 `fc0ce78`；当前分支
+`codex/v1-pages-release` 位于 `5c8fb25`。PR #3 可合并，远端 `quality`、
+`browser-smoke` 与 `pages-artifact` 均通过，PR 上的部署和线上冒烟按设计
+跳过。当时仓库尚未启用 Pages，`main` 尚未保护，也尚无 V1 标签或 Release；
+该状态已经由下方首次公开部署证据取代。
+本地复验为 66 个单元测试通过；完整 Playwright 为 45 项通过、3 项按设计
+跳过；Pages 产物为 22 个文件、0 个 source map。
+
+2026-07-20 首次公开部署证据：PR #3 合并提交为
+`40c4ab2fdc7ff570924ff5f5c9ed6b024b7a1a77`。该提交的
+[CI](https://github.com/0mn1si2i5/Mundus/actions/runs/29722665105) 与
+[Pages](https://github.com/0mn1si2i5/Mundus/actions/runs/29722665114) 均通过；
+`pages-artifact`、`deploy-pages` 和桌面/移动 `live-smoke` 完整成功。线上地址
+为 <https://0mn1si2i5.github.io/Mundus/>，HTTPS 请求返回 200 和预期文档
+标题。最终标签必须等待本证据变更合并后的同 SHA 部署再次通过。
+
+零上下文执行线程必须先阅读仓库根目录的 [AGENTS.md](../AGENTS.md)，然后按
+[MVP_RELEASE_PLAN.md](MVP_RELEASE_PLAN.md) 与
+[RELEASE_RUNBOOK.md](RELEASE_RUNBOOK.md) 完成剩余发布闭环。
 
 基线检查点为私有 `main` 的 `1d627e6`：本地 57 个单元测试、31 个浏览器测试通过（1 个桌面专属生命周期用例在移动项目按设计跳过），远端 quality 与 browser-smoke 均通过。公开发布仍以执行计划中的产品、安全、许可和部署门槛为准。
 
-2026-07-15 停止检查点位于 `codex/v1-product-completion`：发现循环与 Development 证据叙事已完成本地三类审阅和纠错复验；本地 66 个单元测试通过，完整浏览器套件 43 项通过、3 项按设计跳过。该分支尚未合并，公开治理、远端 CI、Pages 和发布仍未开始。
+2026-07-15 的产品收口停止检查点已经由后续 PR #1 和 PR #2 取代；保留其
+测试数字仅作为历史证据，不再作为当前执行状态。
 
 ## 阶段 1：完成，保留一项非阻塞验证
 

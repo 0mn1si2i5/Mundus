@@ -17,9 +17,9 @@ The V1 scope is intentionally limited to three modes:
 - **Sunline** visualizes the day-night boundary and estimates solar position,
   sunrise, and sunset in UTC for educational use.
 
-The planned public URL is
-<https://0mn1si2i5.github.io/Mundus/>. It will be marked as the live site only
-after the public-release smoke test passes.
+Explore the verified live site at <https://0mn1si2i5.github.io/Mundus/>. Its
+GitHub Pages deployment is built from reviewed `main` and checked on desktop
+and mobile after each production deployment.
 
 ## Run locally
 

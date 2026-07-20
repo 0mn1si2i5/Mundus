@@ -1,9 +1,10 @@
 # Mundus V1 MVP release plan
 
-- Status: ready for execution
+- Status: Packets A-C complete; Packet D is completing final evidence and release
 - Prepared: 2026-07-16
-- Current branch: `codex/v1-product-completion`
-- Current checkpoint: `ad804e7`
+- Status refreshed: 2026-07-20
+- Current branch: `codex/v1-release-evidence`
+- Current checkpoint: first public deployment `40c4ab2`
 - Production host: GitHub Pages
 - Production source: protected, reviewed `main`
 - Public fallback URL: `https://0mn1si2i5.github.io/Mundus/`
@@ -14,6 +15,13 @@ This is the execution handoff for the smallest responsible public release. It
 narrows the broader open-source work in [EXECUTION_PLAN.md](EXECUTION_PLAN.md)
 to the work that must be complete before a public showcase launch.
 
+For a zero-context takeover, read the repository root
+[`AGENTS.md`](../AGENTS.md) first. PR #1 and PR #2 have been merged. PR #3 has
+been merged. The repository is public; Pages, `main` protection, and private
+vulnerability reporting are enabled; the first deployment and automated live
+smoke passed. Packet D still requires final evidence merge, redeployment, tag,
+and GitHub Release.
+
 ## 1. Release outcome
 
 Publish the existing three-mode V1 as a static, publicly accessible showcase
@@ -22,8 +30,8 @@ repository.
 
 The release is complete only when:
 
-- the current V1 product-completion branch has passed local and remote gates and
-  is merged into `main`;
+- the accepted V1 product-completion and public-release surface remain merged
+  into `main` without release-blocking regressions;
 - a GitHub Pages deployment built from that `main` commit is live;
 - the live desktop and mobile experience passes the release smoke checklist;
 - the live deployment commit is tagged `v1.0.0` and documented in a GitHub
@@ -87,6 +95,10 @@ build output, caches, credentials, or tokens.
 
 ### Packet A — close the V1 product-completion branch
 
+Status: **complete** through merged PR #1. The steps below are retained as the
+historical gate; do not repeat the feature batch unless current evidence shows
+a regression.
+
 1. Rebase or update `codex/v1-product-completion` from current `main` without
    changing the accepted product scope.
 2. Run:
@@ -112,7 +124,8 @@ Gate A evidence:
 
 ### Packet B — prepare the minimum public-release surface
 
-Do this from a new release branch based on the merged `main`.
+Status: **complete** through merged PR #2. The steps below are retained as the
+public-surface acceptance contract.
 
 1. Make English the canonical README and provide a complete Chinese README or a
    clearly linked equivalent. Both must state product purpose, three-mode scope,
@@ -143,6 +156,9 @@ Gate B evidence:
 
 ### Packet C — add reproducible GitHub Pages deployment
 
+Status: **complete** through merged PR #3. Its merge commit `40c4ab2` passed the
+complete Pages workflow, deployment, and automated desktop/mobile live smoke.
+
 1. Add a dedicated Pages workflow that builds with the pinned Node and pnpm
    versions, uses the lockfile, runs the release gate, uploads only `dist/`, and
    deploys only from `main` through the `github-pages` environment.
@@ -169,6 +185,9 @@ Gate C evidence:
   manually editing hosted files.
 
 ### Packet D — public launch
+
+Status: **in progress**. Public settings and the first deployment are complete;
+final evidence, redeployment, and the matching tag/Release remain.
 
 This packet changes public external state. Execute it only after Gates A–C and a
 final product-owner visibility confirmation.
@@ -225,23 +244,25 @@ launch gate.
 ## 5. Final acceptance checklist
 
 - [ ] Gates A, B, C, and D have complete evidence.
-- [ ] `pnpm check` and full Playwright pass on the release commit.
-- [ ] Remote CI and Pages deployment pass.
-- [ ] No unresolved P0/P1 product, accessibility, data, license, or security
+- [x] `pnpm check` and full Playwright pass on the first deployed commit.
+- [x] Remote CI and first Pages deployment pass.
+- [x] No unresolved P0/P1 product, accessibility, data, license, or security
       finding remains.
-- [ ] Live desktop and mobile smoke pass.
-- [ ] The three V1 modes, bilingual UI, sharing, attribution, and fallback paths
+- [x] Automated live desktop and mobile smoke pass.
+- [x] The three V1 modes, bilingual UI, sharing, attribution, and fallback paths
       are available on the public URL.
-- [ ] README and repository homepage point to the live site.
+- [ ] README and repository homepage point to the live site from final `main`.
 - [ ] Pages deployment SHA = `main` release commit SHA = `v1.0.0` target SHA.
 - [ ] Known P2 limitations are written in the release, not silently forgotten.
 
 ## 6. Handoff instruction for the execution thread
 
-Execute Packets A–D in order. Work autonomously inside each packet, but stop for
-product-owner confirmation immediately before making the repository public.
-Do not start V1.1, add product features, or broaden the open-source contribution
-system. When a gate fails, correct the failure and rerun the relevant gate. At
+Use Packets A and B as completed acceptance evidence, review and merge the
+already implemented Packet C through the Packet D sequence, then execute Packet
+D. Work autonomously inside the release scope, but stop for product-owner
+confirmation immediately before making the repository public. Do not start
+V1.1, add product features, or broaden the open-source contribution system.
+When a gate fails, correct the failure and rerun the relevant gate. At
 completion, update [IMPLEMENTATION.md](IMPLEMENTATION.md) with the live URL,
 release/tag SHA, validation counts, known P2 limitations, and links to durable
 remote evidence.
