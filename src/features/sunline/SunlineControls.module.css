@@ -8,6 +8,7 @@
 }
 
 .panel button {
+  min-block-size: 2.75rem;
   padding: 0.45rem 0.65rem;
 }
 
@@ -25,7 +26,7 @@
 }
 
 .primaryControls input {
-  min-height: 2rem;
+  min-block-size: 2.75rem;
   padding: 0 0.5rem;
   color-scheme: dark;
   font-family: var(--font-mono);

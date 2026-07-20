@@ -16,6 +16,22 @@ describe('mode registry', () => {
     expect(new Set(MODE_ORDER).size).toBe(MODE_ORDER.length);
   });
 
+  it('defines complete Chinese title phrase units', () => {
+    expect(MODE_DEFINITIONS.antipodes.titlePhrases.zh).toEqual([
+      '地球',
+      '另一端',
+    ]);
+    expect(MODE_DEFINITIONS.development.titlePhrases.zh).toEqual([
+      '发展的',
+      '不同侧面',
+    ]);
+    expect(MODE_DEFINITIONS.sunline.titlePhrases.zh).toEqual(['日照线']);
+
+    for (const mode of Object.values(MODE_DEFINITIONS)) {
+      expect(mode.titlePhrases.zh.join('')).toBe(mode.title.zh);
+    }
+  });
+
   it('validates Other Side coordinates', () => {
     const schema = MODE_DEFINITIONS.antipodes.stateSchema;
     expect(

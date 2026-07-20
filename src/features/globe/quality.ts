@@ -45,7 +45,7 @@ export function chooseQualityProfile(signals: DeviceSignals): QualityProfile {
   return {
     level: 'medium',
     dpr: [1, Math.min(1.5, signals.devicePixelRatio)],
-    textureWidth: 1024,
+    textureWidth: 2048,
     sphereSegments: [80, 48],
     starCount: 400,
   };

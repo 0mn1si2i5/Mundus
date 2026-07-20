@@ -8,8 +8,16 @@
 }
 
 .developmentPanel {
+  display: grid;
   max-height: 46svh;
+  overflow: hidden;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.panelBody {
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
 
@@ -54,7 +62,7 @@
 }
 
 .indicators button {
-  min-height: 2.3rem;
+  min-block-size: 2.75rem;
   padding: 0.4rem;
   border-right: 0;
   color: var(--color-muted);
@@ -172,6 +180,33 @@
   border-top: 1px solid var(--color-line);
 }
 
+.continuation {
+  position: sticky;
+  z-index: 1;
+  bottom: 0;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.6rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--color-line);
+  color: var(--color-accent);
+  background: rgb(8 11 15 / 94%);
+  font: inherit;
+  font-size: 0.62rem;
+  cursor: pointer;
+  visibility: hidden;
+}
+
+.continuation[data-visible='true'] {
+  visibility: visible;
+}
+
+.continuation span {
+  font-family: var(--font-mono);
+}
+
 .contrast > strong {
   color: var(--color-accent);
   font-family: var(--font-display);
@@ -181,6 +216,11 @@
 .contrast h3 {
   margin: 0;
   font-weight: 400;
+}
+
+.contrast h3:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
 }
 
 .contrastGrid {
@@ -380,10 +420,6 @@
 
   .indicators button:nth-child(2) {
     border-right: 1px solid var(--color-line);
-  }
-
-  .evidenceGrid {
-    grid-template-columns: 1fr;
   }
 
   .footerActions {

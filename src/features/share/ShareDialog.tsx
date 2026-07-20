@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { createPortal } from 'react-dom';
 import type { Locale } from '../../i18n/messages';
 import { useAppStore } from '../../state/appStore';
 import { createShareUrl, type SharePrecision } from './shareUrl';
@@ -65,8 +66,11 @@ export function ShareDialog({
 
   useEffect(() => {
     const restoreFocus = document.activeElement;
+    const root = document.getElementById('root');
+    root?.setAttribute('inert', '');
     closeButton.current?.focus();
     return () => {
+      root?.removeAttribute('inert');
       if (restoreFocus instanceof HTMLElement) restoreFocus.focus();
     };
   }, []);
@@ -79,11 +83,11 @@ export function ShareDialog({
     }
     if (event.key !== 'Tab') return;
 
-    const buttons = dialog.current?.querySelectorAll<HTMLButtonElement>(
-      'button:not([disabled])',
+    const controls = dialog.current?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
     );
-    const first = buttons?.[0];
-    const last = buttons?.[buttons.length - 1];
+    const first = controls?.[0];
+    const last = controls?.[controls.length - 1];
     if (!first || !last) return;
 
     if (event.shiftKey && document.activeElement === first) {
@@ -106,8 +110,14 @@ export function ShareDialog({
     }
   }
 
-  return (
-    <div className={styles.backdrop} onMouseDown={onClose}>
+  return createPortal(
+    <div
+      className={styles.backdrop}
+      onMouseDown={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+    >
       <section
         ref={dialog}
         className={styles.dialog}
@@ -141,6 +151,7 @@ export function ShareDialog({
         </div>
         <output aria-live="polite">{status}</output>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -14,12 +14,22 @@ describe('render quality', () => {
   });
 
   it('selects the detailed profile only for capable desktops', () => {
-    expect(
-      chooseQualityProfile({
-        viewportWidth: 1440,
-        devicePixelRatio: 2,
-        hardwareConcurrency: 10,
-      }).level,
-    ).toBe('high');
+    const profile = chooseQualityProfile({
+      viewportWidth: 1440,
+      devicePixelRatio: 2,
+      hardwareConcurrency: 10,
+    });
+    expect(profile.level).toBe('high');
+    expect(profile.textureWidth).toBe(2048);
+  });
+
+  it('uses the detailed texture on medium desktops', () => {
+    const profile = chooseQualityProfile({
+      viewportWidth: 1024,
+      devicePixelRatio: 1,
+      hardwareConcurrency: 6,
+    });
+    expect(profile.level).toBe('medium');
+    expect(profile.textureWidth).toBe(2048);
   });
 });

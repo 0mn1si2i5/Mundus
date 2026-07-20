@@ -5,3 +5,5 @@ playwright-report
 test-results
 pnpm-lock.yaml
 src/data/generated
+.superpowers
+.worktrees

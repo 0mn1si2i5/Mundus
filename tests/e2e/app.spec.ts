@@ -189,6 +189,554 @@ test('keeps the English mode atlas usable at 320px', async ({ page }) => {
   }
 });
 
+test('keeps compact result, collapsed controls, and mode navigation separate', async ({
+  page,
+}) => {
+  const compactViewports = [
+    { width: 320, height: 568 },
+    { width: 390, height: 844 },
+    { width: 760, height: 844 },
+  ];
+  await page.setViewportSize(compactViewports[0]);
+  await page.goto('./');
+
+  const stage = page.getByTestId('app-stage');
+  const result = page.getByRole('complementary', { name: '结果' });
+  const panel = page.locator('[data-mode-panel="place-controls"]');
+  const navigation = page.getByRole('navigation', { name: '观察模式' });
+  await expect(stage).toBeVisible();
+  await expect(result).toBeVisible();
+  await expect(panel).toBeVisible();
+  await expect(panel).toHaveAttribute('data-expanded', 'false');
+  await expect(navigation).toBeVisible();
+
+  for (const viewport of compactViewports) {
+    await page.setViewportSize(viewport);
+    const rectangles = await Promise.all(
+      [stage, result, panel, navigation].map((surface) =>
+        surface.boundingBox(),
+      ),
+    );
+    for (const rectangle of rectangles) {
+      expect(rectangle).not.toBeNull();
+      expect(rectangle!.x).toBeGreaterThanOrEqual(0);
+      expect(rectangle!.y).toBeGreaterThanOrEqual(0);
+      expect(rectangle!.x + rectangle!.width).toBeLessThanOrEqual(
+        viewport.width,
+      );
+      expect(rectangle!.y + rectangle!.height).toBeLessThanOrEqual(
+        viewport.height,
+      );
+    }
+    for (let second = 1; second < rectangles.length; second += 1) {
+      expect(overlaps(rectangles[0], rectangles[second])).toBe(false);
+    }
+    for (let first = 1; first < rectangles.length; first += 1) {
+      for (let second = first + 1; second < rectangles.length; second += 1) {
+        expect(overlaps(rectangles[first], rectangles[second])).toBe(false);
+      }
+    }
+    expect(
+      rectangles[2]!.y - (rectangles[1]!.y + rectangles[1]!.height),
+    ).toBeLessThanOrEqual(16);
+  }
+
+  await page.setViewportSize({ width: 761, height: 844 });
+  const title = page.getByRole('heading', { name: '地球另一端' });
+  await expect(title).toBeVisible();
+  await expect(result).toHaveCSS('position', 'absolute');
+  await expect(panel).toHaveCSS('position', 'absolute');
+  await expect(navigation).toHaveCSS('position', 'absolute');
+  const desktopRectangles = await Promise.all(
+    [title, result, panel, navigation].map((surface) => surface.boundingBox()),
+  );
+  const desktopSurfaceNames = ['title', 'result', 'controls', 'navigation'];
+  for (const rectangle of desktopRectangles) {
+    expect(rectangle).not.toBeNull();
+    expect(rectangle!.x).toBeGreaterThanOrEqual(0);
+    expect(rectangle!.y).toBeGreaterThanOrEqual(0);
+    expect(rectangle!.x + rectangle!.width).toBeLessThanOrEqual(761);
+    expect(rectangle!.y + rectangle!.height).toBeLessThanOrEqual(844);
+  }
+  for (let first = 1; first < desktopRectangles.length; first += 1) {
+    for (
+      let second = first + 1;
+      second < desktopRectangles.length;
+      second += 1
+    ) {
+      expect(
+        overlaps(desktopRectangles[first], desktopRectangles[second]),
+        `${desktopSurfaceNames[first]} overlaps ${desktopSurfaceNames[second]}`,
+      ).toBe(false);
+    }
+  }
+  for (let second = 1; second < desktopRectangles.length; second += 1) {
+    expect(
+      overlaps(desktopRectangles[0], desktopRectangles[second]),
+      `title overlaps ${desktopSurfaceNames[second]}`,
+    ).toBe(false);
+  }
+});
+
+test('protects landscape desktop poster edges with safe-area-aware base rules', async ({
+  page,
+}) => {
+  const viewport = { width: 844, height: 390 };
+  await page.setViewportSize(viewport);
+  await page.goto('./');
+
+  const baseRules = await page.evaluate(() => {
+    function collectRules(rules: CSSRuleList): {
+      cssText: string;
+      selector: string;
+    }[] {
+      return Array.from(rules).flatMap((rule) => {
+        if (rule instanceof CSSStyleRule) {
+          return [{ cssText: rule.style.cssText, selector: rule.selectorText }];
+        }
+        return 'cssRules' in rule
+          ? collectRules((rule as CSSGroupingRule).cssRules)
+          : [];
+      });
+    }
+
+    return Array.from(document.styleSheets).flatMap((styleSheet) =>
+      collectRules(styleSheet.cssRules),
+    );
+  });
+  const headerRule = baseRules.find(({ selector }) =>
+    /^\._header_[\w-]+$/u.test(selector),
+  );
+  const navigationRule = baseRules.find(({ selector }) =>
+    /^\._modeNav_[\w-]+$/u.test(selector),
+  );
+  const introRule = baseRules.find(({ selector }) =>
+    /^\._intro_[\w-]+$/u.test(selector),
+  );
+  const panelRule = baseRules.find(({ selector }) =>
+    /^\._panel_[\w-]+$/u.test(selector),
+  );
+  const resultRule = baseRules.find(({ selector }) =>
+    /^\._result_[\w-]+$/u.test(selector),
+  );
+  const recoverableModeRule = baseRules.find(({ selector }) =>
+    /^\._recoverableMode_[\w-]+$/u.test(selector),
+  );
+  const shortDevelopmentIntroRule = baseRules.find(
+    ({ cssText, selector }) =>
+      /^\._intro_[\w-]+\[data-mode=['"]development['"]\]$/u.test(selector) &&
+      cssText.includes('right:'),
+  );
+  expect(headerRule?.cssText).toMatch(/safe-area-inset-(top|left|right)/);
+  expect(navigationRule?.cssText).toMatch(
+    /safe-area-inset-(bottom|left|right)/,
+  );
+  expect(introRule?.cssText).toContain('safe-area-inset-left');
+  expect(panelRule?.cssText).toContain('safe-area-inset-left');
+  expect(panelRule?.cssText).toContain('safe-area-inset-right');
+  expect(resultRule?.cssText).toContain('safe-area-inset-right');
+  expect(recoverableModeRule?.cssText).toContain('safe-area-inset-left');
+  expect(shortDevelopmentIntroRule?.cssText).toContain('safe-area-inset-right');
+
+  const title = page.getByRole('heading', { name: '地球另一端' });
+  const result = page.getByRole('complementary', { name: '结果' });
+  const panel = page.locator('[data-mode-panel="place-controls"]');
+  const navigation = page.getByRole('navigation', { name: '观察模式' });
+  const surfaces = [title, result, panel, navigation];
+  const surfaceNames = ['title', 'result', 'controls', 'navigation'];
+  await Promise.all(surfaces.map((surface) => expect(surface).toBeVisible()));
+  const rectangles = await Promise.all(
+    surfaces.map((surface) => surface.boundingBox()),
+  );
+  for (const [index, rectangle] of rectangles.entries()) {
+    expect(rectangle).not.toBeNull();
+    expect(
+      rectangle!.x,
+      `${surfaceNames[index]} left edge`,
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      rectangle!.y,
+      `${surfaceNames[index]} top edge`,
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      rectangle!.x + rectangle!.width,
+      `${surfaceNames[index]} right edge`,
+    ).toBeLessThanOrEqual(viewport.width);
+    expect(
+      rectangle!.y + rectangle!.height,
+      `${surfaceNames[index]} bottom edge`,
+    ).toBeLessThanOrEqual(viewport.height);
+  }
+  for (let first = 0; first < rectangles.length; first += 1) {
+    for (let second = first + 1; second < rectangles.length; second += 1) {
+      expect(
+        overlaps(rectangles[first], rectangles[second]),
+        `${surfaceNames[first]} overlaps ${surfaceNames[second]}`,
+      ).toBe(false);
+    }
+  }
+
+  await page.goto('./?mode=development&indicator=hdi&year=2023&v=1');
+  const developmentTitle = page.getByRole('heading', {
+    name: '发展的不同侧面',
+  });
+  const developmentPanel = page.locator(
+    '[data-mode-panel="development-controls"]',
+  );
+  const developmentNavigation = page.getByRole('navigation', {
+    name: '观察模式',
+  });
+  const developmentSurfaces = [
+    developmentTitle,
+    developmentPanel,
+    developmentNavigation,
+  ];
+  const developmentSurfaceNames = ['title', 'controls', 'navigation'];
+  await Promise.all(
+    developmentSurfaces.map((surface) => expect(surface).toBeVisible()),
+  );
+  const developmentRectangles = await Promise.all(
+    developmentSurfaces.map((surface) => surface.boundingBox()),
+  );
+  for (const [index, rectangle] of developmentRectangles.entries()) {
+    expect(rectangle).not.toBeNull();
+    expect(
+      rectangle!.x,
+      `Development ${developmentSurfaceNames[index]} left edge`,
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      rectangle!.y,
+      `Development ${developmentSurfaceNames[index]} top edge`,
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      rectangle!.x + rectangle!.width,
+      `Development ${developmentSurfaceNames[index]} right edge`,
+    ).toBeLessThanOrEqual(viewport.width);
+    expect(
+      rectangle!.y + rectangle!.height,
+      `Development ${developmentSurfaceNames[index]} bottom edge`,
+    ).toBeLessThanOrEqual(viewport.height);
+  }
+  for (let first = 0; first < developmentRectangles.length; first += 1) {
+    for (
+      let second = first + 1;
+      second < developmentRectangles.length;
+      second += 1
+    ) {
+      expect(
+        overlaps(developmentRectangles[first], developmentRectangles[second]),
+        `Development ${developmentSurfaceNames[first]} overlaps ${developmentSurfaceNames[second]}`,
+      ).toBe(false);
+    }
+  }
+});
+
+test('contains expanded desktop modes by height without changing the normal poster', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const scenarios = [
+    {
+      name: 'Other Side',
+      path: './',
+      title: '地球另一端',
+      panel: 'place-controls',
+      result: '结果',
+      ready: 'Santa Fe, Argentina',
+    },
+    {
+      name: 'Development',
+      path: './?mode=development&indicator=hdi&year=2023&v=1',
+      title: '发展的不同侧面',
+      panel: 'development-controls',
+      result: null,
+      ready: '全球中位数',
+    },
+    {
+      name: 'Sunline',
+      path: './?mode=sunline&v=1',
+      title: '日照线',
+      panel: 'sunline-controls',
+      result: '太阳位置结果',
+      ready: '太阳高度',
+    },
+  ];
+
+  for (const viewport of [
+    { width: 1024, height: 520 },
+    { width: 1024, height: 568 },
+  ]) {
+    for (const scenario of scenarios) {
+      await page.setViewportSize(viewport);
+      await page.goto(scenario.path);
+      await expect(
+        page.getByText(scenario.ready, { exact: true }),
+      ).toBeVisible();
+
+      const title = page.getByRole('heading', { name: scenario.title });
+      const panel = page.locator(`[data-mode-panel="${scenario.panel}"]`);
+      const navigation = page.getByRole('navigation', { name: '观察模式' });
+      const result = scenario.result
+        ? page.getByRole('complementary', { name: scenario.result })
+        : null;
+      const surfaces = result
+        ? [title, result, panel, navigation]
+        : [title, panel, navigation];
+      const surfaceNames = result
+        ? ['title', 'result', 'controls', 'navigation']
+        : ['title', 'controls', 'navigation'];
+      await Promise.all(
+        surfaces.map((surface) => expect(surface).toBeVisible()),
+      );
+      const rectangles = await Promise.all(
+        surfaces.map((surface) => surface.boundingBox()),
+      );
+      for (const [index, rectangle] of rectangles.entries()) {
+        expect(rectangle).not.toBeNull();
+        expect(
+          rectangle!.x,
+          `${scenario.name} ${surfaceNames[index]} left edge at ${viewport.height}px`,
+        ).toBeGreaterThanOrEqual(0);
+        expect(
+          rectangle!.y,
+          `${scenario.name} ${surfaceNames[index]} top edge at ${viewport.height}px`,
+        ).toBeGreaterThanOrEqual(0);
+        expect(
+          rectangle!.x + rectangle!.width,
+          `${scenario.name} ${surfaceNames[index]} right edge at ${viewport.height}px`,
+        ).toBeLessThanOrEqual(viewport.width);
+        expect(
+          rectangle!.y + rectangle!.height,
+          `${scenario.name} ${surfaceNames[index]} bottom edge at ${viewport.height}px`,
+        ).toBeLessThanOrEqual(viewport.height);
+      }
+      for (let first = 0; first < rectangles.length; first += 1) {
+        for (let second = first + 1; second < rectangles.length; second += 1) {
+          expect(
+            overlaps(rectangles[first], rectangles[second]),
+            `${scenario.name} ${surfaceNames[first]} overlaps ${surfaceNames[second]} at ${viewport.height}px`,
+          ).toBe(false);
+        }
+      }
+    }
+  }
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('./');
+  const normalPanel = page.locator('[data-mode-panel="place-controls"]');
+  const normalResult = page.getByRole('complementary', { name: '结果' });
+  await expect(normalPanel).toHaveCSS('max-height', 'none');
+  await expect(normalResult).toHaveCSS('grid-template-columns', '240px');
+});
+
+test('keeps every expanded compact drawer and navigation reachable', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const viewportMeta = page.locator('meta[name="viewport"]');
+  const scenarios = [
+    {
+      path: './',
+      panel: 'place-controls',
+      expand: '展开地点控件',
+      primary: () => page.getByLabel('搜索本地城市'),
+      result: () => page.getByRole('complementary', { name: '结果' }),
+      ready: () => page.getByText('Santa Fe, Argentina'),
+    },
+    {
+      path: './?mode=development&indicator=hdi&year=2023&v=1',
+      panel: 'development-controls',
+      expand: '展开发展控件',
+      primary: () => page.getByRole('slider', { name: /年份/ }),
+      result: () => null,
+      ready: () => page.getByText('全球中位数', { exact: true }),
+    },
+    {
+      path: './?mode=sunline&v=1',
+      panel: 'sunline-controls',
+      expand: '展开日照线控件',
+      primary: () => page.getByRole('slider', { name: /UTC 时间/ }),
+      result: () => page.getByRole('complementary', { name: '太阳位置结果' }),
+      ready: () => page.getByText('太阳高度', { exact: true }),
+    },
+  ];
+
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.goto('./');
+  await expect(viewportMeta).toHaveAttribute('content', /viewport-fit=cover/);
+
+  for (const viewport of [
+    { width: 320, height: 568 },
+    { width: 760, height: 568 },
+  ]) {
+    for (const scenario of scenarios) {
+      await page.setViewportSize(viewport);
+      await page.goto(scenario.path);
+      await page.getByRole('button', { name: scenario.expand }).click();
+      await expect(scenario.ready()).toBeVisible();
+
+      const panel = page.locator(`[data-mode-panel="${scenario.panel}"]`);
+      const panelBody = panel.locator(':scope > div').nth(1);
+      const stage = page.getByTestId('app-stage');
+      const navigation = page.getByRole('navigation', { name: '观察模式' });
+      const result = scenario.result();
+      await expect(panel).toHaveAttribute('data-expanded', 'true');
+      await expect(panel).toBeVisible();
+      await expect(panelBody).toHaveCSS('overflow-y', 'auto');
+      await expect(navigation).toBeVisible();
+
+      const stageRectangle = await stage.boundingBox();
+      expect(stageRectangle).not.toBeNull();
+      expect(stageRectangle!.height).toBeGreaterThanOrEqual(64);
+
+      const surfaces = result
+        ? [result, panel, navigation]
+        : [panel, navigation];
+      const rectangles = await Promise.all(
+        surfaces.map((surface) => surface.boundingBox()),
+      );
+      for (const rectangle of rectangles) {
+        expect(rectangle).not.toBeNull();
+        expect(rectangle!.x).toBeGreaterThanOrEqual(0);
+        expect(rectangle!.y).toBeGreaterThanOrEqual(0);
+        expect(rectangle!.x + rectangle!.width).toBeLessThanOrEqual(
+          viewport.width,
+        );
+        expect(rectangle!.y + rectangle!.height).toBeLessThanOrEqual(
+          viewport.height,
+        );
+      }
+      for (let first = 0; first < rectangles.length; first += 1) {
+        for (let second = first + 1; second < rectangles.length; second += 1) {
+          expect(overlaps(rectangles[first], rectangles[second])).toBe(false);
+        }
+      }
+
+      const primary = scenario.primary();
+      await primary.scrollIntoViewIfNeeded();
+      await expect(primary).toBeVisible();
+      const primaryRectangle = await primary.boundingBox();
+      const panelRectangle = await panel.boundingBox();
+      expect(primaryRectangle).not.toBeNull();
+      expect(panelRectangle).not.toBeNull();
+      expect(primaryRectangle!.y).toBeGreaterThanOrEqual(panelRectangle!.y);
+      expect(
+        primaryRectangle!.y + primaryRectangle!.height,
+      ).toBeLessThanOrEqual(panelRectangle!.y + panelRectangle!.height);
+    }
+  }
+});
+
+test('allows the English display title to wrap within 320px', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto('./?mode=development&indicator=hdi&year=2023&v=1');
+  await page.getByRole('button', { name: '切换为英文' }).click();
+
+  const title = page.getByRole('heading', {
+    name: 'Development, Unpacked',
+  });
+  const layout = await title.evaluate((element) => {
+    const text = element.textContent ?? '';
+    const textNode = element.firstChild;
+    if (!(textNode instanceof Text)) {
+      throw new Error('English title must render as plain text.');
+    }
+
+    const characterRects = Array.from(text).flatMap((character, index) => {
+      if (/\s/u.test(character)) return [];
+      const range = document.createRange();
+      range.setStart(textNode, index);
+      range.setEnd(textNode, index + 1);
+      const rect = range.getBoundingClientRect();
+      return [{ right: rect.right, top: Math.round(rect.top) }];
+    });
+
+    return {
+      lineCount: new Set(characterRects.map(({ top }) => top)).size,
+      maxRight: Math.max(...characterRects.map(({ right }) => right)),
+      viewportWidth: document.documentElement.clientWidth,
+      whiteSpace: getComputedStyle(element).whiteSpace,
+    };
+  });
+
+  expect(layout.whiteSpace).toBe('normal');
+  expect(layout.lineCount).toBeGreaterThan(1);
+  expect(layout.maxRight).toBeLessThanOrEqual(layout.viewportWidth);
+});
+
+test('keeps Chinese display-title phrase units intact at 320px', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto('./?mode=development&indicator=hdi&year=2023&v=1');
+
+  const title = page.getByRole('heading', { name: '发展的不同侧面' });
+  const phrases = title.locator('[data-title-phrase]');
+  await expect(phrases).toHaveCount(2);
+
+  const layout = await title.evaluate((element) => {
+    const titleRect = element.getBoundingClientRect();
+    const hanCharacters = Array.from(element.textContent ?? '').filter(
+      (value) => /\p{Script=Han}/u.test(value),
+    );
+    const textNodes: Text[] = [];
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
+    const characterRects = textNodes.flatMap((textNode) =>
+      Array.from(textNode.data).flatMap((character, index) => {
+        if (!/\p{Script=Han}/u.test(character)) return [];
+        const range = document.createRange();
+        range.setStart(textNode, index);
+        range.setEnd(textNode, index + 1);
+        const rect = range.getBoundingClientRect();
+        return [{ character, top: Math.round(rect.top) }];
+      }),
+    );
+    const visualLines = new Map<number, typeof characterRects>();
+    for (const characterRect of characterRects) {
+      const line = visualLines.get(characterRect.top) ?? [];
+      line.push(characterRect);
+      visualLines.set(characterRect.top, line);
+    }
+    const units = Array.from(
+      element.querySelectorAll<HTMLElement>('[data-title-phrase]'),
+    ).map((unit) => ({
+      text: unit.textContent ?? '',
+      rectCount: unit.getClientRects().length,
+      right: unit.getBoundingClientRect().right,
+      whiteSpace: getComputedStyle(unit).whiteSpace,
+    }));
+
+    return {
+      titleRight: titleRect.right,
+      viewportWidth: document.documentElement.clientWidth,
+      textWrap: getComputedStyle(element).textWrap,
+      hanCharacters,
+      visualLineLengths: Array.from(
+        visualLines.values(),
+        (line) => line.length,
+      ),
+      units,
+    };
+  });
+
+  expect(layout.textWrap).toBe('balance');
+  expect(layout.titleRight).toBeLessThanOrEqual(layout.viewportWidth);
+  expect(layout.units.map(({ text }) => text).join('')).toBe('发展的不同侧面');
+  expect(layout.units.every(({ rectCount }) => rectCount === 1)).toBe(true);
+  expect(layout.units.every(({ right }) => right <= layout.viewportWidth)).toBe(
+    true,
+  );
+  expect(layout.units.every(({ whiteSpace }) => whiteSpace === 'nowrap')).toBe(
+    true,
+  );
+  expect(layout.hanCharacters).toHaveLength(7);
+  expect(layout.visualLineLengths.length).toBeGreaterThan(1);
+  expect(layout.visualLineLengths.every((length) => length > 1)).toBe(true);
+});
+
 test('matches the document language to an English browser', async ({
   browser,
 }) => {
@@ -322,6 +870,33 @@ test('keeps controls reachable after crossing the mobile breakpoint', async ({
   ).toBeVisible();
 });
 
+test('keeps the Development title visible on a short desktop stage', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 915, height: 412 });
+  await page.goto('./?mode=development&indicator=hdi&year=2023&v=1');
+
+  const intro = page.locator('section[data-mode="development"]');
+  const panel = page.locator('[data-mode-panel="development-controls"]');
+  const navigation = page.getByRole('navigation', { name: '观察模式' });
+  const title = page.getByRole('heading', { name: '发展的不同侧面' });
+  await expect(title).toBeVisible();
+  const introLayout = await intro.evaluate((element) => ({
+    clipPath: getComputedStyle(element).clipPath,
+    height: element.getBoundingClientRect().height,
+    width: element.getBoundingClientRect().width,
+  }));
+  expect(introLayout.clipPath).toBe('none');
+  expect(introLayout.width).toBeGreaterThan(200);
+  expect(introLayout.height).toBeGreaterThan(50);
+  expect(overlaps(await title.boundingBox(), await panel.boundingBox())).toBe(
+    false,
+  );
+  expect(
+    overlaps(await title.boundingBox(), await navigation.boundingBox()),
+  ).toBe(false);
+});
+
 test('loads the scoped Natural Earth nearest-place result', async ({
   page,
 }) => {
@@ -389,8 +964,9 @@ test('keeps development map, controls, URL and table synchronized', async ({
         overlaps(await panel.boundingBox(), await surface.boundingBox()),
       ).toBe(false);
     }
+    const panelBody = panel.locator('#development-controls-body');
     expect(
-      await panel.evaluate(
+      await panelBody.evaluate(
         (element) => element.scrollHeight > element.clientHeight,
       ),
     ).toBe(true);
@@ -401,8 +977,9 @@ test('keeps development map, controls, URL and table synchronized', async ({
         await page.getByRole('navigation', { name: '观察模式' }).boundingBox(),
       ),
     ).toBe(false);
+    const panelBody = panel.locator(':scope > div').nth(1);
     expect(
-      await panel.evaluate(
+      await panelBody.evaluate(
         (element) => element.scrollHeight > element.clientHeight,
       ),
     ).toBe(true);
@@ -451,6 +1028,73 @@ test('keeps development map, controls, URL and table synchronized', async ({
   await expect(page).toHaveURL(/indicator=income/);
   await panel.getByRole('slider', { name: /年份/ }).fill('2010');
   await expect(page).toHaveURL(/year=2010/);
+});
+
+test('signposts Development evidence that continues below the panel', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./?mode=development&indicator=education&year=2005&v=1');
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开发展控件' }).click();
+  }
+
+  const panel = page.locator('[data-mode-panel="development-controls"]');
+  const panelBody = panel.locator('#development-controls-body');
+  const immediateEvidence = [
+    panel.getByText('0.540', { exact: true }).first(),
+    panel.getByText('0.607', { exact: true }),
+    panel.getByText('−0.066 指数点', { exact: true }),
+    panel.getByText('+0.163 指数点', { exact: true }),
+    panel.getByText('1990–2005', { exact: true }),
+  ];
+  await Promise.all(
+    immediateEvidence.map((evidence) => expect(evidence).toBeVisible()),
+  );
+
+  if (testInfo.project.name === 'mobile') {
+    const bodyBox = await panelBody.boundingBox();
+    expect(bodyBox).not.toBeNull();
+    for (const evidence of immediateEvidence) {
+      const evidenceBox = await evidence.boundingBox();
+      expect(evidenceBox).not.toBeNull();
+      expect(evidenceBox!.y).toBeGreaterThanOrEqual(bodyBox!.y);
+      expect(evidenceBox!.y + evidenceBox!.height).toBeLessThanOrEqual(
+        bodyBox!.y + bodyBox!.height,
+      );
+    }
+  }
+
+  const continuation = panel.getByRole('button', {
+    name: '继续查看算法结构对照',
+  });
+  const contrastHeading = panel.getByRole('heading', { name: '算法结构对照' });
+  await expect(continuation).toBeVisible();
+
+  const remainingAfterContrastEnters = await panelBody.evaluate(
+    (element, contrast) => {
+      const bodyRect = element.getBoundingClientRect();
+      const contrastRect = contrast.getBoundingClientRect();
+      element.scrollTop += contrastRect.top - bodyRect.top;
+      element.dispatchEvent(new Event('scroll'));
+      return element.scrollHeight - element.clientHeight - element.scrollTop;
+    },
+    await contrastHeading.elementHandle(),
+  );
+  await expect(contrastHeading).toBeVisible();
+  expect(remainingAfterContrastEnters).toBeGreaterThan(2);
+  await expect(continuation).toBeHidden();
+
+  await panelBody.evaluate((element) => {
+    element.scrollTop = 0;
+    element.dispatchEvent(new Event('scroll'));
+  });
+  await expect(continuation).toBeVisible();
+  await continuation.click();
+  await expect(contrastHeading).toBeVisible();
+  await expect(contrastHeading).toBeFocused();
+  await expect(contrastHeading).toHaveCSS('outline-style', 'solid');
+  await expect(continuation).toBeHidden();
+  await expect(panel.getByText('Gabon', { exact: true }).first()).toBeVisible();
 });
 
 test('keeps Development data lazy and cached across mode switches', async ({
@@ -545,23 +1189,186 @@ test('keeps mode lifecycle stable across repeated switching', async ({
   expect(pageErrors).toEqual([]);
 });
 
-test('offers explicit share precision choices', async ({ page }) => {
+test('isolates Share, traps focus, closes cleanly, and preserves URL state', async ({
+  page,
+}) => {
   await page.goto('./?point=30.25%2C120.75&v=1');
-  await page.getByRole('button', { name: '分享' }).click();
+  const initialUrl = page.url();
+  const opener = page.getByRole('button', { name: '分享' });
+  await opener.click();
   const dialog = page.getByRole('dialog', { name: '分享这一视角' });
   await expect(dialog).toBeVisible();
+  await expect(page.locator('#root')).toHaveAttribute('inert', '');
+  await expect(page).toHaveURL(initialUrl);
   await expect(dialog.getByText(/point=30%2C121/)).toBeVisible();
-  await expect(
-    dialog.getByRole('button', { name: '复制精确位置' }),
-  ).toBeVisible();
-  await expect(
-    dialog.getByRole('button', { name: '复制约略位置' }),
-  ).toBeVisible();
-  await expect(dialog.getByRole('button', { name: '关闭' })).toBeFocused();
+  const close = dialog.getByRole('button', { name: '关闭' });
+  const approximate = dialog.getByRole('button', { name: '复制约略位置' });
+  const exact = dialog.getByRole('button', { name: '复制精确位置' });
+  await expect(approximate).toBeVisible();
+  await expect(exact).toBeVisible();
+  await expect(close).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(exact).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(close).toBeFocused();
+
+  await dialog.locator('..').click({ position: { x: 2, y: 2 } });
+  await expect(dialog).toBeHidden();
+  await expect(page.locator('#root')).not.toHaveAttribute('inert', '');
+  await expect(opener).toBeFocused();
+  await expect(page).toHaveURL(initialUrl);
+
+  await opener.click();
+  await expect(dialog).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
-  await expect(page.getByRole('button', { name: '分享' })).toBeFocused();
+  await expect(page.locator('#root')).not.toHaveAttribute('inert', '');
+  await expect(opener).toBeFocused();
+  await expect(page).toHaveURL(initialUrl);
 });
+
+test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('./');
+
+  const placeToggle = page.getByRole('button', { name: '展开地点控件' });
+  await expectMinimumHeight(placeToggle, 44);
+  await placeToggle.click();
+  const placePanel = page.locator('[data-mode-panel="place-controls"]');
+  for (const control of [
+    placePanel.getByRole('searchbox'),
+    placePanel.locator('input[name="latitude"]'),
+    placePanel.locator('input[name="longitude"]'),
+    placePanel.getByRole('button', { name: '前往' }),
+    placePanel.getByRole('button', { name: '使用我的位置' }),
+    placePanel.getByRole('button', { name: '上海' }),
+    placePanel.getByRole('button', { name: '马德里' }),
+  ]) {
+    await expectMinimumHeight(control, 44);
+  }
+
+  await page.getByRole('button', { name: /发展的不同侧面/ }).click();
+  const developmentToggle = page.getByRole('button', { name: '展开发展控件' });
+  await expectMinimumHeight(developmentToggle, 44);
+  await developmentToggle.click();
+  const developmentPanel = page.locator(
+    '[data-mode-panel="development-controls"]',
+  );
+  for (const indicator of ['综合 HDI', '健康', '教育', '收入']) {
+    await expectMinimumHeight(
+      developmentPanel.getByRole('button', { name: indicator }),
+      44,
+    );
+  }
+
+  await page.getByRole('button', { name: /日照线/ }).click();
+  const sunlineToggle = page.getByRole('button', { name: '展开日照线控件' });
+  await expectMinimumHeight(sunlineToggle, 44);
+  await sunlineToggle.click();
+  const sunlinePanel = page.locator('[data-mode-panel="sunline-controls"]');
+  await expectMinimumHeight(sunlinePanel.getByLabel('UTC 日期'), 44);
+  await expectMinimumHeight(
+    sunlinePanel.getByRole('button', { name: '播放一天' }),
+    44,
+  );
+  await expectMinimumHeight(
+    sunlinePanel.getByRole('button', { name: '回到此刻' }),
+    44,
+  );
+
+  await page.getByRole('button', { name: '分享' }).click();
+  const share = page.getByRole('dialog', { name: '分享这一视角' });
+  for (const action of ['关闭', '复制约略位置', '复制精确位置']) {
+    await expectMinimumHeight(share.getByRole('button', { name: action }), 44);
+  }
+
+  await page.keyboard.press('Escape');
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expectMinimumHeight(
+    page.getByRole('button', { name: '收起日照线控件' }),
+    44,
+  );
+  await page.getByRole('button', { name: '分享' }).click();
+  const compactShare = page.getByRole('dialog', { name: '分享这一视角' });
+  for (const action of ['关闭', '复制约略位置', '复制精确位置']) {
+    await expectMinimumHeight(
+      compactShare.getByRole('button', { name: action }),
+      44,
+    );
+  }
+});
+
+test('keeps the flip-to-antipode target at least 44px tall at compact widths', async ({
+  page,
+}) => {
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 320, height: 568 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('./');
+    await page.getByRole('button', { name: '展开地点控件' }).click();
+    await expectMinimumHeight(
+      page.getByRole('button', { name: '翻到另一端' }),
+      44,
+    );
+  }
+});
+
+test('uses the accent focus ring for keyboard form and disclosure controls only', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('./');
+  const toggle = page.getByRole('button', { name: '展开地点控件' });
+  await toggle.click();
+  const panel = page.locator('[data-mode-panel="place-controls"]');
+  const search = panel.getByRole('searchbox');
+  const summary = panel.getByText('数据与方法', { exact: true });
+
+  await search.focus();
+  await expectAccentFocusRing(search);
+  await summary.focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await expectAccentFocusRing(summary);
+
+  const shareButton = page.getByRole('button', { name: '分享' });
+  await shareButton.click();
+  await page.keyboard.press('Escape');
+  await page.mouse.click(4, 4);
+  await shareButton.click();
+  expect(
+    await shareButton.evaluate((element) => element.matches(':focus-visible')),
+  ).toBe(false);
+  expect(
+    await shareButton.evaluate(
+      (element) => getComputedStyle(element).outlineStyle,
+    ),
+  ).toBe('none');
+});
+
+async function expectMinimumHeight(
+  locator: import('@playwright/test').Locator,
+  minimum: number,
+) {
+  await expect(locator).toBeVisible();
+  expect((await locator.boundingBox())?.height).toBeGreaterThanOrEqual(minimum);
+}
+
+async function expectAccentFocusRing(
+  locator: import('@playwright/test').Locator,
+) {
+  expect(
+    await locator.evaluate((element) => element.matches(':focus-visible')),
+  ).toBe(true);
+  expect(
+    await locator.evaluate((element) => getComputedStyle(element).outlineStyle),
+  ).toBe('solid');
+  expect(
+    await locator.evaluate((element) => getComputedStyle(element).outlineWidth),
+  ).toBe('2px');
+}
 
 function overlaps(
   first: { x: number; y: number; width: number; height: number } | null,

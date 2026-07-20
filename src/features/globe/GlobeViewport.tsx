@@ -25,8 +25,17 @@ import {
 } from 'three';
 import { useAppStore } from '../../state/appStore';
 import { useFrameBenchmark } from '../performance/useFrameBenchmark';
-import { createCountryTexture, getCountryDataset } from './countryData';
-import { antipodeOf, geoToVector3, vector3ToGeo } from './geo';
+import {
+  createCountryHighlightTexture,
+  createCountryTexture,
+  getCountryDataset,
+} from './countryData';
+import {
+  antipodeOf,
+  createGraticuleLines,
+  geoToVector3,
+  vector3ToGeo,
+} from './geo';
 import {
   CLICK_DRAG_THRESHOLD_PX,
   isSelectionGesture,
@@ -265,7 +274,8 @@ function GlobeScene({
   const clearCameraTarget = useAppStore((state) => state.clearCameraTarget);
   const group = useRef<Group>(null);
   const interactionStart = useRef<Vector3>(null);
-  const { camera, invalidate } = useThree();
+  const { camera, gl, invalidate } = useThree();
+  const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
   const reducedMotion = useReducedMotion();
   const countries = useMemo(() => getCountryDataset(), []);
   const texture = useMemo(
@@ -273,17 +283,19 @@ function GlobeScene({
       createCountryTexture(
         countries,
         profile.textureWidth,
-        hoveredCountry?.countryId ?? null,
-        selectedCountry?.countryId ?? null,
         countryFills,
+        maxAnisotropy,
       ),
-    [
-      countries,
-      hoveredCountry?.countryId,
-      profile.textureWidth,
-      selectedCountry?.countryId,
-      countryFills,
-    ],
+    [countries, profile.textureWidth, countryFills, maxAnisotropy],
+  );
+  const highlights = useMemo(
+    () =>
+      createCountryHighlightTexture(
+        countries,
+        profile.textureWidth,
+        maxAnisotropy,
+      ),
+    [countries, profile.textureWidth, maxAnisotropy],
   );
 
   const primary = useMemo(() => geoToVector3(point, 1.025), [point]);
@@ -341,6 +353,19 @@ function GlobeScene({
   ]);
 
   useEffect(() => () => texture.dispose(), [texture]);
+  useEffect(() => () => highlights.texture.dispose(), [highlights]);
+  useEffect(() => {
+    highlights.update(
+      hoveredCountry?.countryId ?? null,
+      selectedCountry?.countryId ?? null,
+    );
+    invalidate();
+  }, [
+    highlights,
+    hoveredCountry?.countryId,
+    invalidate,
+    selectedCountry?.countryId,
+  ]);
 
   useFrame((_, delta) => {
     if (benchmarkActive) {
@@ -407,10 +432,10 @@ function GlobeScene({
 
   return (
     <>
-      <ambientLight intensity={sunline ? 0.58 : 0.85} color="#8ca0a4" />
+      <ambientLight intensity={sunline ? 0.66 : 1.05} color="#8ca0a4" />
       <directionalLight
         position={[-3, 2, 4]}
-        intensity={sunline ? 1.15 : 3.2}
+        intensity={sunline ? 1.25 : 3.35}
         color="#dfe7d5"
       />
       <Stars
@@ -441,15 +466,15 @@ function GlobeScene({
             metalness={0.05}
           />
         </mesh>
-        <mesh>
-          <sphereGeometry args={[1.004, 48, 32]} />
+        <mesh scale={1.002}>
+          <sphereGeometry args={[1, ...profile.sphereSegments]} />
           <meshBasicMaterial
-            color="#76918c"
-            wireframe
+            map={highlights.texture}
             transparent
-            opacity={0.11}
+            depthWrite={false}
           />
         </mesh>
+        <GeographicGraticule sunline={Boolean(sunline)} />
         <mesh scale={1.075}>
           <sphereGeometry args={[1, 64, 48]} />
           <meshBasicMaterial
@@ -506,6 +531,26 @@ function GlobeScene({
       />
     </>
   );
+}
+
+function GeographicGraticule({ sunline }: { sunline: boolean }) {
+  const lines = useMemo(
+    () => createGraticuleLines(sunline ? 1.018 : 1.006),
+    [sunline],
+  );
+
+  return lines.map((line) => (
+    <Line
+      key={`${line.kind}-${line.coordinate}`}
+      points={line.points}
+      color={sunline ? '#91aaa3' : '#839f98'}
+      lineWidth={line.coordinate === 0 ? 0.85 : 0.55}
+      transparent
+      opacity={sunline ? 0.28 : 0.2}
+      depthTest
+      renderOrder={3}
+    />
+  ));
 }
 
 const SUNLINE_VERTEX_SHADER = `
