@@ -11,6 +11,7 @@ describe('render quality', () => {
     expect(profile.level).toBe('low');
     expect(profile.dpr[1]).toBe(1.25);
     expect(profile.textureWidth).toBe(1024);
+    expect(profile.vectorDetail).toBe('110m');
   });
 
   it('selects the detailed profile only for capable desktops', () => {
@@ -21,6 +22,7 @@ describe('render quality', () => {
     });
     expect(profile.level).toBe('high');
     expect(profile.textureWidth).toBe(2048);
+    expect(profile.vectorDetail).toBe('50m');
   });
 
   it('uses the detailed texture on medium desktops', () => {
@@ -31,5 +33,6 @@ describe('render quality', () => {
     });
     expect(profile.level).toBe('medium');
     expect(profile.textureWidth).toBe(2048);
+    expect(profile.vectorDetail).toBe('50m');
   });
 });

@@ -4,6 +4,7 @@ export interface QualityProfile {
   level: QualityLevel;
   dpr: [number, number];
   textureWidth: 1024 | 2048;
+  vectorDetail: '110m' | '50m';
   sphereSegments: [number, number];
   starCount: number;
 }
@@ -27,6 +28,7 @@ export function chooseQualityProfile(signals: DeviceSignals): QualityProfile {
       level: 'low',
       dpr: [1, Math.min(1.25, signals.devicePixelRatio)],
       textureWidth: 1024,
+      vectorDetail: '110m',
       sphereSegments: [64, 40],
       starCount: 280,
     };
@@ -37,6 +39,7 @@ export function chooseQualityProfile(signals: DeviceSignals): QualityProfile {
       level: 'high',
       dpr: [1, Math.min(1.75, signals.devicePixelRatio)],
       textureWidth: 2048,
+      vectorDetail: '50m',
       sphereSegments: [96, 64],
       starCount: 550,
     };
@@ -46,6 +49,7 @@ export function chooseQualityProfile(signals: DeviceSignals): QualityProfile {
     level: 'medium',
     dpr: [1, Math.min(1.5, signals.devicePixelRatio)],
     textureWidth: 2048,
+    vectorDetail: '50m',
     sphereSegments: [80, 48],
     starCount: 400,
   };

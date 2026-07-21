@@ -179,4 +179,16 @@ describe('camera focus intent', () => {
       target: null,
     });
   });
+
+  it('does not clear a newer camera target when an older animation completes', () => {
+    const store = useAppStore.getState();
+    store.toggleAntipodeFocus();
+    const olderTarget = useAppStore.getState().cameraFocusIntent.target!;
+    store.toggleAntipodeFocus();
+    const newerIntent = useAppStore.getState().cameraFocusIntent;
+
+    useAppStore.getState().clearCameraTarget(olderTarget);
+
+    expect(useAppStore.getState().cameraFocusIntent).toEqual(newerIntent);
+  });
 });

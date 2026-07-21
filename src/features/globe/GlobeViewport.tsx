@@ -7,6 +7,7 @@ import {
 import { Billboard, Line, OrbitControls } from '@react-three/drei';
 import {
   useEffect,
+  useCallback,
   forwardRef,
   useImperativeHandle,
   useMemo,
@@ -71,6 +72,8 @@ import {
   type AntipodeRelationDiagnosticReason,
 } from './AntipodeRelationLayer';
 import { cssPixelsToWorldUnits } from './screenSpace';
+import { VectorGlobeLayer, type VectorGlobeState } from './VectorGlobeLayer';
+import type { VectorGlobeResources } from './vectorGlobe';
 
 interface GlobeViewportProps {
   diagnosticResetKey: string;
@@ -125,6 +128,20 @@ export function GlobeViewport({
     new URLSearchParams(window.location.search).has('dragDiagnostics'),
   );
   const [contextLost, setContextLost] = useState(false);
+  const [vectorRenderSampleKey, setVectorRenderSampleKey] = useState(0);
+  const [vectorState, setVectorState] = useState<VectorGlobeState>('loading');
+  const [vectorPaletteVersion, setVectorPaletteVersion] = useState(0);
+  const [vectorGeometryId, setVectorGeometryId] = useState('');
+  const [vectorDragTransparent, setVectorDragTransparent] = useState(false);
+  const [vectorDragEvidence, setVectorDragEvidence] = useState('');
+  const [vectorSunlineHighlight, setVectorSunlineHighlight] = useState<
+    string | null
+  >(null);
+  const [vectorRenderEvidence, setVectorRenderEvidence] = useState<{
+    vectorDraws: number;
+    rendererCalls: number;
+    revision: number;
+  } | null>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const keyboardController = useRef<GlobeKeyboardController>(null);
   const [pointerStarts] = useState(() => new Map<number, PointerStart>());
@@ -139,6 +156,13 @@ export function GlobeViewport({
   const point = useAppStore((state) => state.point);
   const selectedCountry = useAppStore((state) => state.selectedCountry);
   const antipodeDragVisible = showAntipodes && antipodeDragActive;
+  const handleVectorStateChange = useCallback(
+    (state: VectorGlobeState, resources: VectorGlobeResources | null) => {
+      setVectorState(state);
+      setVectorGeometryId(resources?.surface.uuid ?? '');
+    },
+    [],
+  );
   if (dragModeActive !== showAntipodes) {
     pointerStarts.clear();
     setAntipodeDragActive(false);
@@ -411,6 +435,7 @@ export function GlobeViewport({
     };
     const restored = () => {
       setContextLost(false);
+      setVectorRenderSampleKey((value) => value + 1);
     };
     canvas.addEventListener('webglcontextlost', lost);
     canvas.addEventListener('webglcontextrestored', restored);
@@ -473,6 +498,21 @@ export function GlobeViewport({
       aria-label={ariaLabel}
       aria-describedby="globe-keyboard-instructions"
       data-quality={profile.level}
+      data-vector-detail={profile.vectorDetail}
+      data-vector-state={vectorState}
+      data-vector-geometry-id={vectorGeometryId || undefined}
+      data-vector-palette-version={
+        vectorState === 'ready' ? vectorPaletteVersion : undefined
+      }
+      data-vector-raster-fallback-visible={String(vectorState !== 'ready')}
+      data-vector-render-draws={vectorRenderEvidence?.vectorDraws}
+      data-vector-renderer-calls={vectorRenderEvidence?.rendererCalls}
+      data-vector-render-revision={vectorRenderEvidence?.revision}
+      data-vector-drag-transparent={
+        vectorState === 'ready' ? String(vectorDragTransparent) : undefined
+      }
+      data-vector-drag-effective-alpha={vectorDragEvidence || undefined}
+      data-vector-sunline-highlight={vectorSunlineHighlight ?? undefined}
       data-marker-role-count={
         showAntipodes ? (relationReady ? 4 : 2) : undefined
       }
@@ -597,6 +637,19 @@ export function GlobeViewport({
           onGlobePick={recordGlobePick}
           onAntipodeRelationArcCount={recordAntipodeRelationArcCount}
           onAntipodeCityMarkerSize={recordAntipodeCityMarkerSize}
+          onVectorStateChange={handleVectorStateChange}
+          onVectorPaletteUpdate={setVectorPaletteVersion}
+          onVectorDragMaterialChange={setVectorDragTransparent}
+          onVectorSunlineHighlightChange={setVectorSunlineHighlight}
+          onVectorDragEvidence={setVectorDragEvidence}
+          onVectorRenderEvidence={(vectorDraws, rendererCalls) =>
+            setVectorRenderEvidence((current) => ({
+              vectorDraws,
+              rendererCalls,
+              revision: (current?.revision ?? 0) + 1,
+            }))
+          }
+          vectorRenderSampleKey={vectorRenderSampleKey}
         />
       </Canvas>
       {contextLost ? (
@@ -662,6 +715,16 @@ interface GlobeSceneProps {
     cssPixels: number | null,
     reason?: AntipodeRelationDiagnosticReason,
   ) => void;
+  onVectorStateChange: (
+    state: VectorGlobeState,
+    resources: VectorGlobeResources | null,
+  ) => void;
+  onVectorPaletteUpdate: (version: number) => void;
+  onVectorDragMaterialChange: (transparent: boolean) => void;
+  onVectorDragEvidence: (evidence: string) => void;
+  onVectorSunlineHighlightChange: (evidence: string | null) => void;
+  onVectorRenderEvidence: (vectorDraws: number, rendererCalls: number) => void;
+  vectorRenderSampleKey: number;
 }
 
 interface AntipodeMaterialEvidence {
@@ -694,6 +757,13 @@ function GlobeScene({
   onGlobePick,
   onAntipodeRelationArcCount,
   onAntipodeCityMarkerSize,
+  onVectorStateChange,
+  onVectorPaletteUpdate,
+  onVectorDragMaterialChange,
+  onVectorDragEvidence,
+  onVectorSunlineHighlightChange,
+  onVectorRenderEvidence,
+  vectorRenderSampleKey,
 }: GlobeSceneProps) {
   const point = useAppStore((state) => state.point);
   const selectedCountry = useAppStore((state) => state.selectedCountry);
@@ -723,19 +793,21 @@ function GlobeScene({
   const highlightMaterial = useRef<MeshBasicMaterial>(null);
   const innerWall = useRef<Mesh>(null);
   const innerMaterial = useRef<MeshBasicMaterial>(null);
+  const [vectorReady, setVectorReady] = useState(false);
   const { camera, gl, invalidate } = useThree();
   const reducedMotion = useReducedMotion();
   const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
   const countries = useMemo(() => getCountryDataset(), []);
+  const rasterCountryFills = vectorReady ? null : countryFills;
   const texture = useMemo(
     () =>
       createCountryTexture(
         countries,
         profile.textureWidth,
-        countryFills,
+        rasterCountryFills,
         maxAnisotropy,
       ),
-    [countries, profile.textureWidth, countryFills, maxAnisotropy],
+    [countries, profile.textureWidth, rasterCountryFills, maxAnisotropy],
   );
   const highlights = useMemo(
     () =>
@@ -745,6 +817,13 @@ function GlobeScene({
         maxAnisotropy,
       ),
     [countries, profile.textureWidth, maxAnisotropy],
+  );
+  const handleVectorStateChange = useCallback(
+    (state: VectorGlobeState, resources: VectorGlobeResources | null) => {
+      setVectorReady(state === 'ready');
+      onVectorStateChange(state, resources);
+    },
+    [onVectorStateChange],
   );
 
   const relationOrigin = antipodeRelation?.origin.exactPoint ?? point;
@@ -875,17 +954,19 @@ function GlobeScene({
       },
     );
     onAntipodeLayerDiagnostic(
-      `visible:${baseMesh.visible},transparent:${base.transparent},depthWrite:${base.depthWrite},renderOrder:${baseMesh.renderOrder},radius:${baseMesh.scale.x}`,
-      String(outerMesh.visible),
-      `visible:${highlight.visible},renderOrder:${highlight.renderOrder},radius:${highlight.scale.x},depthWrite:${highlightSurface.depthWrite}`,
+      `visible:${!antipodeDragActive && (vectorReady || baseMesh.visible)},transparent:${base.transparent},depthWrite:${base.depthWrite},renderOrder:${baseMesh.renderOrder},radius:${baseMesh.scale.x}`,
+      String(antipodeDragActive && (vectorReady || outerMesh.visible)),
+      `visible:${vectorReady || highlight.visible},renderOrder:${highlight.renderOrder},radius:${highlight.scale.x},depthWrite:${highlightSurface.depthWrite}`,
     );
   }, [
     antipodeDragActive,
     onAntipodeLayerDiagnostic,
     onAntipodeSceneDiagnostic,
     showAntipodes,
+    vectorReady,
   ]);
   useEffect(() => {
+    if (vectorReady) return;
     highlights.update(
       hoveredCountry?.countryId ?? null,
       selectedCountry?.countryId ?? null,
@@ -896,6 +977,7 @@ function GlobeScene({
     hoveredCountry?.countryId,
     invalidate,
     selectedCountry?.countryId,
+    vectorReady,
   ]);
 
   useFrame((_, delta) => {
@@ -925,7 +1007,7 @@ function GlobeScene({
           ),
           reducedMotion ? 'instant' : 'animated',
         );
-        clearCameraTarget();
+        clearCameraTarget(cameraTarget);
       } else {
         const rotation = new Quaternion().setFromUnitVectors(
           currentDirection,
@@ -1000,9 +1082,24 @@ function GlobeScene({
           <sphereGeometry args={[1, ...profile.sphereSegments]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
+        <VectorGlobeLayer
+          profile={profile}
+          countryFills={countryFills}
+          hoveredCountryId={hoveredCountry?.countryId ?? null}
+          selectedCountryId={selectedCountry?.countryId ?? null}
+          dragActive={antipodeDragActive}
+          onStateChange={handleVectorStateChange}
+          onPaletteUpdate={onVectorPaletteUpdate}
+          onDragMaterialChange={onVectorDragMaterialChange}
+          onDragEvidence={onVectorDragEvidence}
+          sunlineActive={Boolean(sunline)}
+          onSunlineHighlightChange={onVectorSunlineHighlightChange}
+          onRenderEvidence={onVectorRenderEvidence}
+          renderSampleKey={vectorRenderSampleKey}
+        />
         <mesh
           ref={baseSurface}
-          visible={!antipodeDragActive}
+          visible={!vectorReady && !antipodeDragActive}
           renderOrder={0}
           raycast={ignoreRaycast}
         >
@@ -1018,7 +1115,7 @@ function GlobeScene({
         </mesh>
         <mesh
           ref={outerShell}
-          visible={antipodeDragActive}
+          visible={!vectorReady && antipodeDragActive}
           renderOrder={ANTIPODE_DRAG_RENDERING.outerShell.renderOrder}
           raycast={ignoreRaycast}
         >
@@ -1056,6 +1153,7 @@ function GlobeScene({
         </mesh>
         <mesh
           ref={highlightMesh}
+          visible={!vectorReady}
           scale={
             sunline
               ? SUNLINE_RENDERING.highlight.radius
@@ -1746,7 +1844,7 @@ function CenterCandleGlow({
   const haloMaterial = useRef<MeshBasicMaterial>(null);
   const frameRevision = useRef(0);
   const lastReportedAt = useRef(0);
-  const { invalidate } = useThree();
+  const { invalidate, setFrameloop } = useThree();
 
   useFrame(({ clock }) => {
     if (!active || reducedMotion) return;
@@ -1795,6 +1893,10 @@ function CenterCandleGlow({
         ANTIPODE_DRAG_RENDERING.centerGlow.halo.opacity;
     }
   }, [active, diagnosticsEnabled, invalidate, onMode, reducedMotion]);
+  useEffect(() => {
+    setFrameloop(active && !reducedMotion ? 'always' : 'demand');
+    return () => setFrameloop('demand');
+  }, [active, reducedMotion, setFrameloop]);
 
   return (
     <group

@@ -43,7 +43,7 @@ interface AppState {
   setHoveredCountry: (country: CountryRef | null) => void;
   toggleAntipodeFocus: () => void;
   requestCameraFocus: (point: GeoPoint) => void;
-  clearCameraTarget: () => void;
+  clearCameraTarget: (completedTarget?: GeoPoint) => void;
   setCameraFocusFree: () => void;
   markInteraction: () => void;
   markMeaningfulInteraction: () => void;
@@ -161,10 +161,21 @@ export const useAppStore = create<AppState>((set) => ({
       cameraFocusIntent: { side: 'major-city', target },
       hasInteracted: true,
     }),
-  clearCameraTarget: () =>
-    set((state) => ({
-      cameraFocusIntent: { ...state.cameraFocusIntent, target: null },
-    })),
+  clearCameraTarget: (completedTarget) =>
+    set((state) => {
+      const current = state.cameraFocusIntent.target;
+      if (
+        completedTarget &&
+        current &&
+        (current.latitude !== completedTarget.latitude ||
+          current.longitude !== completedTarget.longitude)
+      ) {
+        return state;
+      }
+      return {
+        cameraFocusIntent: { ...state.cameraFocusIntent, target: null },
+      };
+    }),
   setCameraFocusFree: () =>
     set({ cameraFocusIntent: { side: 'free', target: null } }),
   markInteraction: () => set({ hasInteracted: true }),

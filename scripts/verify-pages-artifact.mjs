@@ -102,6 +102,25 @@ if (![...files].some((path) => /^assets\/.+\.css$/.test(path))) {
   throw new Error('Pages artifact contains no stylesheet bundle.');
 }
 
+for (const detail of ['110m', '50m']) {
+  const matches = [...files].filter((path) =>
+    new RegExp(`^assets/natural-earth-vector-globe-${detail}-.+\\.mvg$`).test(
+      path,
+    ),
+  );
+  if (matches.length !== 1) {
+    throw new Error(`Missing ${detail} vector globe asset`);
+  }
+  const bytes = await readFile(resolve(root, matches[0]));
+  if (detail === '50m') {
+    const { gzipSync } = await import('node:zlib');
+    const gzipBytes = gzipSync(bytes, { level: 9, mtime: 0 }).byteLength;
+    if (gzipBytes > 1.5 * 1024 * 1024) {
+      throw new Error(`50m vector globe gzip budget exceeded: ${gzipBytes}`);
+    }
+  }
+}
+
 const notices = await readFile(resolve(root, 'THIRD_PARTY_NOTICES.md'), 'utf8');
 if (notices.trim().length === 0) {
   throw new Error('Bundled dependency notices are empty.');
