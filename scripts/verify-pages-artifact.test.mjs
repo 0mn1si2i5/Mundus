@@ -30,6 +30,14 @@ async function createArtifact({
     writeFile(join(root, 'THIRD_PARTY_NOTICES.md'), notices),
     writeFile(join(root, 'assets/app.js'), javascript),
     writeFile(join(root, 'assets/app.css'), stylesheet),
+    writeFile(
+      join(root, 'assets/natural-earth-vector-globe-110m-test.mvg'),
+      '110m',
+    ),
+    writeFile(
+      join(root, 'assets/natural-earth-vector-globe-50m-test.mvg'),
+      '50m',
+    ),
   ]);
   return root;
 }
@@ -56,6 +64,14 @@ test('rejects root-relative references in CSS', async () => {
 test('rejects an empty bundled notices file', async () => {
   const root = await createArtifact({ notices: '' });
   await verifyFailure(root, 'Bundled dependency notices are empty');
+});
+
+test('rejects a missing vector globe resolution', async () => {
+  const root = await createArtifact();
+  await import('node:fs/promises').then(({ rm }) =>
+    rm(join(root, 'assets/natural-earth-vector-globe-50m-test.mvg')),
+  );
+  await verifyFailure(root, 'Missing 50m vector globe asset');
 });
 
 test('Pages workflow serializes the complete production deployment', async () => {

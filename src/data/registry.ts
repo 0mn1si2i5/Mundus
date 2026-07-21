@@ -2,6 +2,7 @@ import { z } from 'zod';
 import naturalEarthManifest from './manifests/natural-earth-110m.json';
 import undpDevelopmentManifest from './manifests/undp-hdr-2025-development.json';
 import geoNamesMajorCitiesManifest from './manifests/geonames-major-cities.json';
+import naturalEarthVectorManifest from './manifests/natural-earth-vector-globe.json';
 
 const auxiliarySourceSchema = z.object({
   sourceName: z.string().min(1),
@@ -36,12 +37,75 @@ export const dataManifestSchema = z.object({
   gzipBytes: z.number().int().nonnegative().optional(),
   staticDecodedBytesEstimate: z.number().int().nonnegative().optional(),
   runtimeDecodedBytesEstimate: z.number().int().nonnegative().optional(),
+  sourceAssets: z
+    .record(
+      z.string(),
+      z.object({
+        distributionUrl: z.url(),
+        sha256: z.string().regex(/^[a-f0-9]{64}$/),
+      }),
+    )
+    .optional(),
+  derivedAssets: z
+    .record(
+      z.string(),
+      z.object({
+        path: z.string().min(1),
+        sha256: z.string().regex(/^[a-f0-9]{64}$/),
+        rawBytes: z.number().int().positive(),
+        gzipBytes: z.number().int().positive(),
+        gpuBytes: z.number().int().positive(),
+        runtimeGpuBytes: z.number().int().positive(),
+        paletteBytes: z.number().int().positive(),
+        countries: z.number().int().positive(),
+        vertices: z.number().int().positive(),
+        triangles: z.number().int().positive(),
+        coastlineVertices: z.number().int().positive(),
+        borderVertices: z.number().int().positive(),
+        droppedDegenerateTriangles: z.number().int().nonnegative(),
+        droppedOutsideTriangles: z.number().int().nonnegative(),
+        maxEdgeDegrees: z.number().positive(),
+        containmentSamplesPerTriangle: z.number().int().positive(),
+        candidateAreaSteradians: z.number().positive(),
+        acceptedAreaSteradians: z.number().positive(),
+        droppedOutsideAreaSteradians: z.number().nonnegative(),
+        droppedOutsideAreaFraction: z.number().min(0).max(1),
+        representativeDroppedAreaFractions: z.record(
+          z.string(),
+          z.number().min(0).max(1),
+        ),
+        sourceCountryFeatureAreaSteradians: z.number().positive(),
+        sourceLandUnionAreaSteradians: z.number().positive(),
+        emittedAreaSteradians: z.number().positive(),
+        sourceAreaDeficitFraction: z.number().min(0).max(1),
+        largestPartDeficits: z.array(
+          z.object({
+            countryId: z.string().min(1),
+            partIndex: z.number().int().nonnegative(),
+            sourceAreaSteradians: z.number().nonnegative(),
+            acceptedAreaSteradians: z.number().nonnegative(),
+            deficitFraction: z.number().min(0).max(1),
+          }),
+        ),
+        largestCountryDeficits: z.array(
+          z.object({
+            countryId: z.string().min(1),
+            sourceAreaSteradians: z.number().positive(),
+            emittedAreaSteradians: z.number().nonnegative(),
+            deficitFraction: z.number().min(0).max(1),
+            sourceSelfIntersections: z.number().int().nonnegative(),
+          }),
+        ),
+      }),
+    )
+    .optional(),
 });
 
 export type DataManifest = z.infer<typeof dataManifestSchema>;
 
 export const DATA_MANIFESTS: readonly DataManifest[] = [
   dataManifestSchema.parse(naturalEarthManifest),
+  dataManifestSchema.parse(naturalEarthVectorManifest),
   dataManifestSchema.parse(undpDevelopmentManifest),
   dataManifestSchema.parse(geoNamesMajorCitiesManifest),
 ];

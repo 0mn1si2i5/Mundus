@@ -68,6 +68,125 @@ function globeRegion(page: Page) {
   });
 }
 
+async function expectVectorReady(page: Page, detail: '110m' | '50m') {
+  const globe = globeRegion(page);
+  await expect(globe).toHaveAttribute('data-vector-state', 'ready');
+  await expect(globe).toHaveAttribute('data-vector-detail', detail);
+  await expect(globe).toHaveAttribute(
+    'data-vector-raster-fallback-visible',
+    'false',
+  );
+  await expect(globe).toHaveAttribute('data-vector-render-draws', '4');
+  await expect
+    .poll(async () =>
+      Number(await globe.getAttribute('data-vector-renderer-calls')),
+    )
+    .toBeGreaterThanOrEqual(4);
+}
+
+test('loads only the quality-selected vector resolution and hides raster after readiness', async ({
+  page,
+}, testInfo) => {
+  const vectorRequests: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('natural-earth-vector-globe')) {
+      vectorRequests.push(request.url());
+    }
+  });
+  await page.goto('./');
+  const detail = testInfo.project.name === 'mobile' ? '110m' : '50m';
+  await expectVectorReady(page, detail);
+  expect(vectorRequests).toHaveLength(1);
+  expect(vectorRequests[0]).toContain(`-${detail}-`);
+});
+
+test('Development palette updates preserve vector geometry identity', async ({
+  page,
+}) => {
+  await page.goto('./?mode=development&indicator=hdi&year=2023&v=1');
+  await expectVectorReady(
+    page,
+    test.info().project.name === 'mobile' ? '110m' : '50m',
+  );
+  const globe = globeRegion(page);
+  const geometryId = await globe.getAttribute('data-vector-geometry-id');
+  const paletteVersion = Number(
+    await globe.getAttribute('data-vector-palette-version'),
+  );
+  const renderRevision = Number(
+    await globe.getAttribute('data-vector-render-revision'),
+  );
+  if (test.info().project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开发展控件' }).click();
+  }
+  await page.getByRole('button', { name: '教育' }).click();
+  await page.getByRole('slider').fill('2005');
+  await expect(globe).toHaveAttribute('data-vector-geometry-id', geometryId!);
+  await expect
+    .poll(async () =>
+      Number(await globe.getAttribute('data-vector-palette-version')),
+    )
+    .toBeGreaterThan(paletteVersion);
+  await expect
+    .poll(async () =>
+      Number(await globe.getAttribute('data-vector-render-revision')),
+    )
+    .toBeGreaterThan(renderRevision);
+});
+
+test('vector drag shell becomes transparent while the hit sphere remains active', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./');
+  await expectVectorReady(
+    page,
+    test.info().project.name === 'mobile' ? '110m' : '50m',
+  );
+  const globe = globeRegion(page);
+  const before = await page.locator('canvas').screenshot({
+    path: testInfo.outputPath('vector-before-drag.png'),
+  });
+  const center = await globeCenter(page);
+  await page.mouse.move(center.x, center.y);
+  await page.mouse.down();
+  await page.mouse.move(center.x + 24, center.y, { steps: 3 });
+  await expect(globe).toHaveAttribute('data-vector-drag-transparent', 'true');
+  await expect(globe).toHaveAttribute(
+    'data-vector-drag-effective-alpha',
+    'oceanAlpha:0.76,landAlpha:0,effectiveAlpha:0.76',
+  );
+  await expect(globe).toHaveAttribute('data-antipode-hit-sphere', 'enabled');
+  await expect(globe).toHaveAttribute(
+    'data-antipode-inner-wall-visible',
+    'true',
+  );
+  const during = await page.locator('canvas').screenshot({
+    path: testInfo.outputPath('vector-during-drag.png'),
+  });
+  expect(during.byteLength).toBeGreaterThan(1000);
+  expect(during.equals(before)).toBe(false);
+  await page.mouse.up();
+  await expect(globe).toHaveAttribute('data-vector-drag-transparent', 'false');
+});
+
+test('keeps the raster globe when the selected vector asset fails', async ({
+  page,
+}) => {
+  await page.route('**/natural-earth-vector-globe-*.mvg', (route) =>
+    route.abort(),
+  );
+  await page.goto('./');
+  const globe = globeRegion(page);
+  await expect(globe).toHaveAttribute('data-vector-state', 'error');
+  await expect(globe).toHaveAttribute(
+    'data-vector-raster-fallback-visible',
+    'true',
+  );
+  const center = await globeCenter(page);
+  await page.mouse.click(center.x, center.y);
+  await expect(globe).toHaveAttribute('data-globe-pick-revision', /[1-9]\d*/);
+});
+
 async function dispatchGlobePointer(
   page: Page,
   type: string,
@@ -529,6 +648,10 @@ test('reports and clears WebGL context interruption', async ({ page }) => {
   const benchmark = page.locator('output[data-phase="complete"]');
   await expect(benchmark).toContainText('fps');
   await expect(benchmark).toContainText('p95');
+  const beforeRestore = await canvas.screenshot();
+  const renderRevision = Number(
+    await globeRegion(page).getAttribute('data-vector-render-revision'),
+  );
   await dispatchGlobePointer(page, 'pointerdown', {
     clientX: 100,
     clientY: 100,
@@ -556,6 +679,21 @@ test('reports and clears WebGL context interruption', async ({ page }) => {
   );
   await expect(contextStatus).toBeVisible();
   await expect(contextStatus).toBeHidden();
+  await expect(globeRegion(page)).toHaveAttribute('data-vector-state', 'ready');
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-vector-render-draws',
+    '4',
+  );
+  await expect
+    .poll(async () =>
+      Number(
+        await globeRegion(page).getAttribute('data-vector-render-revision'),
+      ),
+    )
+    .toBeGreaterThan(renderRevision);
+  const afterRestore = await canvas.screenshot();
+  expect(beforeRestore.byteLength).toBeGreaterThan(1000);
+  expect(afterRestore.byteLength).toBeGreaterThan(1000);
 });
 
 test('keeps country semantics when WebGL2 is unavailable', async ({ page }) => {
@@ -853,6 +991,25 @@ test('keeps the Sunline subsolar marker on its legacy sphere-ring geometry', asy
   );
   await expect(globe).not.toHaveAttribute('data-marker-role-count', /.+/);
   await expect(page.getByText('太阳高度', { exact: true })).toBeVisible();
+});
+
+test('renders the vector selected-country highlight above the Sunline mask', async ({
+  page,
+}) => {
+  await page.goto(
+    './?mode=sunline&point=31.2304%2C121.4737&time=2024-03-20T00%3A00Z&v=1',
+  );
+  const globe = globeRegion(page);
+  await expect(globe).toHaveAttribute('data-vector-state', 'ready');
+  await expect(globe).toHaveAttribute(
+    'data-vector-sunline-highlight',
+    'visible:true,renderOrder:4,radius:1.014,depthWrite:false',
+  );
+  await expect(globe).toHaveAttribute('data-vector-render-draws', '5');
+  await expect(globe).toHaveAttribute(
+    'data-sunline-highlight-country',
+    'China',
+  );
 });
 
 test('keeps overlapping selected and subsolar roles visible and depth-occluded', async ({
@@ -2143,11 +2300,12 @@ test('resets bilateral focus for new points and mode round trips', async ({
   await expectCameraDiagnosticCleared(page);
   await page.getByRole('button', { name: /地球另一端/ }).click();
 
-  await page.getByLabel('搜索全球主要城市').fill('Tokyo');
-  await page.getByRole('option', { name: /^东京 / }).click();
-  if (testInfo.project.name === 'mobile') {
+  const citySearch = page.getByLabel('搜索全球主要城市');
+  if (testInfo.project.name === 'mobile' && !(await citySearch.isVisible())) {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
+  await citySearch.fill('Tokyo');
+  await page.getByRole('option', { name: /^东京 / }).click();
   await expect(page.getByRole('button', { name: '翻到对跖点' })).toBeVisible();
 
   await page.getByRole('button', { name: '翻到对跖点' }).click();
@@ -2651,6 +2809,20 @@ test('loads GeoNames only for Other Side and reuses one lazy asset', async ({
   expect(
     requests.filter((url) => url.includes('geonames-major-cities')),
   ).toHaveLength(1);
+});
+
+test('reopens mobile place controls before city search after a mode round trip', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Responsive panel coverage');
+  await page.goto('./');
+  await page.getByRole('button', { name: /日照线/ }).click();
+  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await page.getByRole('button', { name: '展开地点控件' }).click();
+  const search = page.getByRole('combobox', { name: '搜索全球主要城市' });
+  await expect(search).toBeVisible();
+  await search.fill('北京');
+  await expect(page.getByRole('option', { name: /^北京 / })).toBeVisible();
 });
 
 test('searches bilingual source aliases by keyboard without mutating URL before selection', async ({
