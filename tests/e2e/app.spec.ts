@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type CDPSession, type Page } from '@playwright/test';
 
 function relativeLuminance(color: string) {
   const channels = color
@@ -62,6 +62,452 @@ async function expectCameraDiagnosticCleared(page: Page) {
   await expect(globe).not.toHaveAttribute('data-camera-focus-motion', /.+/);
 }
 
+function globeRegion(page: Page) {
+  return page.getByRole('region', {
+    name: /三维地球|three-dimensional globe/,
+  });
+}
+
+async function dispatchGlobePointer(
+  page: Page,
+  type: string,
+  options: {
+    pointerId?: number;
+    pointerType?: 'mouse' | 'touch';
+    clientX: number;
+    clientY: number;
+  },
+) {
+  await globeRegion(page).dispatchEvent(type, {
+    bubbles: true,
+    pointerId: options.pointerId ?? 1,
+    pointerType: options.pointerType ?? 'mouse',
+    clientX: options.clientX,
+    clientY: options.clientY,
+  });
+}
+
+async function expectAntipodeDragInactive(page: Page) {
+  const globe = globeRegion(page);
+  await expect(globe).toHaveAttribute('data-antipode-drag-state', 'inactive');
+  await expect(globe).toHaveAttribute(
+    'data-antipode-inner-wall-visible',
+    'false',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-antipode-center-glow-visible',
+    'false',
+  );
+}
+
+async function globeCenter(page: Page) {
+  const point = await page.locator('canvas').evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const offsets = [
+      [0, 0],
+      [0.05, 0],
+      [-0.05, 0],
+      [0, -0.05],
+      [0, 0.05],
+      [0.1, 0],
+      [-0.1, 0],
+    ];
+    for (const [xOffset, yOffset] of offsets) {
+      const x = bounds.left + bounds.width * (0.5 + xOffset!);
+      const y = bounds.top + bounds.height * (0.5 + yOffset!);
+      if (document.elementFromPoint(x, y) === element) return { x, y };
+    }
+    return null;
+  });
+  if (!point) throw new Error('Globe canvas center is covered by page UI.');
+  return point;
+}
+
+interface TouchPoint {
+  id: number;
+  x: number;
+  y: number;
+}
+
+async function dispatchTouch(
+  session: CDPSession,
+  type: 'touchStart' | 'touchMove' | 'touchEnd' | 'touchCancel',
+  points: TouchPoint[],
+) {
+  await session.send('Input.dispatchTouchEvent', {
+    type,
+    touchPoints: points.map((point) => ({
+      ...point,
+      radiusX: 1,
+      radiusY: 1,
+      force: 1,
+    })),
+  });
+}
+
+test('wires the mounted shell materials and picking sphere to the rendering contract', async ({
+  page,
+}) => {
+  await page.goto('./');
+  const globe = globeRegion(page);
+  await expect(globe).toHaveAttribute(
+    'data-antipode-outer-material',
+    'side:FrontSide,depthWrite:false,renderOrder:2,radius:1',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-antipode-inner-material',
+    'side:BackSide,depthWrite:false,renderOrder:1,radius:0.985',
+  );
+  await expect(globe).toHaveAttribute('data-antipode-hit-sphere', 'enabled');
+  await expect(globe).toHaveAttribute(
+    'data-antipode-base-surface',
+    'visible:true,transparent:false,depthWrite:true,renderOrder:0,radius:1',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-antipode-drag-shell-visible',
+    'false',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-antipode-highlight',
+    'visible:true,renderOrder:3,radius:1.002,depthWrite:false',
+  );
+});
+
+test('uses real desktop mouse input for threshold activation and preserves picking', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium', 'Desktop mouse coverage');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('./');
+  const globe = globeRegion(page);
+  await page.getByLabel('搜索本地城市').fill('Tokyo');
+  await page.getByRole('button', { name: /东京/ }).click();
+  await expectCameraCenter(page, 35.6762, 139.6503);
+  const center = await globeCenter(page);
+
+  await page.mouse.move(center.x, center.y);
+  const revisionBeforeDrag = Number(
+    (await globe.getAttribute('data-antipode-hit-sphere-pick-revision')) ?? 0,
+  );
+  await page.mouse.down();
+  await page.mouse.move(center.x + 5, center.y);
+  await expectAntipodeDragInactive(page);
+  await page.mouse.up();
+
+  await page.mouse.move(center.x, center.y);
+  await page.mouse.down();
+  await page.mouse.move(center.x + 24, center.y, { steps: 3 });
+  await expect(globe).toHaveAttribute('data-antipode-drag-state', 'active');
+  await expect(globe).toHaveAttribute(
+    'data-antipode-base-surface',
+    'visible:false,transparent:false,depthWrite:true,renderOrder:0,radius:1',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-antipode-drag-shell-visible',
+    'true',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-antipode-highlight',
+    'visible:true,renderOrder:3,radius:1.002,depthWrite:false',
+  );
+  await expect(globe).toHaveAttribute('data-antipode-hit-sphere', 'enabled');
+  await expect
+    .poll(async () =>
+      Number(
+        (await globe.getAttribute('data-antipode-hit-sphere-pick-revision')) ??
+          0,
+      ),
+    )
+    .toBeGreaterThan(revisionBeforeDrag);
+  await page.mouse.up();
+  await expectAntipodeDragInactive(page);
+  await expect(globe).toHaveAttribute(
+    'data-antipode-base-surface',
+    'visible:true,transparent:false,depthWrite:true,renderOrder:0,radius:1',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-antipode-drag-shell-visible',
+    'false',
+  );
+
+  const revisionBefore = Number(
+    (await globe.getAttribute('data-antipode-hit-sphere-pick-revision')) ?? 0,
+  );
+  const focusedCenter = await globeCenter(page);
+  await page.mouse.click(focusedCenter.x, focusedCenter.y);
+  await expect
+    .poll(async () =>
+      Number(
+        (await globe.getAttribute('data-antipode-hit-sphere-pick-revision')) ??
+          0,
+      ),
+    )
+    .toBeGreaterThan(revisionBefore);
+});
+
+test('uses real mobile touch input for tap and drag threshold behavior', async ({
+  page,
+}) => {
+  test.skip(test.info().project.name !== 'mobile', 'Mobile touch coverage');
+  await page.goto('./');
+  const globe = globeRegion(page);
+  const center = await globeCenter(page);
+  await page.touchscreen.tap(center.x, center.y);
+  await expectAntipodeDragInactive(page);
+
+  const session = await page.context().newCDPSession(page);
+  await dispatchTouch(session, 'touchStart', [{ id: 1, ...center }]);
+  await dispatchTouch(session, 'touchMove', [
+    { id: 1, x: center.x + 10, y: center.y },
+  ]);
+  await expectAntipodeDragInactive(page);
+  await dispatchTouch(session, 'touchMove', [
+    { id: 1, x: center.x + 28, y: center.y },
+  ]);
+  await expect(globe).toHaveAttribute('data-antipode-drag-state', 'active');
+  await expect(globe).toHaveAttribute('data-antipode-hit-sphere', 'enabled');
+  await dispatchTouch(session, 'touchEnd', []);
+  await expectAntipodeDragInactive(page);
+});
+
+test('tracks real multi-touch until final release and cancel', async ({
+  page,
+}) => {
+  test.skip(
+    test.info().project.name !== 'mobile',
+    'Mobile multi-touch coverage',
+  );
+  await page.goto('./');
+  const globe = globeRegion(page);
+  const center = await globeCenter(page);
+  const session = await page.context().newCDPSession(page);
+  const first = { id: 1, x: center.x - 20, y: center.y };
+  const second = { id: 2, x: center.x + 20, y: center.y };
+
+  await dispatchTouch(session, 'touchStart', [first]);
+  await dispatchTouch(session, 'touchStart', [first, second]);
+  await dispatchTouch(session, 'touchMove', [
+    { ...first, x: first.x - 18 },
+    { ...second, x: second.x + 18 },
+  ]);
+  await expect(globe).toHaveAttribute('data-antipode-drag-state', 'active');
+  await dispatchTouch(session, 'touchEnd', [{ ...second, x: second.x + 18 }]);
+  await expect(globe).toHaveAttribute('data-antipode-drag-state', 'active');
+  await dispatchTouch(session, 'touchEnd', []);
+  await expectAntipodeDragInactive(page);
+
+  await dispatchTouch(session, 'touchStart', [first]);
+  await dispatchTouch(session, 'touchMove', [{ ...first, x: first.x - 18 }]);
+  await expect(globe).toHaveAttribute('data-antipode-drag-state', 'active');
+  await dispatchTouch(session, 'touchCancel', []);
+  await expectAntipodeDragInactive(page);
+});
+
+test('activates the Other Side section only beyond mouse and touch drag thresholds', async ({
+  page,
+}) => {
+  await page.goto('./');
+  const globe = globeRegion(page);
+  await expectAntipodeDragInactive(page);
+  await dispatchGlobePointer(page, 'pointerdown', {
+    clientX: 100,
+    clientY: 100,
+  });
+  await expectAntipodeDragInactive(page);
+  await dispatchGlobePointer(page, 'pointermove', {
+    clientX: 105,
+    clientY: 100,
+  });
+  await expectAntipodeDragInactive(page);
+  await dispatchGlobePointer(page, 'pointermove', {
+    clientX: 106,
+    clientY: 100,
+  });
+  await expect(globe).toHaveAttribute('data-antipode-drag-state', 'active');
+  await expect(globe).toHaveAttribute(
+    'data-antipode-inner-wall-visible',
+    'true',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-antipode-center-glow-visible',
+    'true',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-antipode-drag-shell-visible',
+    'true',
+  );
+  await dispatchGlobePointer(page, 'pointerup', { clientX: 106, clientY: 100 });
+  await expectAntipodeDragInactive(page);
+
+  await dispatchGlobePointer(page, 'pointerdown', {
+    pointerId: 2,
+    pointerType: 'touch',
+    clientX: 100,
+    clientY: 100,
+  });
+  await dispatchGlobePointer(page, 'pointermove', {
+    pointerId: 2,
+    pointerType: 'touch',
+    clientX: 110,
+    clientY: 100,
+  });
+  await expectAntipodeDragInactive(page);
+  await dispatchGlobePointer(page, 'pointermove', {
+    pointerId: 2,
+    pointerType: 'touch',
+    clientX: 111,
+    clientY: 100,
+  });
+  await expect(globe).toHaveAttribute('data-antipode-drag-state', 'active');
+  await dispatchGlobePointer(page, 'pointercancel', {
+    pointerId: 2,
+    pointerType: 'touch',
+    clientX: 111,
+    clientY: 100,
+  });
+  await expectAntipodeDragInactive(page);
+});
+
+test('ignores click, wheel, and keyboard and clears every drag lifecycle exit', async ({
+  page,
+}) => {
+  await page.goto('./');
+  const globe = globeRegion(page);
+  await dispatchGlobePointer(page, 'pointerdown', {
+    clientX: 100,
+    clientY: 100,
+  });
+  await dispatchGlobePointer(page, 'pointerup', { clientX: 100, clientY: 100 });
+  await globe.dispatchEvent('wheel', { deltaY: 120 });
+  await globe.focus();
+  await page.keyboard.press('ArrowLeft');
+  await expectAntipodeDragInactive(page);
+
+  for (const exit of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+    await dispatchGlobePointer(page, 'pointerdown', {
+      clientX: 100,
+      clientY: 100,
+    });
+    await dispatchGlobePointer(page, 'pointermove', {
+      clientX: 120,
+      clientY: 100,
+    });
+    await expect(globe).toHaveAttribute('data-antipode-drag-state', 'active');
+    await dispatchGlobePointer(page, exit, { clientX: 120, clientY: 100 });
+    await expectAntipodeDragInactive(page);
+  }
+
+  await dispatchGlobePointer(page, 'pointerdown', {
+    clientX: 100,
+    clientY: 100,
+  });
+  await dispatchGlobePointer(page, 'pointermove', {
+    clientX: 120,
+    clientY: 100,
+  });
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await expectAntipodeDragInactive(page);
+});
+
+test('keeps drag active until the final active pointer ends and clears on mode exit', async ({
+  page,
+}) => {
+  await page.goto('./');
+  const globe = globeRegion(page);
+  for (const pointerId of [1, 2]) {
+    await dispatchGlobePointer(page, 'pointerdown', {
+      pointerId,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 100,
+    });
+    await dispatchGlobePointer(page, 'pointermove', {
+      pointerId,
+      pointerType: 'touch',
+      clientX: 120,
+      clientY: 100,
+    });
+  }
+  await dispatchGlobePointer(page, 'pointerup', {
+    pointerId: 1,
+    pointerType: 'touch',
+    clientX: 120,
+    clientY: 100,
+  });
+  await expect(globe).toHaveAttribute('data-antipode-drag-state', 'active');
+  await page.getByRole('button', { name: /发展的不同侧面/ }).click();
+  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await expectAntipodeDragInactive(page);
+
+  await page.goto('./?mode=sunline&v=1');
+  await expect(globeRegion(page)).not.toHaveAttribute(
+    'data-antipode-drag-state',
+  );
+});
+
+test('uses static reduced-motion glow and deterministic active-only flicker', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('./?dragDiagnostics=1');
+  const globe = globeRegion(page);
+  await dispatchGlobePointer(page, 'pointerdown', {
+    clientX: 100,
+    clientY: 100,
+  });
+  await dispatchGlobePointer(page, 'pointermove', {
+    clientX: 120,
+    clientY: 100,
+  });
+  await expect(globe).toHaveAttribute(
+    'data-antipode-center-glow-flicker',
+    'static',
+  );
+  await dispatchGlobePointer(page, 'pointerup', { clientX: 120, clientY: 100 });
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await dispatchGlobePointer(page, 'pointerdown', {
+    clientX: 100,
+    clientY: 100,
+  });
+  await dispatchGlobePointer(page, 'pointermove', {
+    clientX: 120,
+    clientY: 100,
+  });
+  await expect(globe).toHaveAttribute(
+    'data-antipode-center-glow-flicker',
+    'deterministic',
+  );
+  const activeRevision = Number(
+    (await globe.getAttribute('data-antipode-center-glow-revision')) ?? 0,
+  );
+  await expect
+    .poll(async () =>
+      Number(
+        (await globe.getAttribute('data-antipode-center-glow-revision')) ?? 0,
+      ),
+    )
+    .toBeGreaterThan(activeRevision);
+  const heldRevision = Number(
+    (await globe.getAttribute('data-antipode-center-glow-revision')) ?? 0,
+  );
+  await page.waitForTimeout(250);
+  expect(
+    Number(
+      (await globe.getAttribute('data-antipode-center-glow-revision')) ?? 0,
+    ),
+  ).toBeGreaterThan(heldRevision);
+  await dispatchGlobePointer(page, 'pointerup', { clientX: 120, clientY: 100 });
+  const revision = await globe.getAttribute(
+    'data-antipode-center-glow-revision',
+  );
+  await page.waitForTimeout(250);
+  await expect(globe).toHaveAttribute(
+    'data-antipode-center-glow-revision',
+    revision ?? '0',
+  );
+});
+
 test('reports and clears WebGL context interruption', async ({ page }) => {
   await page.goto('./?benchmark=1&benchmarkWarmup=100&benchmarkDuration=300');
   const canvas = page.locator('canvas');
@@ -69,6 +515,18 @@ test('reports and clears WebGL context interruption', async ({ page }) => {
   const benchmark = page.locator('output[data-phase="complete"]');
   await expect(benchmark).toContainText('fps');
   await expect(benchmark).toContainText('p95');
+  await dispatchGlobePointer(page, 'pointerdown', {
+    clientX: 100,
+    clientY: 100,
+  });
+  await dispatchGlobePointer(page, 'pointermove', {
+    clientX: 120,
+    clientY: 100,
+  });
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-antipode-drag-state',
+    'active',
+  );
   const canLoseContext = await canvas.evaluate((element) => {
     const context = (element as HTMLCanvasElement).getContext('webgl2');
     const extension = context?.getExtension('WEBGL_lose_context');
@@ -78,6 +536,7 @@ test('reports and clears WebGL context interruption', async ({ page }) => {
     return true;
   });
   test.skip(!canLoseContext, 'WEBGL_lose_context is unavailable');
+  await expectAntipodeDragInactive(page);
   const contextStatus = page.getByText(
     '图形上下文暂时中断，正在等待浏览器恢复。',
   );

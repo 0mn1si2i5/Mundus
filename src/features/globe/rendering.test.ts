@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ANTIPODE_DRAG_RENDERING,
   GLOBE_COLOR_CONTRACT,
   GLOBE_RENDERING,
   SUNLINE_RENDERING,
   contrastRatio,
   sunlineOverlayAtAltitude,
 } from './rendering';
+import { BackSide, FrontSide } from 'three';
 import { COUNTRY_TEXTURE_STYLE } from './countryData';
 
 describe('matte parchment globe rendering contract', () => {
@@ -112,5 +114,60 @@ describe('Sunline rendering contract', () => {
         GLOBE_COLOR_CONTRACT.sunline.subsolar,
       ),
     ).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('Other Side drag cross-section rendering contract', () => {
+  it('uses separate ordered transparent shell layers without writing depth', () => {
+    expect(ANTIPODE_DRAG_RENDERING.outerShell).toMatchObject({
+      radius: 1,
+      side: FrontSide,
+      depthTest: true,
+      depthWrite: false,
+    });
+    expect(ANTIPODE_DRAG_RENDERING.outerShell.dragOpacity).toBeGreaterThan(0.6);
+    expect(ANTIPODE_DRAG_RENDERING.outerShell.dragOpacity).toBeLessThan(0.9);
+    expect(ANTIPODE_DRAG_RENDERING.innerWall).toMatchObject({
+      side: BackSide,
+      depthTest: true,
+      depthWrite: false,
+    });
+    expect(ANTIPODE_DRAG_RENDERING.innerWall.radius).toBeLessThan(
+      ANTIPODE_DRAG_RENDERING.outerShell.radius,
+    );
+    expect(ANTIPODE_DRAG_RENDERING.outerShell.renderOrder).toBeGreaterThan(
+      ANTIPODE_DRAG_RENDERING.innerWall.renderOrder,
+    );
+    expect(ANTIPODE_DRAG_RENDERING.highlight.radius).toBeGreaterThan(
+      ANTIPODE_DRAG_RENDERING.outerShell.radius,
+    );
+    expect(ANTIPODE_DRAG_RENDERING.highlight.renderOrder).toBeGreaterThan(
+      ANTIPODE_DRAG_RENDERING.outerShell.renderOrder,
+    );
+    expect(ANTIPODE_DRAG_RENDERING.highlight).toMatchObject({
+      depthTest: true,
+      depthWrite: false,
+    });
+  });
+
+  it('keeps the candle glow non-interactive and below cross-section markers', () => {
+    expect(ANTIPODE_DRAG_RENDERING.centerGlow.core).toMatchObject({
+      depthTest: false,
+      depthWrite: false,
+    });
+    expect(ANTIPODE_DRAG_RENDERING.centerGlow.halo).toMatchObject({
+      depthTest: false,
+      depthWrite: false,
+    });
+    expect(
+      ANTIPODE_DRAG_RENDERING.centerGlow.flickerAmplitude,
+    ).toBeGreaterThanOrEqual(0.05);
+    expect(
+      ANTIPODE_DRAG_RENDERING.centerGlow.flickerAmplitude,
+    ).toBeLessThanOrEqual(0.08);
+    expect(ANTIPODE_DRAG_RENDERING.centerGlow.renderOrder).toBeLessThan(
+      ANTIPODE_DRAG_RENDERING.markerRenderOrder,
+    );
+    expect(ANTIPODE_DRAG_RENDERING.centerNode.depthWrite).toBe(false);
   });
 });

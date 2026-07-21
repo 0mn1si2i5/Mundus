@@ -1,3 +1,5 @@
+import { BackSide, FrontSide } from 'three';
+
 export const GLOBE_RENDERING = {
   material: { roughness: 0.96, metalness: 0 },
   ambient: { color: '#f2e7cf', intensity: 1.35 },
@@ -5,6 +7,53 @@ export const GLOBE_RENDERING = {
   stars: { count: 0 },
   atmosphere: { opacity: 0 },
   graticule: { color: '#746f63', opacity: 0.34 },
+} as const;
+
+export const ANTIPODE_DRAG_RENDERING = {
+  outerShell: {
+    radius: 1,
+    renderOrder: 2,
+    color: '#ffffff',
+    dragOpacity: 0.76,
+    side: FrontSide,
+    depthTest: true,
+    depthWrite: false,
+  },
+  innerWall: {
+    radius: 0.985,
+    renderOrder: 1,
+    color: '#7b5542',
+    opacity: 0.3,
+    side: BackSide,
+    depthTest: true,
+    depthWrite: false,
+  },
+  highlight: {
+    radius: 1.002,
+    renderOrder: 3,
+    depthTest: true,
+    depthWrite: false,
+  },
+  centerGlow: {
+    renderOrder: 4,
+    flickerAmplitude: 0.065,
+    core: {
+      radius: 0.035,
+      color: '#ffd28a',
+      opacity: 0.92,
+      depthTest: false,
+      depthWrite: false,
+    },
+    halo: {
+      radius: 0.095,
+      color: '#ef8b45',
+      opacity: 0.16,
+      depthTest: false,
+      depthWrite: false,
+    },
+  },
+  centerNode: { depthWrite: false },
+  markerRenderOrder: 5,
 } as const;
 
 export const GLOBE_COLOR_CONTRACT = {
