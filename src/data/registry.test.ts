@@ -8,6 +8,7 @@ describe('data registry', () => {
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual([
       'natural-earth-countries-110m',
+      'natural-earth-vector-globe',
       'undp-hdr-2025-development',
       'geonames-major-cities',
     ]);
@@ -16,6 +17,40 @@ describe('data registry', () => {
         (manifest) => dataManifestSchema.safeParse(manifest).success,
       ),
     ).toBe(true);
+  });
+
+  it('pins both vector resolutions and their transfer and GPU budgets', () => {
+    const manifest = DATA_MANIFESTS.find(
+      (candidate) => candidate.id === 'natural-earth-vector-globe',
+    );
+    expect(manifest?.sourceAssets).toMatchObject({
+      '110m': {
+        sha256:
+          '2516c915867c7baf18ddec727aec46c315541a07cfb3d79a6559b05d5e94eee8',
+      },
+      '50m': {
+        sha256:
+          '04342cdc1e3016bcd7db1630de95684d67b79fe3c8c460321e87aef469502394',
+      },
+    });
+    expect(manifest?.derivedAssets?.['110m']?.gpuBytes).toBeLessThanOrEqual(
+      8 * 1024 * 1024,
+    );
+    expect(manifest?.derivedAssets?.['50m']?.gpuBytes).toBeLessThanOrEqual(
+      24 * 1024 * 1024,
+    );
+    expect(manifest?.derivedAssets?.['50m']?.gzipBytes).toBeLessThanOrEqual(
+      1.5 * 1024 * 1024,
+    );
+    expect(
+      manifest?.derivedAssets?.['110m']?.droppedOutsideAreaFraction,
+    ).toBeLessThan(0.0001);
+    expect(
+      manifest?.derivedAssets?.['50m']?.droppedOutsideAreaFraction,
+    ).toBeLessThan(0.0001);
+    expect(manifest?.derivedAssets?.['50m']?.runtimeGpuBytes).toBe(
+      manifest?.derivedAssets?.['50m']?.gpuBytes,
+    );
   });
 
   it('contains no retired populated-place pipeline', () => {

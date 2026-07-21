@@ -20,6 +20,49 @@ The pinned distribution SHA-256 is recorded in
 `src/data/manifests/natural-earth-110m.json`. Boundaries are a cartographic view
 and are not a legal authority on territorial status.
 
+## Natural Earth vector globe, 1:110m and 1:50m
+
+- Source: the same Natural Earth 4.1.0 Admin 0 countries distributed by
+  `world-atlas` 2.0.2
+- Terms: public domain; redistribution allowed
+- Quality policy: low quality lazily requests 110m; medium and high quality
+  lazily request 50m; the existing raster sphere remains visible while loading
+  or after a vector failure
+- Transformation: classify rings by projected area and containment, triangulate
+  each Polygon/MultiPolygon part and holes in a local gnomonic projection,
+  subdivide edges on the sphere, reject
+  degenerate/outside slivers, merge every country into one surface buffer, and
+  derive one coastline plus one internal shared-boundary buffer from TopoJSON
+  topology
+- Encoding: signed-normalized 16-bit positions, stable `countryIndex`, and
+  `meshoptimizer` 1.1.1 transport; runtime country picking remains CPU-based
+- Attribution shown in the product: **Made with Natural Earth**
+
+The exact 110m/50m source hashes, generated `.mvg` hashes, raw/gzip/GPU sizes,
+geometry counts, and edge limits are recorded in
+`src/data/manifests/natural-earth-vector-globe.json`. The 50m asset is 2,055,260
+bytes raw and 1,346,186 bytes at the verifier's gzip level; its measured runtime
+GPU buffer and palette allocation is 8,950,732 bytes. Four interior samples per
+triangle plus adaptive boundary subdivision limit dropped candidate area to
+0.00417% at 110m and 0.000149% at 50m, with hard global and representative-country
+gates. Development indicator/year changes update a
+small RGBA palette only. Missing values retain the explicit unknown color and
+are never converted to zero.
+
+Coverage is also checked independently against `d3.geoArea` on source country
+features, not against converter candidate triangles. For this snapshot the 50m
+country-feature sum and TopoJSON land union both equal `3.612531650 sr` within
+floating-point precision; they are recorded separately because other datasets
+may contain overlaps or disputes. The emitted 50m surface is `3.612526269 sr`,
+an absolute relative difference of `0.000149%`. The converter classifies projected
+rings by area and containment rather than trusting source ring order; this is
+required for the polar Antarctica part whose seam ring precedes its coastline.
+Before this correction, the 50m emitted surface was only `3.315518543 sr` and
+Antarctica emitted `0.004730775 sr` versus its `0.301957940 sr` source area.
+The decoded 110m source contains four self-intersecting country rings (Fiji,
+Sudan, Russia, and Antarctica); these are explicitly reported and use a narrow
+0.25% repair ceiling, while valid material countries retain a 0.1% ceiling.
+
 ## GeoNames major cities
 
 - Source: [GeoNames geographical database](https://www.geonames.org/)
@@ -110,7 +153,13 @@ pnpm data:verify
 ```
 
 to verify the committed generated snapshots and the installed, pinned
-`world-atlas` runtime asset by SHA-256. `pnpm test` separately exercises the
+`world-atlas` runtime assets by SHA-256. Rebuild both vector assets with:
+
+```bash
+pnpm data:vector-globe
+```
+
+`pnpm test` separately exercises the
 data registry schemas, record-level expectations, and calculation invariants;
 the generator scripts validate their input and output while building a new
 snapshot.

@@ -9,6 +9,21 @@ const assets = [
     hashField: 'sha256',
   },
   {
+    manifest: 'src/data/manifests/natural-earth-vector-globe.json',
+    asset: 'node_modules/world-atlas/countries-50m.json',
+    hashField: 'sourceAssets.50m.sha256',
+  },
+  {
+    manifest: 'src/data/manifests/natural-earth-vector-globe.json',
+    asset: 'src/data/generated/natural-earth-vector-globe-110m.mvg',
+    hashField: 'derivedAssets.110m.sha256',
+  },
+  {
+    manifest: 'src/data/manifests/natural-earth-vector-globe.json',
+    asset: 'src/data/generated/natural-earth-vector-globe-50m.mvg',
+    hashField: 'derivedAssets.50m.sha256',
+  },
+  {
     manifest: 'src/data/manifests/geonames-major-cities.json',
     asset: 'src/data/generated/geonames-major-cities.json',
     hashField: 'derivedAssetSha256',
@@ -28,7 +43,9 @@ for (const entry of assets) {
     readFile(entry.asset),
   ]);
   const manifest = JSON.parse(manifestBytes.toString('utf8'));
-  const expected = manifest[entry.hashField];
+  const expected = entry.hashField
+    .split('.')
+    .reduce((value, field) => value?.[field], manifest);
   const actual = createHash('sha256').update(assetBytes).digest('hex');
   if (typeof expected !== 'string' || actual !== expected) {
     failed = true;

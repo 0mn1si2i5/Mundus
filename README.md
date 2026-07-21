@@ -43,6 +43,11 @@ pnpm test:e2e
 tests, and the production build. Production source maps are deliberately
 disabled for the V1 public artifact.
 
+The globe uses reproducibly generated Natural Earth vector spheres: low quality
+loads 110m, while medium/high quality loads 50m. Country colors are supplied by
+a small palette texture, and the existing raster globe remains the loading and
+failure fallback.
+
 ## Data and licensing
 
 The repository's MIT License covers Mundus source code only. Bundled datasets

@@ -128,6 +128,10 @@ and `src/data/manifests/`.
   application runtime or production bundle. npm declares `MIT AND Apache-2.0`;
   source and notices are at <https://github.com/nk2028/opencc-js>.
 
+`meshoptimizer@1.1.1` is also used at runtime to decode the lazy Natural Earth
+vector globe buffers. It is MIT licensed; its exact bundled notice is emitted
+to `THIRD_PARTY_NOTICES.md` by the production build.
+
 ## Solar method
 
 Sunline implements mathematical approximations described by NOAA; it does not
