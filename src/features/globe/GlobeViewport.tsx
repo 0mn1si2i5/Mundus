@@ -46,7 +46,6 @@ import {
   createGraticuleLines,
   createLineSegmentPositions,
   geoToVector3,
-  markerWorldDiameter,
   vector3ToGeo,
 } from './geo';
 import {
@@ -65,6 +64,13 @@ import {
 import { supportsWebGL2 } from './webgl';
 import type { GeoPoint } from './geo';
 import styles from './GlobeViewport.module.css';
+import type { AntipodeRelation } from '../antipodes/relation';
+import {
+  AntipodeRelationLayer,
+  type AntipodeRelationDiagnosticHandle,
+  type AntipodeRelationDiagnosticReason,
+} from './AntipodeRelationLayer';
+import { cssPixelsToWorldUnits } from './screenSpace';
 
 interface GlobeViewportProps {
   diagnosticResetKey: string;
@@ -78,6 +84,7 @@ interface GlobeViewportProps {
   countryFills: ReadonlyMap<string, string> | null;
   showAntipodes: boolean;
   sunline: SunlineRenderState | null;
+  antipodeRelation: AntipodeRelation | null;
 }
 
 export interface SunlineRenderState {
@@ -110,6 +117,7 @@ export function GlobeViewport({
   countryFills,
   showAntipodes,
   sunline,
+  antipodeRelation,
 }: GlobeViewportProps) {
   const [supported] = useState(supportsWebGL2);
   const [profile] = useState(detectQualityProfile);
@@ -183,12 +191,14 @@ export function GlobeViewport({
 
   function recordSunlineProjectionDiagnostic(
     selected: ProjectedMarkerEvidence,
+    selectedSurface: ProjectedMarkerEvidence,
     solar: ProjectedMarkerEvidence,
     reason: SunlineDiagnosticReason,
   ) {
     const element = viewport.current;
     if (!element) return;
     element.dataset.sunlineSelectedProjectedCenter = `${selected.x},${selected.y}`;
+    element.dataset.sunlineSelectedSurfaceProjectedCenter = `${selectedSurface.x},${selectedSurface.y}`;
     element.dataset.sunlineSolarProjectedCenter = `${solar.x},${solar.y}`;
     element.dataset.sunlineSelectedFrontFacing = String(selected.frontFacing);
     element.dataset.sunlineSolarFrontFacing = String(solar.frontFacing);
@@ -239,6 +249,61 @@ export function GlobeViewport({
     element.dataset.antipodeHitSpherePickRevision = String(
       Number(element.dataset.antipodeHitSpherePickRevision ?? 0) + 1,
     );
+  }
+
+  function recordGlobePick(point: GeoPoint) {
+    const element = viewport.current;
+    if (!element) return;
+    element.dataset.globeLastPickTarget = `${formatDiagnosticCoordinate(point.latitude)},${formatDiagnosticCoordinate(point.longitude)}`;
+    element.dataset.globePickRevision = String(
+      Number(element.dataset.globePickRevision ?? 0) + 1,
+    );
+  }
+
+  function recordAntipodeRelationArcCount(count: number | null) {
+    const element = viewport.current;
+    if (!element) return;
+    if (count === null) {
+      delete element.dataset.antipodeRelationDiagnosticSource;
+      delete element.dataset.antipodeRelationArcCount;
+      return;
+    }
+    element.dataset.antipodeRelationDiagnosticSource = 'measured';
+    element.dataset.antipodeRelationArcCount = String(count);
+  }
+
+  function recordAntipodeCityMarkerSize(
+    role: 'origin-city' | 'antipode-city',
+    cssPixels: number | null,
+    reason?: AntipodeRelationDiagnosticReason,
+  ) {
+    const element = viewport.current;
+    if (!element) return;
+    if (cssPixels === null) {
+      if (role === 'origin-city') {
+        delete element.dataset.markerOriginCityActualCssDiameter;
+      } else {
+        delete element.dataset.markerAntipodeCityActualCssDiameter;
+      }
+      if (
+        !element.dataset.markerOriginCityActualCssDiameter &&
+        !element.dataset.markerAntipodeCityActualCssDiameter
+      ) {
+        delete element.dataset.antipodeRelationDiagnosticRevision;
+        delete element.dataset.antipodeRelationDiagnosticReason;
+      }
+      return;
+    }
+    const value = Number(cssPixels.toFixed(3)).toString();
+    if (role === 'origin-city') {
+      element.dataset.markerOriginCityActualCssDiameter = value;
+    } else {
+      element.dataset.markerAntipodeCityActualCssDiameter = value;
+    }
+    element.dataset.antipodeRelationDiagnosticRevision = String(
+      Number(element.dataset.antipodeRelationDiagnosticRevision ?? 0) + 1,
+    );
+    if (reason) element.dataset.antipodeRelationDiagnosticReason = reason;
   }
 
   function syncDragActive() {
@@ -386,6 +451,11 @@ export function GlobeViewport({
     }
   }, [diagnosticResetKey, showAntipodes]);
 
+  const relationReady = Boolean(
+    antipodeRelation?.origin.nearestMajorCity &&
+    antipodeRelation.antipode.nearestMajorCity,
+  );
+
   if (!supported) {
     return (
       <section className={styles.unavailable} role="status">
@@ -403,8 +473,22 @@ export function GlobeViewport({
       aria-label={ariaLabel}
       aria-describedby="globe-keyboard-instructions"
       data-quality={profile.level}
-      data-marker-role-count={showAntipodes ? 2 : undefined}
-      data-marker-roles={showAntipodes ? 'origin,antipode' : undefined}
+      data-marker-role-count={
+        showAntipodes ? (relationReady ? 4 : 2) : undefined
+      }
+      data-marker-roles={
+        showAntipodes
+          ? relationReady
+            ? 'origin,antipode,origin-city,antipode-city'
+            : 'origin,antipode'
+          : undefined
+      }
+      data-antipode-relation-state={
+        showAntipodes ? (relationReady ? 'ready' : 'pending') : undefined
+      }
+      data-antipode-city-shapes={
+        showAntipodes && relationReady ? 'square,triangle' : undefined
+      }
       data-marker-center-css-px={showAntipodes ? 3 : undefined}
       data-cross-section-interior-draw-count={showAntipodes ? 1 : undefined}
       data-antipode-drag-state={
@@ -500,6 +584,7 @@ export function GlobeViewport({
           antipodeDragActive={antipodeDragVisible}
           dragDiagnosticsEnabled={dragDiagnosticsEnabled}
           sunline={sunline}
+          antipodeRelation={antipodeRelation}
           onCameraFocusStart={clearCameraDiagnostic}
           onCameraFocusComplete={recordCameraDiagnostic}
           onMarkerDiagnostic={recordMarkerDiagnostic}
@@ -509,6 +594,9 @@ export function GlobeViewport({
           onAntipodeSceneDiagnostic={recordAntipodeSceneDiagnostic}
           onAntipodeLayerDiagnostic={recordAntipodeLayerDiagnostic}
           onHitSpherePick={recordHitSpherePick}
+          onGlobePick={recordGlobePick}
+          onAntipodeRelationArcCount={recordAntipodeRelationArcCount}
+          onAntipodeCityMarkerSize={recordAntipodeCityMarkerSize}
         />
       </Canvas>
       {contextLost ? (
@@ -536,6 +624,7 @@ interface GlobeSceneProps {
   antipodeDragActive: boolean;
   dragDiagnosticsEnabled: boolean;
   sunline: SunlineRenderState | null;
+  antipodeRelation: AntipodeRelation | null;
   onCameraFocusStart: () => void;
   onCameraFocusComplete: (
     point: GeoPoint,
@@ -550,6 +639,7 @@ interface GlobeSceneProps {
   ) => void;
   onSunlineProjectionDiagnostic: (
     selected: ProjectedMarkerEvidence,
+    selectedSurface: ProjectedMarkerEvidence,
     solar: ProjectedMarkerEvidence,
     reason: SunlineDiagnosticReason,
   ) => void;
@@ -565,6 +655,13 @@ interface GlobeSceneProps {
     highlight: string,
   ) => void;
   onHitSpherePick: () => void;
+  onGlobePick: (point: GeoPoint) => void;
+  onAntipodeRelationArcCount: (count: number | null) => void;
+  onAntipodeCityMarkerSize: (
+    role: 'origin-city' | 'antipode-city',
+    cssPixels: number | null,
+    reason?: AntipodeRelationDiagnosticReason,
+  ) => void;
 }
 
 interface AntipodeMaterialEvidence {
@@ -584,6 +681,7 @@ function GlobeScene({
   antipodeDragActive,
   dragDiagnosticsEnabled,
   sunline,
+  antipodeRelation,
   onCameraFocusStart,
   onCameraFocusComplete,
   onMarkerDiagnostic,
@@ -593,6 +691,9 @@ function GlobeScene({
   onAntipodeSceneDiagnostic,
   onAntipodeLayerDiagnostic,
   onHitSpherePick,
+  onGlobePick,
+  onAntipodeRelationArcCount,
+  onAntipodeCityMarkerSize,
 }: GlobeSceneProps) {
   const point = useAppStore((state) => state.point);
   const selectedCountry = useAppStore((state) => state.selectedCountry);
@@ -611,6 +712,8 @@ function GlobeScene({
   const group = useRef<Group>(null);
   const interactionStart = useRef<Vector3>(null);
   const markerDiagnostic = useRef<MarkerDiagnosticHandle>(null);
+  const antipodeRelationDiagnostic =
+    useRef<AntipodeRelationDiagnosticHandle>(null);
   const sunlineDiagnostic = useRef<SunlineDiagnosticHandle>(null);
   const outerShell = useRef<Mesh>(null);
   const outerMaterial = useRef<MeshStandardMaterial>(null);
@@ -644,10 +747,16 @@ function GlobeScene({
     [countries, profile.textureWidth, maxAnisotropy],
   );
 
-  const primary = useMemo(() => geoToVector3(point, 1.003), [point]);
+  const relationOrigin = antipodeRelation?.origin.exactPoint ?? point;
+  const relationAntipode =
+    antipodeRelation?.antipode.exactPoint ?? antipodeOf(point);
+  const primary = useMemo(
+    () => geoToVector3(relationOrigin, 1.003),
+    [relationOrigin],
+  );
   const antipode = useMemo(
-    () => geoToVector3(antipodeOf(point), 1.0035),
-    [point],
+    () => geoToVector3(relationAntipode, 1.0035),
+    [relationAntipode],
   );
   const crossSection = useMemo(
     () => createAntipodeCrossSection(primary),
@@ -672,6 +781,7 @@ function GlobeScene({
     function finishCameraMove() {
       camera.lookAt(0, 0, 0);
       markerDiagnostic.current?.request('interaction');
+      antipodeRelationDiagnostic.current?.request('interaction');
       sunlineDiagnostic.current?.request('interaction');
       onCameraFocusStart();
       setCameraFocusFree();
@@ -723,6 +833,7 @@ function GlobeScene({
   useEffect(() => {
     if (!showAntipodes) return;
     markerDiagnostic.current?.request('point');
+    antipodeRelationDiagnostic.current?.request('point');
     invalidate();
   }, [invalidate, point, showAntipodes]);
   useEffect(() => {
@@ -806,6 +917,7 @@ function GlobeScene({
       if (remaining < 0.003 || reducedMotion) {
         camera.position.copy(targetDirection.multiplyScalar(cameraDistance));
         markerDiagnostic.current?.request('camera-focus');
+        antipodeRelationDiagnostic.current?.request('camera-focus');
         sunlineDiagnostic.current?.request('camera-focus');
         onCameraFocusComplete(
           vector3ToGeo(
@@ -845,6 +957,7 @@ function GlobeScene({
     const selectedPoint = vector3ToGeo(
       group.current.worldToLocal(event.point.clone()),
     );
+    onGlobePick(selectedPoint);
     selectPoint(selectedPoint);
     setSelectedCountry(countries.findCountry(selectedPoint));
     invalidate();
@@ -975,6 +1088,7 @@ function GlobeScene({
               ref={sunlineDiagnostic}
               globeGroup={group}
               selectedPosition={selectedMarkerPosition}
+              selectedSurfacePosition={primary}
               solarPosition={solarMarkerPosition}
               onDiagnostic={onSunlineProjectionDiagnostic}
             />
@@ -997,7 +1111,7 @@ function GlobeScene({
               color={GLOBE_COLOR_CONTRACT.origin.outer}
               centerColor={GLOBE_COLOR_CONTRACT.origin.center}
               role="origin"
-              point={point}
+              point={relationOrigin}
               diagnosticHandle={markerDiagnostic}
               onDiagnostic={onMarkerDiagnostic}
             />
@@ -1008,6 +1122,14 @@ function GlobeScene({
               role="antipode"
             />
             <AntipodeCrossSection section={crossSection} />
+            {antipodeRelation ? (
+              <AntipodeRelationLayer
+                ref={antipodeRelationDiagnostic}
+                relation={antipodeRelation}
+                onArcCount={onAntipodeRelationArcCount}
+                onMarkerSize={onAntipodeCityMarkerSize}
+              />
+            ) : null}
             <CenterCandleGlow
               active={antipodeDragActive}
               reducedMotion={reducedMotion}
@@ -1041,6 +1163,7 @@ function GlobeScene({
           }
           interactionStart.current = null;
           markerDiagnostic.current?.request('interaction');
+          antipodeRelationDiagnostic.current?.request('interaction');
           sunlineDiagnostic.current?.request('interaction');
           invalidate();
         }}
@@ -1294,7 +1417,7 @@ function Marker({
     cameraOffset.current.subVectors(worldPosition.current, camera.position);
     const projectionDepth = cameraOffset.current.dot(cameraDirection.current);
     const verticalFov = (camera as PerspectiveCamera).fov;
-    const diameter = markerWorldDiameter(
+    const diameter = cssPixelsToWorldUnits(
       targetCssPixels,
       projectionDepth,
       verticalFov,
@@ -1385,14 +1508,17 @@ const SunlineProjectionDiagnostic = forwardRef(
     {
       globeGroup,
       selectedPosition,
+      selectedSurfacePosition,
       solarPosition,
       onDiagnostic,
     }: {
       globeGroup: RefObject<Group | null>;
       selectedPosition: Vector3;
+      selectedSurfacePosition: Vector3;
       solarPosition: Vector3;
       onDiagnostic: (
         selected: ProjectedMarkerEvidence,
+        selectedSurface: ProjectedMarkerEvidence,
         solar: ProjectedMarkerEvidence,
         reason: SunlineDiagnosticReason,
       ) => void;
@@ -1401,6 +1527,7 @@ const SunlineProjectionDiagnostic = forwardRef(
   ) {
     const pending = useRef<SunlineDiagnosticReason | null>('mount');
     const selectedWorld = useRef(new Vector3());
+    const selectedSurfaceWorld = useRef(new Vector3());
     const solarWorld = useRef(new Vector3());
     const surfaceNormal = useRef(new Vector3());
     const cameraOffset = useRef(new Vector3());
@@ -1416,7 +1543,7 @@ const SunlineProjectionDiagnostic = forwardRef(
     useEffect(() => {
       pending.current = 'position';
       invalidate();
-    }, [invalidate, selectedPosition, solarPosition]);
+    }, [invalidate, selectedPosition, selectedSurfacePosition, solarPosition]);
     useEffect(() => {
       const nextSize = `${size.width}x${size.height}`;
       if (diagnosticSize.current === nextSize) return;
@@ -1433,12 +1560,25 @@ const SunlineProjectionDiagnostic = forwardRef(
       selectedWorld.current
         .copy(selectedPosition)
         .applyMatrix4(group.matrixWorld);
+      selectedSurfaceWorld.current
+        .copy(selectedSurfacePosition)
+        .normalize()
+        .applyMatrix4(group.matrixWorld);
       solarWorld.current.copy(solarPosition).applyMatrix4(group.matrixWorld);
       const reason = pending.current;
       pending.current = null;
       onDiagnostic(
         projectMarkerEvidence(
           selectedWorld.current,
+          camera as PerspectiveCamera,
+          size.width,
+          size.height,
+          surfaceNormal.current,
+          cameraOffset.current,
+          projected.current,
+        ),
+        projectMarkerEvidence(
+          selectedSurfaceWorld.current,
           camera as PerspectiveCamera,
           size.width,
           size.height,

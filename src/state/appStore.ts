@@ -9,7 +9,7 @@ import type { SunlineClockMode } from './urlState';
 import { clampSunlineTime } from '../features/sunline/solar';
 
 export interface CameraFocusIntent {
-  side: 'origin' | 'antipode' | 'free' | 'nearest-place';
+  side: 'origin' | 'antipode' | 'free' | 'major-city';
   target: GeoPoint | null;
 }
 
@@ -158,7 +158,7 @@ export const useAppStore = create<AppState>((set) => ({
     }),
   requestCameraFocus: (target) =>
     set({
-      cameraFocusIntent: { side: 'nearest-place', target },
+      cameraFocusIntent: { side: 'major-city', target },
       hasInteracted: true,
     }),
   clearCameraTarget: () =>

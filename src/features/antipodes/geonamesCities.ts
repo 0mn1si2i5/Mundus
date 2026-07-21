@@ -247,17 +247,23 @@ export function findNearestMajorCity(
 ): NearestMajorCity {
   if (cities.length === 0)
     throw new Error('Cannot find a nearest city in an empty index');
-  return cities
-    .map((city) => ({
-      city,
-      distanceKm: greatCircleDistanceKm(point, city.point),
-    }))
-    .sort(
-      (a, b) =>
-        a.distanceKm - b.distanceKm ||
-        b.city.population - a.city.population ||
-        a.city.id - b.city.id,
-    )[0]!;
+  let nearestCity = cities[0]!;
+  let nearestDistanceKm = greatCircleDistanceKm(point, nearestCity.point);
+  for (let index = 1; index < cities.length; index += 1) {
+    const city = cities[index]!;
+    const distanceKm = greatCircleDistanceKm(point, city.point);
+    if (
+      distanceKm < nearestDistanceKm ||
+      (distanceKm === nearestDistanceKm &&
+        (city.population > nearestCity.population ||
+          (city.population === nearestCity.population &&
+            city.id < nearestCity.id)))
+    ) {
+      nearestCity = city;
+      nearestDistanceKm = distanceKm;
+    }
+  }
+  return { city: nearestCity, distanceKm: nearestDistanceKm };
 }
 
 export function configureGeoNamesCityImporter(value: DataImporter) {

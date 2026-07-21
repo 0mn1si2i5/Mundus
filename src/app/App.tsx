@@ -194,6 +194,7 @@ export function App() {
               countryFills={presentation.globe.countryFills}
               showAntipodes={presentation.globe.showAntipodes}
               sunline={presentation.globe.sunline}
+              antipodeRelation={presentation.globe.antipodeRelation}
             />
           </Suspense>
         </ErrorBoundary>

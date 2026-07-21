@@ -1,15 +1,32 @@
 import { describe, expect, it } from 'vitest';
+import { existsSync } from 'node:fs';
 import { DATA_MANIFESTS, dataManifestSchema } from './registry';
 
 describe('data registry', () => {
   it('contains valid manifests with unique ids', () => {
     const ids = DATA_MANIFESTS.map((manifest) => manifest.id);
     expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toEqual([
+      'natural-earth-countries-110m',
+      'undp-hdr-2025-development',
+      'geonames-major-cities',
+    ]);
     expect(
       DATA_MANIFESTS.every(
         (manifest) => dataManifestSchema.safeParse(manifest).success,
       ),
     ).toBe(true);
+  });
+
+  it('contains no retired populated-place pipeline', () => {
+    for (const path of [
+      'src/features/antipodes/populatedPlaces.ts',
+      'src/data/generated/natural-earth-populated-places-50m.json',
+      'src/data/manifests/natural-earth-populated-places-50m.json',
+      'scripts/build-populated-places.mjs',
+    ]) {
+      expect(existsSync(path), path).toBe(false);
+    }
   });
 
   it('pins the licensed GeoNames major-city snapshot and derived budgets', () => {

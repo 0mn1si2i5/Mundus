@@ -20,30 +20,14 @@ The pinned distribution SHA-256 is recorded in
 `src/data/manifests/natural-earth-110m.json`. Boundaries are a cartographic view
 and are not a legal authority on territorial status.
 
-## Natural Earth populated places, 1:50m
-
-- Source: [Natural Earth Populated Places](https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-populated-places/)
-- Version: Natural Earth 5.1.2
-- Terms: [public domain](https://www.naturalearthdata.com/about/terms-of-use/); redistribution allowed
-- Use: nearest represented place in Other Side
-- Transformation: retain the Natural Earth identifier, ASCII place and
-  admin-0 names, coordinates, and `pop_max`; sort by identifier; encode as
-  compact tuples; load only while Other Side is active
-- Attribution shown in the product: **Made with Natural Earth**
-
-The source and derived-asset SHA-256 values are recorded in
-`src/data/manifests/natural-earth-populated-places-50m.json`. “Nearest” means
-nearest within this selected 1:50m dataset, not within a complete city or
-settlement gazetteer.
-
 ## GeoNames major cities
 
 - Source: [GeoNames geographical database](https://www.geonames.org/)
 - Snapshot: `cities15000`, `alternateNamesV2`, `countryInfo`,
   `admin1CodesASCII`, and upstream readme retrieved 2026-07-21
 - Terms: [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/)
-- Use: offline bilingual major-city autocomplete in Other Side; it does not
-  replace the Natural Earth nearest-place result
+- Use: offline bilingual major-city autocomplete and bilateral nearest
+  represented major-city results in Other Side
 - Scope: active `P` records with codes `PPL`, `PPLA`, `PPLA2`, `PPLA3`,
   `PPLA4`, `PPLC`, or `PPLG`; all `PPLC` and `PPLA`, otherwise population at
   least 100,000; a non-empty admin-1 code and exact country and admin-1 joins
@@ -63,7 +47,10 @@ hash, size measurements, fallback policy, and transformation are recorded in
 `src/data/manifests/geonames-major-cities.json`. Missing Chinese source names
 remain explicit canonical fallbacks; non-Chinese names are never translated.
 GeoNames is a filtered search index, not a complete gazetteer or territorial
-authority.
+authority. Each relation distance is measured independently from an exact
+endpoint to the nearest eligible entry in this same immutable index, with
+deterministic distance, population, and GeoNames-ID ties. Results do not mean
+nearest settlement, administrative boundary, or built area.
 
 ## UNDP Human Development Report 2025
 

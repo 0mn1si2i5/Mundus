@@ -204,10 +204,12 @@ layers:
 - Select a point by globe interaction, coordinates, local city search, curated
   example, or permission-based geolocation.
 - Calculate the antipode locally.
-- Show origin and antipode countries/oceans, coordinates, center-line distance,
-  half-circumference surface distance, and the nearest place represented in the
-  bundled Natural Earth selection.
-- “Nearest place” is scoped to that dataset; never imply a complete gazetteer.
+- Show exact origin and antipode countries/oceans, coordinates, center-line and
+  half-circumference distances, plus the nearest eligible major city to each
+  endpoint in the bundled GeoNames snapshot.
+- The bilateral city results are represented major-city entries, not nearest
+  settlements, administrative boundaries, built areas, or a complete
+  gazetteer.
 - Sharing exact coordinates must retain the precise/approximate privacy choice.
 
 ### Development, Unpacked (`development`)
@@ -404,7 +406,8 @@ Do not repeat this work unless a regression or current diff invalidates it:
 - V1 product loop and all three modes;
 - first-interaction hint and keyboard-complete Mode Atlas;
 - Development median/history/structural-contrast narrative;
-- visible Natural Earth attribution in Other Side;
+- visible Natural Earth country-boundary and GeoNames major-city attribution in
+  Other Side;
 - English canonical README and Chinese README;
 - security policy;
 - data-source and third-party-license documentation;
@@ -448,7 +451,8 @@ Manual product smoke in both a desktop and mobile viewport:
 
 1. Open the root URL directly and with a hard refresh.
 2. Confirm the default Other Side view loads without a fatal console error.
-3. Select a point, verify origin/antipode result and Natural Earth attribution.
+3. Select a point, verify exact origin/antipode results, both nearest eligible
+   GeoNames major cities, scope caveat, and Natural Earth/GeoNames attribution.
 4. Use a precise share URL and an approximate share URL; reload each and verify
    the intended state and privacy precision.
 5. Open/close Mode Atlas by pointer and keyboard; verify focus restoration.

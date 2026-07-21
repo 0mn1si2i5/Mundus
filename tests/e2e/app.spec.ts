@@ -189,6 +189,9 @@ test('uses real desktop mouse input for threshold activation and preserves picki
   const revisionBeforeDrag = Number(
     (await globe.getAttribute('data-antipode-hit-sphere-pick-revision')) ?? 0,
   );
+  const relationRevisionBeforeDrag = Number(
+    await globe.getAttribute('data-antipode-relation-diagnostic-revision'),
+  );
   await page.mouse.down();
   await page.mouse.move(center.x + 5, center.y);
   await expectAntipodeDragInactive(page);
@@ -221,6 +224,17 @@ test('uses real desktop mouse input for threshold activation and preserves picki
     .toBeGreaterThan(revisionBeforeDrag);
   await page.mouse.up();
   await expectAntipodeDragInactive(page);
+  await expect
+    .poll(async () =>
+      Number(
+        await globe.getAttribute('data-antipode-relation-diagnostic-revision'),
+      ),
+    )
+    .toBeGreaterThan(relationRevisionBeforeDrag);
+  await expect(globe).toHaveAttribute(
+    'data-antipode-relation-diagnostic-reason',
+    'interaction',
+  );
   await expect(globe).toHaveAttribute(
     'data-antipode-base-surface',
     'visible:true,transparent:false,depthWrite:true,renderOrder:0,radius:1',
@@ -587,21 +601,40 @@ test('keeps exact marker roles and center dots legible across the zoom range', a
 }) => {
   await page.goto('./');
   const globe = page.getByRole('region', { name: '交互式三维地球' });
-  await expect(globe).toHaveAttribute('data-marker-role-count', '2');
-  await expect(globe).toHaveAttribute('data-marker-roles', 'origin,antipode');
+  await expect(globe).toHaveAttribute('data-marker-role-count', '4');
+  await expect(globe).toHaveAttribute(
+    'data-marker-roles',
+    'origin,antipode,origin-city,antipode-city',
+  );
   await expect(globe).toHaveAttribute('data-marker-center-css-px', '3');
   await expect(globe).toHaveAttribute(
     'data-cross-section-interior-draw-count',
     '1',
   );
   await expect(globe).toHaveAttribute(
-    'data-marker-diagnostic-state',
-    'idle-rotation',
+    'data-antipode-relation-diagnostic-source',
+    'measured',
   );
-  await expect(globe).not.toHaveAttribute('data-camera-distance', /.+/);
-  await expect(globe).not.toHaveAttribute(
-    'data-marker-diagnostic-revision',
-    /.+/,
+  await expect(globe).toHaveAttribute('data-antipode-relation-arc-count', '2');
+  await expect(globe).toHaveAttribute(
+    'data-marker-diagnostic-state',
+    'sampled',
+  );
+  const initialRevision = Number(
+    await globe.getAttribute('data-marker-diagnostic-revision'),
+  );
+  expect(initialRevision).toBeGreaterThan(0);
+  await expect(globe).toHaveAttribute(
+    'data-antipode-relation-diagnostic-revision',
+    /[1-9]\d*/,
+  );
+  const initialRelationRevision = await globe.getAttribute(
+    'data-antipode-relation-diagnostic-revision',
+  );
+  await page.waitForTimeout(250);
+  await expect(globe).toHaveAttribute(
+    'data-antipode-relation-diagnostic-revision',
+    initialRelationRevision!,
   );
 
   await globe.focus();
@@ -618,10 +651,20 @@ test('keeps exact marker roles and center dots legible across the zoom range', a
   const idleRevision = await globe.getAttribute(
     'data-marker-diagnostic-revision',
   );
+  const relationRevisionAfterKeyboard = Number(
+    await globe.getAttribute('data-antipode-relation-diagnostic-revision'),
+  );
+  expect(relationRevisionAfterKeyboard).toBeGreaterThan(
+    Number(initialRelationRevision),
+  );
   await page.waitForTimeout(250);
   await expect(globe).toHaveAttribute(
     'data-marker-diagnostic-revision',
     idleRevision!,
+  );
+  await expect(globe).toHaveAttribute(
+    'data-antipode-relation-diagnostic-revision',
+    relationRevisionAfterKeyboard.toString(),
   );
 
   const originalViewport = page.viewportSize();
@@ -639,16 +682,36 @@ test('keeps exact marker roles and center dots legible across the zoom range', a
     'data-marker-diagnostic-reason',
     'resize',
   );
+  await expect(globe).toHaveAttribute(
+    'data-antipode-relation-diagnostic-reason',
+    'resize',
+  );
+  const relationRevisionAfterResize = Number(
+    await globe.getAttribute('data-antipode-relation-diagnostic-revision'),
+  );
+  expect(relationRevisionAfterResize).toBeGreaterThan(
+    relationRevisionAfterKeyboard,
+  );
 
   async function expectProjectedMarkerSize() {
     const evidence = await globe.evaluate((element) => ({
       actualCssDiameter: Number(element.dataset.markerOriginActualCssDiameter),
+      originCityCssDiameter: Number(
+        element.dataset.markerOriginCityActualCssDiameter,
+      ),
+      antipodeCityCssDiameter: Number(
+        element.dataset.markerAntipodeCityActualCssDiameter,
+      ),
       target: element.dataset.markerOriginTarget,
     }));
     expect(Number.isFinite(evidence.actualCssDiameter)).toBe(true);
     expect(evidence.target).toBe('31.2304,121.4737');
     expect(evidence.actualCssDiameter).toBeGreaterThanOrEqual(10);
     expect(evidence.actualCssDiameter).toBeLessThanOrEqual(12);
+    expect(evidence.originCityCssDiameter).toBeGreaterThanOrEqual(6.5);
+    expect(evidence.originCityCssDiameter).toBeLessThanOrEqual(7.5);
+    expect(evidence.antipodeCityCssDiameter).toBeGreaterThanOrEqual(7.5);
+    expect(evidence.antipodeCityCssDiameter).toBeLessThanOrEqual(8.5);
   }
 
   for (let index = 0; index < 16; index += 1) {
@@ -659,12 +722,23 @@ test('keeps exact marker roles and center dots legible across the zoom range', a
     'data-marker-diagnostic-revision',
     idleRevision!,
   );
+  const relationRevisionAtMinimumZoom = Number(
+    await globe.getAttribute('data-antipode-relation-diagnostic-revision'),
+  );
+  expect(relationRevisionAtMinimumZoom).toBeGreaterThan(
+    relationRevisionAfterResize,
+  );
   await expectProjectedMarkerSize();
 
   for (let index = 0; index < 24; index += 1) {
     await page.keyboard.press('-');
   }
   await expect(globe).toHaveAttribute('data-camera-distance', '5');
+  expect(
+    Number(
+      await globe.getAttribute('data-antipode-relation-diagnostic-revision'),
+    ),
+  ).toBeGreaterThan(relationRevisionAtMinimumZoom);
   await expectProjectedMarkerSize();
 });
 
@@ -683,6 +757,16 @@ test('clears marker diagnostics by mode and refreshes them for point focus', asy
   );
 
   await page.getByRole('button', { name: /发展的不同侧面/ }).click();
+  await expect(globe).not.toHaveAttribute('data-antipode-relation-arc-count');
+  await expect(globe).not.toHaveAttribute(
+    'data-marker-origin-city-actual-css-diameter',
+  );
+  await expect(globe).not.toHaveAttribute(
+    'data-marker-antipode-city-actual-css-diameter',
+  );
+  await expect(globe).not.toHaveAttribute(
+    'data-antipode-relation-diagnostic-revision',
+  );
   await expect(globe).not.toHaveAttribute(
     'data-marker-diagnostic-revision',
     /.+/,
@@ -700,6 +784,9 @@ test('clears marker diagnostics by mode and refreshes them for point focus', asy
   );
   const revisionBeforePoint = Number(
     await globe.getAttribute('data-marker-diagnostic-revision'),
+  );
+  const relationRevisionBeforePoint = Number(
+    await globe.getAttribute('data-antipode-relation-diagnostic-revision'),
   );
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
@@ -723,12 +810,20 @@ test('clears marker diagnostics by mode and refreshes them for point focus', asy
   expect(
     Number(await globe.getAttribute('data-marker-diagnostic-revision')),
   ).toBeGreaterThanOrEqual(revisionBeforePoint);
+  expect(
+    Number(
+      await globe.getAttribute('data-antipode-relation-diagnostic-revision'),
+    ),
+  ).toBeGreaterThan(relationRevisionBeforePoint);
 
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
   const revisionBeforeFocus = Number(
     await globe.getAttribute('data-marker-diagnostic-revision'),
+  );
+  const relationRevisionBeforeFocus = Number(
+    await globe.getAttribute('data-antipode-relation-diagnostic-revision'),
   );
   await page.getByRole('button', { name: '翻到对跖点' }).click();
   await expectCameraCenter(page, -35.6895, -40.30829);
@@ -737,6 +832,13 @@ test('clears marker diagnostics by mode and refreshes them for point focus', asy
       Number(await globe.getAttribute('data-marker-diagnostic-revision')),
     )
     .toBeGreaterThan(revisionBeforeFocus);
+  await expect
+    .poll(async () =>
+      Number(
+        await globe.getAttribute('data-antipode-relation-diagnostic-revision'),
+      ),
+    )
+    .toBeGreaterThan(relationRevisionBeforeFocus);
 });
 
 test('keeps the Sunline subsolar marker on its legacy sphere-ring geometry', async ({
@@ -1005,48 +1107,70 @@ test('selects reviewed night-side land through the Sunline mask with a real poin
 
   const globe = page.getByRole('region', { name: '交互式三维地球' });
   const canvas = page.locator('canvas');
-  const clickPoint = await canvas.evaluate((element) => {
-    const bounds = element.getBoundingClientRect();
-    const offsets = [
-      [0.005, 0],
-      [-0.005, 0],
-      [0, -0.005],
-      [0, 0.005],
-      [0.01, 0],
-      [-0.01, 0],
-      [0, -0.01],
-      [0, 0.01],
-      [0.015, 0],
-      [-0.015, 0],
-      [0, -0.015],
-      [0, 0.015],
-      [0.02, 0],
-      [-0.02, 0],
-      [0, -0.02],
-      [0, 0.02],
-    ];
-    for (const [xOffset, yOffset] of offsets) {
-      const x = bounds.left + bounds.width * (0.5 + xOffset);
-      const y = bounds.top + bounds.height * (0.5 + yOffset);
-      if (document.elementFromPoint(x, y) === element) return { x, y };
-    }
-    return null;
-  });
+  await expect(globe).toHaveAttribute(
+    'data-sunline-selected-front-facing',
+    'true',
+  );
+  await expect
+    .poll(async () => {
+      const projected = await globe.getAttribute(
+        'data-sunline-selected-surface-projected-center',
+      );
+      const bounds = await canvas.boundingBox();
+      if (!projected || !bounds) return false;
+      const [x, y] = projected.split(',').map(Number);
+      return (
+        Math.abs(x - bounds.width / 2) < 1 &&
+        Math.abs(y - bounds.height / 2) < 1
+      );
+    })
+    .toBe(true);
+  const projectedCenter = await globe.getAttribute(
+    'data-sunline-selected-surface-projected-center',
+  );
+  if (!projectedCenter)
+    throw new Error('Selected surface projection diagnostic is missing.');
+  const [projectedX, projectedY] = projectedCenter.split(',').map(Number);
+  const clickPoint = await canvas.evaluate(
+    (element, point) => {
+      const bounds = element.getBoundingClientRect();
+      const x = bounds.left + point.x;
+      const y = bounds.top + point.y;
+      return document.elementFromPoint(x, y) === element ? { x, y } : null;
+    },
+    { x: projectedX, y: projectedY },
+  );
   if (!clickPoint) throw new Error('Focused globe is covered by page UI.');
   const pointBeforeClick = new URL(page.url()).searchParams.get('point');
   expect(pointBeforeClick).toBe('35.6895,139.6917');
+  const expectedTarget = await globe.getAttribute(
+    'data-sunline-selected-marker-target',
+  );
+  if (!expectedTarget)
+    throw new Error('Pre-click selected target diagnostic is missing.');
+  const [expectedLatitude, expectedLongitude] = expectedTarget
+    .split(',')
+    .map(Number);
+  const pickRevisionBefore = Number(
+    (await globe.getAttribute('data-globe-pick-revision')) ?? 0,
+  );
   await page.mouse.click(clickPoint.x, clickPoint.y);
 
   await expect
-    .poll(() => new URL(page.url()).searchParams.get('point'))
-    .not.toBe(pointBeforeClick);
+    .poll(async () =>
+      Number((await globe.getAttribute('data-globe-pick-revision')) ?? 0),
+    )
+    .toBeGreaterThan(pickRevisionBefore);
   const point = new URL(page.url()).searchParams.get('point');
   if (!point) throw new Error('Pointer selection did not serialize a point.');
   const [latitude, longitude] = point.split(',').map(Number);
-  expect(Math.abs(latitude - 35.6762)).toBeLessThan(
-    testInfo.project.name === 'mobile' ? 5 : 2,
-  );
-  expect(Math.abs(longitude - 139.6503)).toBeLessThan(2);
+  expect(Math.abs(latitude - expectedLatitude)).toBeLessThan(0.2);
+  expect(Math.abs(longitude - expectedLongitude)).toBeLessThan(0.2);
+  const pickedTarget = await globe.getAttribute('data-globe-last-pick-target');
+  if (!pickedTarget) throw new Error('Globe pick diagnostic is missing.');
+  const [pickedLatitude, pickedLongitude] = pickedTarget.split(',').map(Number);
+  expect(Math.abs(latitude - pickedLatitude)).toBeLessThan(0.0001);
+  expect(Math.abs(longitude - pickedLongitude)).toBeLessThan(0.0001);
 
   const result = page.getByRole('complementary', { name: '太阳位置结果' });
   await expect(result.getByText('Japan', { exact: true })).toBeVisible();
@@ -1114,14 +1238,13 @@ test('keeps the hint for incidental pointing and accepts wheel use', async ({
   await page.goto('./');
   const hint = page.getByTestId('first-interaction-hint');
   const canvas = page.locator('canvas');
+  await expect(hint).toBeVisible();
   const box = await canvas.boundingBox();
   if (!box) throw new Error('Globe canvas has no bounding box.');
   const x = box.x + box.width / 2;
   const y = box.y + box.height / 2;
   await page.mouse.move(x, y);
-  await page.mouse.down();
   await page.mouse.move(x + 2, y + 2);
-  await page.mouse.up();
   await expect(hint).toBeVisible();
 
   await page.mouse.wheel(0, 120);
@@ -1318,8 +1441,11 @@ test('contains compact mode introductions above result surfaces', async ({
       path: './',
       panel: 'place-controls',
       result: '结果',
-      ready: 'Santa Fe, Argentina',
-      globeAttribute: ['data-marker-roles', 'origin,antipode'],
+      ready: '康科迪亚',
+      globeAttribute: [
+        'data-marker-roles',
+        'origin,antipode,origin-city,antipode-city',
+      ],
     },
     {
       name: 'Development',
@@ -1582,7 +1708,7 @@ test('contains expanded desktop modes by height without changing the normal post
       title: '地球另一端',
       panel: 'place-controls',
       result: '结果',
-      ready: 'Santa Fe, Argentina',
+      ready: '康科迪亚',
     },
     {
       name: 'Development',
@@ -1681,7 +1807,7 @@ test('keeps every expanded compact drawer and navigation reachable', async ({
       expand: '展开地点控件',
       primary: () => page.getByLabel('搜索全球主要城市'),
       result: () => page.getByRole('complementary', { name: '结果' }),
-      ready: () => page.getByText('Santa Fe, Argentina'),
+      ready: () => page.getByText('康科迪亚', { exact: true }),
     },
     {
       path: './?mode=development&indicator=hdi&year=2023&v=1',
@@ -2033,21 +2159,21 @@ test('resets bilateral focus for new points and mode round trips', async ({
   await expect(page.getByRole('button', { name: '翻到对跖点' })).toBeVisible();
 });
 
-test('focuses the nearest indexed place without changing the relation or URL', async ({
+test('focuses a represented major city without changing the exact relation or URL', async ({
   page,
 }) => {
   await page.goto('./');
   const result = page.getByRole('complementary', { name: '位置结果' });
-  const place = page.getByRole('button', { name: /Santa Fe, Argentina/ });
-  await expect(place).toBeVisible();
+  const city = page.getByRole('button', { name: /康科迪亚 查看城市/ });
+  await expect(city).toBeVisible();
   const relationBefore = await result.textContent();
   const urlBefore = page.url();
 
-  await place.focus();
-  await expect(place).toBeFocused();
+  await city.focus();
+  await expect(city).toBeFocused();
   await page.keyboard.press('Enter');
 
-  await expectCameraCenter(page, -31.623872, -60.690001);
+  await expectCameraCenter(page, -31.39195, -58.01706);
   await expect(page).toHaveURL(urlBefore);
   await expect(result).toHaveText(relationBefore ?? '');
 });
@@ -2220,17 +2346,39 @@ test('keeps the Development title visible on a short desktop stage', async ({
   ).toBe(false);
 });
 
-test('loads the scoped Natural Earth nearest-place result', async ({
+test('loads one bilateral GeoNames major-city relation and its canvas layer', async ({
   page,
 }) => {
   await page.goto('./?mode=sunline&v=1');
-  await expect(page.getByText('数据中最近的聚居点')).toBeHidden();
+  await expect(page.getByText('起点侧最近的收录主要城市')).toBeHidden();
 
   await page.getByRole('button', { name: /地球另一端/ }).click();
-  await expect(page.getByText('Santa Fe, Argentina')).toBeVisible();
+  const result = page.getByRole('complementary', { name: '位置结果' });
+  await expect(result).toContainText('31.2304°, 121.4737°');
+  await expect(result).toContainText('-31.2304°, -58.5263°');
   await expect(
-    page.getByText('Natural Earth 50m 选点，非完整城市名录', { exact: true }),
+    page.getByRole('region', { name: '起点侧最近的收录主要城市' }),
+  ).toContainText('黄浦');
+  await expect(
+    page.getByRole('region', { name: '对跖点侧最近的收录主要城市' }),
+  ).toContainText('康科迪亚');
+  await expect(
+    page.getByText(/仅比较捆绑 GeoNames 快照中符合条件的主要城市/),
   ).toBeVisible();
+  await expect(
+    page.getByText('包含 GeoNames 数据 · CC BY 4.0', { exact: true }),
+  ).toBeVisible();
+  const globe = page.getByRole('region', { name: '交互式三维地球' });
+  await expect(globe).toHaveAttribute('data-marker-role-count', '4');
+  await expect(globe).toHaveAttribute(
+    'data-marker-roles',
+    'origin,antipode,origin-city,antipode-city',
+  );
+  await expect(globe).toHaveAttribute('data-antipode-relation-arc-count', '2');
+  await expect(globe).toHaveAttribute(
+    'data-antipode-city-shapes',
+    'square,triangle',
+  );
 });
 
 test('shows the Other Side method and Natural Earth attribution', async ({
@@ -2243,7 +2391,6 @@ test('shows the Other Side method and Natural Earth attribution', async ({
   await page.getByText('数据与方法', { exact: true }).click();
   const panel = page.locator('[data-mode-panel="place-controls"]');
   await expect(panel).toContainText('Natural Earth 110m');
-  await expect(panel).toContainText('Natural Earth 50m');
   await expect(panel).toContainText('Made with Natural Earth · 公共领域数据');
   await expect(panel).toContainText('包含 GeoNames 数据 · CC BY 4.0');
   await expect(
@@ -2598,6 +2745,11 @@ test('announces a GeoNames load failure and retries the same lazy asset', async 
   });
   await page.goto('./?mode=sunline&v=1');
   await page.getByRole('button', { name: /地球另一端/ }).click();
+  await expect(page.getByText('31.2304°, 121.4737°')).toBeVisible();
+  await expect(page.getByText('-31.2304°, -58.5263°')).toBeVisible();
+  await expect(page.getByTestId('antipode-relation-status')).toContainText(
+    '精确端点仍然有效',
+  );
   const alert = page
     .getByRole('alert')
     .filter({ hasText: '城市索引暂时不可用' });
@@ -2806,7 +2958,7 @@ test('keeps the flip-to-antipode target at least 44px tall at compact widths', a
   }
 });
 
-test('keeps the nearest-place target at least 44px tall at compact widths', async ({
+test('keeps both major-city focus targets at least 44px tall at compact widths', async ({
   page,
 }) => {
   for (const viewport of [
@@ -2816,18 +2968,22 @@ test('keeps the nearest-place target at least 44px tall at compact widths', asyn
     await page.setViewportSize(viewport);
     await page.goto('./');
     await expectMinimumHeight(
-      page.getByRole('button', { name: /Santa Fe, Argentina/ }),
+      page.getByRole('button', { name: /黄浦 查看城市/ }),
+      44,
+    );
+    await expectMinimumHeight(
+      page.getByRole('button', { name: /康科迪亚 查看城市/ }),
       44,
     );
   }
 });
 
-test('gives the nearest-place relation hover and active feedback without layout shift', async ({
+test('gives a major-city relation hover and active feedback without layout shift', async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('./');
-  const place = page.getByRole('button', { name: /Santa Fe, Argentina/ });
+  const place = page.getByRole('button', { name: /康科迪亚 查看城市/ });
   const before = await place.boundingBox();
   const resting = await place.evaluate(
     (element) => getComputedStyle(element).backgroundColor,

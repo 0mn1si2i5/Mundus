@@ -183,6 +183,36 @@ describe('GeoNames city index', () => {
     ).toBeGreaterThan(100);
   });
 
+  it('scans a large immutable index without map or sort allocation', () => {
+    const template = decodeGeoNamesCityIndex(compact)[0]!;
+    const cities = Array.from({ length: 20_000 }, (_, index) => ({
+      ...template,
+      id: index + 1,
+      population: index,
+      point: { latitude: 20, longitude: (index % 360) - 180 },
+    }));
+    cities[17_321] = {
+      ...cities[17_321]!,
+      point: { latitude: 0, longitude: 0 },
+    };
+    const originalMap = Array.prototype.map;
+    const originalSort = Array.prototype.sort;
+    Array.prototype.map = () => {
+      throw new Error('nearest lookup must not map');
+    };
+    Array.prototype.sort = () => {
+      throw new Error('nearest lookup must not sort');
+    };
+    try {
+      expect(
+        findNearestMajorCity({ latitude: 0, longitude: 0 }, cities).city.id,
+      ).toBe(17_322);
+    } finally {
+      Array.prototype.map = originalMap;
+      Array.prototype.sort = originalSort;
+    }
+  });
+
   it('shares one lazy load and clears a failed promise for retry', async () => {
     const importer = vi.fn().mockResolvedValue({ default: compact });
     setGeoNamesCityImporterForTests(importer);
