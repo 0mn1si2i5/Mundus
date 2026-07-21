@@ -16,13 +16,6 @@
   font-size: 0.72rem !important;
 }
 
-.search {
-  position: relative;
-  display: grid;
-  gap: 0.3rem;
-}
-
-.search > span,
 .coordinates > span,
 .coordinates label span,
 .examples > span {
@@ -30,47 +23,6 @@
   font-size: 0.58rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-}
-
-.search input {
-  width: 100%;
-  min-block-size: 2.75rem;
-  padding: 0 0.7rem;
-}
-
-.results {
-  position: absolute;
-  z-index: 2;
-  right: 1rem;
-  left: 1rem;
-  margin: 0;
-  padding: 0;
-  border: 1px solid var(--color-line);
-  background: var(--color-panel);
-  list-style: none;
-}
-
-.results button {
-  display: flex;
-  width: 100%;
-  justify-content: space-between;
-  padding: 0.65rem 0.7rem;
-  border: 0;
-  border-bottom: 1px solid var(--color-line);
-  text-align: left;
-}
-
-.results li:last-child button {
-  border-bottom: 0;
-}
-
-.results strong {
-  font-weight: 500;
-}
-
-.results span {
-  color: var(--color-muted);
-  font-size: 0.72rem;
 }
 
 .coordinates {

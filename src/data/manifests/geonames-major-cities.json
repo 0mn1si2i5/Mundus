@@ -1,0 +1,59 @@
+{
+  "id": "geonames-major-cities",
+  "sourceName": "GeoNames geographical database",
+  "sourceUrl": "https://www.geonames.org/",
+  "distributionUrl": "https://download.geonames.org/export/dump/cities15000.zip",
+  "licenseName": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "version": "GeoNames dump retrieved 2026-07-21",
+  "retrievedAt": "2026-07-21",
+  "sha256": "6c84524d26553d8657d4fda1853ac2c4fafbd5d45885a862c04e16c8604c1ec7",
+  "derivedAssetSha256": "0d3b027c525497968cfcf7f44ac531310b97ff4585753f30af82e1b2741d63e3",
+  "auxiliarySources": [
+    {
+      "sourceName": "GeoNames alternate names V2",
+      "distributionUrl": "https://download.geonames.org/export/dump/alternateNamesV2.zip",
+      "version": "retrieved 2026-07-21",
+      "sha256": "77c5dbcdf73799beaf416813a6b062eb8b0ff0a21b80a3338dcee95592b64c6b",
+      "purpose": "Current English and Chinese names and search aliases"
+    },
+    {
+      "sourceName": "GeoNames country info",
+      "distributionUrl": "https://download.geonames.org/export/dump/countryInfo.txt",
+      "version": "retrieved 2026-07-21",
+      "sha256": "93bafc525813f22e4711ff9ed6d626343094ce48c26388dc7c49189b3d7d5512",
+      "purpose": "Exact ISO2 country and GeoNames ID joins"
+    },
+    {
+      "sourceName": "GeoNames admin-1 codes",
+      "distributionUrl": "https://download.geonames.org/export/dump/admin1CodesASCII.txt",
+      "version": "retrieved 2026-07-21",
+      "sha256": "34784457b76b988a669dff7c3e4b104e4902c0875643cff019281ac79dfa2992",
+      "purpose": "Exact country.admin1 administrative joins"
+    },
+    {
+      "sourceName": "GeoNames dump readme",
+      "distributionUrl": "https://download.geonames.org/export/dump/readme.txt",
+      "version": "retrieved 2026-07-21",
+      "sha256": "b1957379b6c1242c700c98ac9a8aa0a09f56c3c0a50ee72175527005f48ef2c5",
+      "purpose": "Upstream field and license documentation"
+    }
+  ],
+  "attribution": "Contains GeoNames data, licensed under CC BY 4.0",
+  "redistribution": "allowed",
+  "transformations": [
+    "Keep active PPL, PPLA, PPLA2, PPLA3, PPLA4, PPLC, and PPLG records; include every PPLC/PPLA and otherwise require population of at least 100000",
+    "Require a non-empty admin1 code and join countries and admin-1 regions by exact source identifiers; exclude records without either exact join",
+    "Select current English and zh-CN, zh-Hans, or zh names without machine translation",
+    "Convert only existing zh-CN, zh-Hans, and zh source names from OpenCC traditional Chinese to Simplified Chinese with opencc-js 1.4.1 t-to-cn dictionaries; retain each distinct original form as a search alias",
+    "Retain every distinct accepted Chinese source form and its distinct Simplified Chinese derivative; retain distinct canonical and ASCII names plus at most two additional non-display English aliases after normalized deduplication",
+    "Sort records by GeoNames ID and encode coordinates as signed 1e-5 degree integers in a lexical string table"
+  ],
+  "missingValuePolicy": "Records without valid coordinates, a non-empty admin1 code, an exact ISO2 country join, or an exact country.admin1 join are excluded. Missing Chinese labels use and count the canonical source label; non-Chinese values are never translated or imputed.",
+  "boundaryPolicy": "This is a filtered major-city search index, not a complete gazetteer or territorial authority.",
+  "recordCount": 6944,
+  "rawBytes": 779105,
+  "gzipBytes": 274846,
+  "staticDecodedBytesEstimate": 3116420,
+  "runtimeDecodedBytesEstimate": 4758952
+}

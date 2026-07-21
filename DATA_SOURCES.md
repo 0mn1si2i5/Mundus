@@ -36,6 +36,35 @@ The source and derived-asset SHA-256 values are recorded in
 nearest within this selected 1:50m dataset, not within a complete city or
 settlement gazetteer.
 
+## GeoNames major cities
+
+- Source: [GeoNames geographical database](https://www.geonames.org/)
+- Snapshot: `cities15000`, `alternateNamesV2`, `countryInfo`,
+  `admin1CodesASCII`, and upstream readme retrieved 2026-07-21
+- Terms: [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/)
+- Use: offline bilingual major-city autocomplete in Other Side; it does not
+  replace the Natural Earth nearest-place result
+- Scope: active `P` records with codes `PPL`, `PPLA`, `PPLA2`, `PPLA3`,
+  `PPLA4`, `PPLC`, or `PPLG`; all `PPLC` and `PPLA`, otherwise population at
+  least 100,000; a non-empty admin-1 code and exact country and admin-1 joins
+  are required
+- Transformation: select current English and `zh-CN`/`zh-Hans`/`zh` names;
+  convert only those existing Chinese source names from OpenCC traditional to
+  Simplified Chinese using `opencc-js` 1.4.1 `t` to `cn` dictionaries; retain
+  every distinct accepted original Chinese form and distinct simplified
+  derivative as aliases; retain canonical/ASCII names and at most two
+  additional non-display English aliases; sort by GeoNames ID and encode
+  coordinates at 1e-5 degree precision
+- Attribution shown in the product: **Contains GeoNames data, licensed under CC
+  BY 4.0**, with a no-warranty statement
+
+The final index contains 6,944 records. Its exact five source hashes, derived
+hash, size measurements, fallback policy, and transformation are recorded in
+`src/data/manifests/geonames-major-cities.json`. Missing Chinese source names
+remain explicit canonical fallbacks; non-Chinese names are never translated.
+GeoNames is a filtered search index, not a complete gazetteer or territorial
+authority.
+
 ## UNDP Human Development Report 2025
 
 - Source: [UNDP Human Development Report data center](https://hdr.undp.org/data-center/documentation-and-downloads)
@@ -76,14 +105,24 @@ functionality.
 
 ## Reproducibility
 
-The two generated snapshots are produced by scripts in `scripts/`. Each build
-script pins the source URL and expected SHA-256 before transforming data. Run:
+The generated snapshots are produced by scripts in `scripts/`. Each build
+script pins the source URL and expected SHA-256 before transforming data. To
+rebuild the GeoNames index from a clean checkout, run:
+
+```bash
+pnpm data:cities
+```
+
+The command creates ignored `tmp/geonames/` as needed, streams missing files
+from the exact manifest URLs to atomic temporary paths, verifies SHA-256 before
+renaming, and reuses only checksum-valid cached sources. Raw sources are never
+committed. Then run:
 
 ```bash
 pnpm data:verify
 ```
 
-to verify the two committed generated snapshots and the installed, pinned
+to verify the committed generated snapshots and the installed, pinned
 `world-atlas` runtime asset by SHA-256. `pnpm test` separately exercises the
 data registry schemas, record-level expectations, and calculation invariants;
 the generator scripts validate their input and output while building a new

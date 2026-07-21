@@ -180,9 +180,9 @@ test('uses real desktop mouse input for threshold activation and preserves picki
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('./');
   const globe = globeRegion(page);
-  await page.getByLabel('搜索本地城市').fill('Tokyo');
-  await page.getByRole('button', { name: /东京/ }).click();
-  await expectCameraCenter(page, 35.6762, 139.6503);
+  await page.getByLabel('搜索全球主要城市').fill('Tokyo');
+  await page.getByRole('option', { name: /^东京 / }).click();
+  await expectCameraCenter(page, 35.6895, 139.69171);
   const center = await globeCenter(page);
 
   await page.mouse.move(center.x, center.y);
@@ -704,12 +704,12 @@ test('clears marker diagnostics by mode and refreshes them for point focus', asy
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
-  await page.getByLabel('搜索本地城市').fill('Tokyo');
-  await page.getByRole('button', { name: /东京/ }).click();
+  await page.getByLabel('搜索全球主要城市').fill('Tokyo');
+  await page.getByRole('option', { name: /^东京 / }).click();
 
   await expect(globe).toHaveAttribute(
     'data-marker-origin-target',
-    '35.6762,139.6503',
+    '35.6895,139.69171',
   );
   await expect
     .poll(async () =>
@@ -731,7 +731,7 @@ test('clears marker diagnostics by mode and refreshes them for point focus', asy
     await globe.getAttribute('data-marker-diagnostic-revision'),
   );
   await page.getByRole('button', { name: '翻到对跖点' }).click();
-  await expectCameraCenter(page, -35.6762, -40.3497);
+  await expectCameraCenter(page, -35.6895, -40.30829);
   await expect
     .poll(async () =>
       Number(await globe.getAttribute('data-marker-diagnostic-revision')),
@@ -998,9 +998,9 @@ test('selects reviewed night-side land through the Sunline mask with a real poin
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
-  await page.getByLabel('搜索本地城市').fill('Tokyo');
-  await page.getByRole('button', { name: /东京/ }).click();
-  await expectCameraCenter(page, 35.6762, 139.6503);
+  await page.getByLabel('搜索全球主要城市').fill('Tokyo');
+  await page.getByRole('option', { name: /^东京 / }).click();
+  await expectCameraCenter(page, 35.6895, 139.69171);
   await page.getByRole('button', { name: /日照线/ }).click();
 
   const globe = page.getByRole('region', { name: '交互式三维地球' });
@@ -1034,7 +1034,7 @@ test('selects reviewed night-side land through the Sunline mask with a real poin
   });
   if (!clickPoint) throw new Error('Focused globe is covered by page UI.');
   const pointBeforeClick = new URL(page.url()).searchParams.get('point');
-  expect(pointBeforeClick).toBe('35.6762,139.6503');
+  expect(pointBeforeClick).toBe('35.6895,139.6917');
   await page.mouse.click(clickPoint.x, clickPoint.y);
 
   await expect
@@ -1679,7 +1679,7 @@ test('keeps every expanded compact drawer and navigation reachable', async ({
       path: './',
       panel: 'place-controls',
       expand: '展开地点控件',
-      primary: () => page.getByLabel('搜索本地城市'),
+      primary: () => page.getByLabel('搜索全球主要城市'),
       result: () => page.getByRole('complementary', { name: '结果' }),
       ready: () => page.getByText('Santa Fe, Argentina'),
     },
@@ -2017,8 +2017,8 @@ test('resets bilateral focus for new points and mode round trips', async ({
   await expectCameraDiagnosticCleared(page);
   await page.getByRole('button', { name: /地球另一端/ }).click();
 
-  await page.getByLabel('搜索本地城市').fill('Tokyo');
-  await page.getByRole('button', { name: /东京/ }).click();
+  await page.getByLabel('搜索全球主要城市').fill('Tokyo');
+  await page.getByRole('option', { name: /^东京 / }).click();
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
@@ -2135,17 +2135,19 @@ test('replaces continuous timeline changes instead of flooding history', async (
   await expect(page).toHaveURL(/year=2005/);
 });
 
-test('selects a local city and validates coordinate input', async ({
+test('selects a major city and validates coordinate input', async ({
   page,
 }, testInfo) => {
   await page.goto('./');
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
-  await page.getByLabel('搜索本地城市').fill('Tokyo');
-  await page.getByRole('button', { name: /东京/ }).click();
+  await page.getByLabel('搜索全球主要城市').fill('Tokyo');
+  const tokyo = page.getByRole('option', { name: /^东京 / });
+  expect((await tokyo.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  await tokyo.click();
   await expect(page.getByText('Japan', { exact: true })).toBeVisible();
-  await expect(page).toHaveURL(/point=35.6762%2C139.6503/);
+  await expect(page).toHaveURL(/point=35.6895%2C139.6917/);
 
   if (testInfo.project.name === 'mobile') {
     const expand = page.getByRole('button', { name: '展开地点控件' });
@@ -2243,9 +2245,16 @@ test('shows the Other Side method and Natural Earth attribution', async ({
   await expect(panel).toContainText('Natural Earth 110m');
   await expect(panel).toContainText('Natural Earth 50m');
   await expect(panel).toContainText('Made with Natural Earth · 公共领域数据');
+  await expect(panel).toContainText('包含 GeoNames 数据 · CC BY 4.0');
   await expect(
     panel.getByRole('link', { name: /Natural Earth 来源/ }),
   ).toHaveAttribute('href', 'https://www.naturalearthdata.com/');
+  await expect(
+    panel.getByRole('link', { name: /GeoNames 来源/ }),
+  ).toHaveAttribute('href', 'https://www.geonames.org/');
+  await expect(
+    panel.getByRole('link', { name: /GeoNames CC BY 4.0 许可/ }),
+  ).toHaveAttribute('href', 'https://creativecommons.org/licenses/by/4.0/');
 });
 
 test('keeps development map, controls, URL and table synchronized', async ({
@@ -2452,6 +2461,155 @@ test('keeps Development data lazy and cached across mode switches', async ({
   expect(requests.filter((url) => url.includes('undp-hdr'))).toHaveLength(1);
 });
 
+test('loads GeoNames only for Other Side and reuses one lazy asset', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === 'mobile',
+    'One request trace is sufficient',
+  );
+  const requests: string[] = [];
+  page.on('request', (request) => requests.push(request.url()));
+
+  await page.goto('./?mode=development&v=1');
+  await expect(
+    page.getByRole('heading', { name: '发展的不同侧面' }),
+  ).toBeVisible();
+  expect(
+    requests.filter((url) => url.includes('geonames-major-cities')),
+  ).toHaveLength(0);
+
+  await page.goto('./?mode=sunline&v=1');
+  await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
+  expect(
+    requests.filter((url) => url.includes('geonames-major-cities')),
+  ).toHaveLength(0);
+
+  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await expect(
+    page.getByRole('combobox', { name: '搜索全球主要城市' }),
+  ).toBeVisible();
+  await expect
+    .poll(
+      () =>
+        requests.filter((url) => url.includes('geonames-major-cities')).length,
+    )
+    .toBe(1);
+  expect(requests.some((url) => url.includes('geonames.org'))).toBe(false);
+
+  await page.getByRole('button', { name: /日照线/ }).click();
+  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await page.getByRole('combobox', { name: '搜索全球主要城市' }).fill('北京');
+  await expect(page.getByRole('option', { name: /^北京 / })).toBeVisible();
+  expect(
+    requests.filter((url) => url.includes('geonames-major-cities')),
+  ).toHaveLength(1);
+});
+
+test('searches bilingual source aliases by keyboard without mutating URL before selection', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === 'mobile',
+    'Desktop keyboard and fixture coverage',
+  );
+  await page.goto('./');
+  const input = page.getByRole('combobox', { name: '搜索全球主要城市' });
+  const initialUrl = page.url();
+
+  for (const [query, expected] of [
+    ['Beijing', /北京/],
+    ['北京', /北京/],
+    ['纽约', /纽约市/],
+    ['紐約', /纽约市/],
+    ['Sao Paulo', /圣保罗/],
+  ] as const) {
+    await input.fill(query);
+    await expect(
+      page.getByRole('option', { name: expected }).first(),
+    ).toBeVisible();
+    await expect(page).toHaveURL(initialUrl);
+    await input.press('Escape');
+    await expect(page.getByRole('listbox')).toBeHidden();
+  }
+
+  await input.fill('北京');
+  await expect(page.getByRole('listbox')).toBeVisible();
+  await page.locator('header').dispatchEvent('pointerdown', {
+    bubbles: true,
+    pointerType: 'mouse',
+  });
+  await expect(page.getByRole('listbox')).toBeHidden();
+  await expect(page).toHaveURL(initialUrl);
+
+  await input.fill('纽约');
+  await input.press('ArrowDown');
+  await expect(input).toHaveAttribute(
+    'aria-activedescendant',
+    /city-option-5128581/,
+  );
+  await input.press('Enter');
+  await expect(page).toHaveURL(/point=40.7143%2C-74.006/);
+  await expect(input).toBeFocused();
+});
+
+test('keeps warmed major-city search responsive in Pixel emulation', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name !== 'mobile',
+    'Pixel emulation performance coverage',
+  );
+  await page.goto('./');
+  await page.getByRole('button', { name: '展开地点控件' }).click();
+  const input = page.getByRole('combobox', { name: '搜索全球主要城市' });
+  const durations: number[] = [];
+  for (const query of ['Beijing', '北京', '纽约', '紐約', 'Sao Paulo']) {
+    await input.fill(query);
+    await expect(page.getByRole('listbox')).toBeVisible();
+    durations.push(
+      Number(
+        await input.evaluate((element) =>
+          element
+            .closest('[data-city-search-ms]')
+            ?.getAttribute('data-city-search-ms'),
+        ),
+      ),
+    );
+  }
+  expect(Math.max(...durations)).toBeLessThan(15);
+});
+
+test('announces a GeoNames load failure and retries the same lazy asset', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === 'mobile',
+    'One failure trace is sufficient',
+  );
+  let failed = false;
+  await page.route('**/*geonames-major-cities*', async (route) => {
+    if (!failed) {
+      failed = true;
+      await route.abort();
+    } else {
+      await route.continue();
+    }
+  });
+  await page.goto('./?mode=sunline&v=1');
+  await page.getByRole('button', { name: /地球另一端/ }).click();
+  const alert = page
+    .getByRole('alert')
+    .filter({ hasText: '城市索引暂时不可用' });
+  await expect(alert).toBeVisible();
+  const retry = alert.getByRole('button', { name: '重试城市索引' });
+  expect((await retry.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  await retry.click();
+  const input = page.getByRole('combobox', { name: '搜索全球主要城市' });
+  await input.fill('北京');
+  await expect(page.getByRole('option', { name: /^北京 / })).toBeVisible();
+});
+
 test('explains Development evidence consistently in English', async ({
   page,
 }, testInfo) => {
@@ -2569,7 +2727,7 @@ test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
   await placeToggle.click();
   const placePanel = page.locator('[data-mode-panel="place-controls"]');
   for (const control of [
-    placePanel.getByRole('searchbox'),
+    placePanel.getByRole('combobox'),
     placePanel.locator('input[name="latitude"]'),
     placePanel.locator('input[name="longitude"]'),
     placePanel.getByRole('button', { name: '前往' }),
@@ -2697,7 +2855,7 @@ test('uses the accent focus ring for keyboard form and disclosure controls only'
   const toggle = page.getByRole('button', { name: '展开地点控件' });
   await toggle.click();
   const panel = page.locator('[data-mode-panel="place-controls"]');
-  const search = panel.getByRole('searchbox');
+  const search = panel.getByRole('combobox');
   const summary = panel.getByText('数据与方法', { exact: true });
 
   await search.focus();

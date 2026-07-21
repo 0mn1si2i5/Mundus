@@ -16,6 +16,10 @@ import {
 } from '../development/useDevelopmentDataset';
 import { observeSun, solarEventsUtc, solarPosition } from '../sunline/solar';
 import type { SunlineRenderState } from '../globe/GlobeViewport';
+import {
+  useGeoNamesCityIndex,
+  type GeoNamesCityLoadState,
+} from '../antipodes/useGeoNamesCityIndex';
 
 interface GlobePresentation {
   countryFills: ReadonlyMap<string, string> | null;
@@ -32,6 +36,7 @@ export type ModePresentation =
       selectedCountry: CountryRef | null;
       antipodeCountry: CountryRef | null;
       nearestPlace: PopulatedPlaceLoadState;
+      cityIndex: GeoNamesCityLoadState;
     }
   | {
       id: 'development';
@@ -65,6 +70,7 @@ export function useModePresentation(): ModePresentation {
     activeMode === 'antipodes',
   );
   const developmentData = useDevelopmentDataset(activeMode === 'development');
+  const cityIndex = useGeoNamesCityIndex(activeMode === 'antipodes');
   const developmentFills = useMemo(() => {
     if (developmentData.status !== 'ready') return null;
     return new Map(
@@ -92,6 +98,7 @@ export function useModePresentation(): ModePresentation {
         selectedCountry,
         antipodeCountry,
         nearestPlace,
+        cityIndex,
       };
     case 'development':
       return {

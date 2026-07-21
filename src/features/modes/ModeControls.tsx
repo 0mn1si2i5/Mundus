@@ -28,7 +28,9 @@ export function ModeControls({
   let controls;
   switch (presentation.id) {
     case 'antipodes':
-      controls = <OtherSideControls locale={locale} />;
+      controls = (
+        <OtherSideControls locale={locale} cityIndex={presentation.cityIndex} />
+      );
       break;
     case 'development':
       controls = (
