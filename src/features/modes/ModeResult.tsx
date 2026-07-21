@@ -3,13 +3,16 @@ import { messages } from '../../i18n/messages';
 import { chordDistanceKm, surfaceDistanceKm } from '../antipodes/distance';
 import type { ModePresentation } from './useModePresentation';
 import styles from './ModeResult.module.css';
+import type { GeoPoint } from '../globe/geo';
 
 export function ModeResult({
   locale,
   presentation,
+  onCameraFocus,
 }: {
   locale: Locale;
   presentation: ModePresentation;
+  onCameraFocus: (point: GeoPoint) => void;
 }) {
   const t = messages[locale];
   switch (presentation.id) {
@@ -18,6 +21,10 @@ export function ModeResult({
         locale === 'zh' ? 'zh-CN' : 'en-US',
         { maximumFractionDigits: 0 },
       );
+      const nearestResult =
+        presentation.nearestPlace.status === 'ready'
+          ? presentation.nearestPlace.result
+          : null;
       return (
         <aside
           className={styles.result}
@@ -40,18 +47,21 @@ export function ModeResult({
           {presentation.nearestPlace.status !== 'idle' ? (
             <div className={styles.nearestPlace}>
               <span>{t.nearestPlace}</span>
-              {presentation.nearestPlace.status === 'ready' ? (
+              {nearestResult ? (
                 <>
-                  <em>
-                    {presentation.nearestPlace.result.place.name},{' '}
-                    {presentation.nearestPlace.result.place.country}
-                  </em>
+                  <button
+                    type="button"
+                    className={styles.nearestPlaceButton}
+                    onClick={() => onCameraFocus(nearestResult.place.point)}
+                  >
+                    <em>
+                      {nearestResult.place.name}, {nearestResult.place.country}
+                    </em>
+                    <span>{t.focusNearestPlace}</span>
+                  </button>
                   <strong>
                     {t.nearestPlaceDistance}{' '}
-                    {numberFormatter.format(
-                      presentation.nearestPlace.result.distanceKm,
-                    )}{' '}
-                    km
+                    {numberFormatter.format(nearestResult.distanceKm)} km
                   </strong>
                   <small>{t.nearestPlaceScope}</small>
                 </>

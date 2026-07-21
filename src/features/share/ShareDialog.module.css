@@ -5,8 +5,7 @@
   display: grid;
   place-items: center;
   padding: 1rem;
-  background: rgb(3 5 7 / 72%);
-  backdrop-filter: blur(10px);
+  background: rgb(73 62 48 / 28%);
   overscroll-behavior: contain;
 }
 
@@ -16,6 +15,7 @@
   padding: 1.5rem;
   border: 1px solid var(--color-line);
   background: var(--color-panel);
+  box-shadow: var(--shadow-paper);
   max-height: calc(100dvh - 2rem);
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -48,6 +48,7 @@
   padding: 0.8rem;
   border: 1px solid var(--color-line);
   color: var(--color-muted);
+  background: var(--color-control);
   font-size: 0.65rem;
 }
 

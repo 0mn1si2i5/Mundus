@@ -3,7 +3,13 @@
   min-height: 100svh;
   overflow: hidden;
   background:
-    radial-gradient(circle at 50% 46%, rgb(41 65 75 / 18%), transparent 38%),
+    radial-gradient(circle at 18% 16%, rgb(166 139 90 / 5%), transparent 32%),
+    repeating-linear-gradient(
+      103deg,
+      rgb(104 82 51 / 1.5%) 0,
+      transparent 1px,
+      transparent 11px
+    ),
     var(--color-bg);
 }
 
@@ -147,7 +153,8 @@
   padding: 0.45rem 0.7rem;
   border: 1px solid var(--color-line);
   color: var(--color-text);
-  background: rgb(8 11 15 / 78%);
+  background: var(--color-panel);
+  box-shadow: var(--shadow-paper);
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   transform: translateX(-50%);
@@ -166,6 +173,8 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   border-top: 1px solid var(--color-line);
+  background: var(--color-panel);
+  box-shadow: var(--shadow-paper);
 }
 
 .modeNav button {
@@ -177,7 +186,7 @@
   border: 0;
   border-right: 1px solid var(--color-line);
   color: var(--color-muted);
-  background: transparent;
+  background: var(--color-panel);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -193,7 +202,7 @@
 .modeNav button:hover,
 .modeNav .activeMode {
   color: var(--color-text);
-  background: rgb(255 255 255 / 3%);
+  background: var(--color-control);
 }
 
 .modeNavIndex {
@@ -226,7 +235,8 @@
   aspect-ratio: 1;
   border: 1px solid var(--color-line);
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #263d43, #10191e 62%, #080b0f);
+  background: var(--fallback-globe-background);
+  box-shadow: var(--fallback-globe-shadow);
 }
 
 .fallback p {
@@ -245,6 +255,7 @@
   border: 1px solid var(--color-line);
   color: var(--color-subtle);
   background: var(--color-panel);
+  box-shadow: var(--shadow-paper);
   font-size: 0.75rem;
 }
 
@@ -269,7 +280,7 @@
   padding: 0.45rem 0.65rem;
   border: 1px solid var(--color-line);
   color: var(--color-text);
-  background: transparent;
+  background: var(--color-control);
   font: inherit;
   cursor: pointer;
 }
@@ -354,6 +365,27 @@
     right: calc(1.25rem + env(safe-area-inset-right));
     bottom: 5.2rem;
     left: calc(1.25rem + env(safe-area-inset-left));
+  }
+}
+
+@media (max-width: 760px) and (max-height: 568px) {
+  .shell {
+    grid-template-rows: minmax(11.625rem, 1fr) auto minmax(0, auto) auto;
+  }
+
+  .intro {
+    top: -1.5rem;
+  }
+
+  .intro h1 {
+    margin-block: 0.35rem 0.55rem;
+    font-size: clamp(2rem, 10vw, 2.6rem);
+  }
+
+  .intro > p:last-child {
+    max-width: 88%;
+    font-size: 0.72rem;
+    line-height: 1.45;
   }
 }
 

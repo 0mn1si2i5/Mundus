@@ -1,4 +1,66 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+function relativeLuminance(color: string) {
+  const channels = color
+    .match(/[\d.]+/gu)
+    ?.slice(0, 3)
+    .map(Number);
+  if (!channels || channels.length !== 3)
+    throw new Error(`Invalid color: ${color}`);
+  const [red, green, blue] = channels.map((channel) => {
+    const value = channel / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * red! + 0.7152 * green! + 0.0722 * blue!;
+}
+
+function contrastRatio(foreground: string, background: string) {
+  const light = Math.max(
+    relativeLuminance(foreground),
+    relativeLuminance(background),
+  );
+  const dark = Math.min(
+    relativeLuminance(foreground),
+    relativeLuminance(background),
+  );
+  return (light + 0.05) / (dark + 0.05);
+}
+
+async function expectCameraCenter(
+  page: Page,
+  latitude: number,
+  longitude: number,
+  timeout = 5000,
+) {
+  const globe = page.getByRole('region', {
+    name: /三维地球|three-dimensional globe/,
+  });
+  await expect(globe).toHaveAttribute(
+    'data-camera-focus-target',
+    `${latitude},${longitude}`,
+    { timeout },
+  );
+  await expect(globe).toHaveAttribute(
+    'data-camera-center-latitude',
+    latitude.toString(),
+    { timeout },
+  );
+  await expect(globe).toHaveAttribute(
+    'data-camera-center-longitude',
+    longitude.toString(),
+    { timeout },
+  );
+}
+
+async function expectCameraDiagnosticCleared(page: Page) {
+  const globe = page.getByRole('region', {
+    name: /三维地球|three-dimensional globe/,
+  });
+  await expect(globe).not.toHaveAttribute('data-camera-focus-target', /.+/);
+  await expect(globe).not.toHaveAttribute('data-camera-center-latitude', /.+/);
+  await expect(globe).not.toHaveAttribute('data-camera-center-longitude', /.+/);
+  await expect(globe).not.toHaveAttribute('data-camera-focus-motion', /.+/);
+}
 
 test('reports and clears WebGL context interruption', async ({ page }) => {
   await page.goto('./?benchmark=1&benchmarkWarmup=100&benchmarkDuration=300');
@@ -41,6 +103,516 @@ test('loads the laboratory shell and switches language', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '地球另一端' })).toBeVisible();
   await page.getByRole('button', { name: '切换为英文' }).click();
   await expect(page.getByRole('heading', { name: 'Other Side' })).toBeVisible();
+});
+
+test('explains the opaque through-Earth cross-section in both languages', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./');
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开地点控件' }).click();
+  }
+  await page.getByText('数据与方法').click();
+  await expect(
+    page.getByText(/虚线表示穿过不透明地球内部的剖面/),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: '切换为英文' }).click();
+  await expect(
+    page.getByText(/dashed line denotes a section through the opaque Earth/),
+  ).toBeVisible();
+});
+
+test('keeps exact marker roles and center dots legible across the zoom range', async ({
+  page,
+}) => {
+  await page.goto('./');
+  const globe = page.getByRole('region', { name: '交互式三维地球' });
+  await expect(globe).toHaveAttribute('data-marker-role-count', '2');
+  await expect(globe).toHaveAttribute('data-marker-roles', 'origin,antipode');
+  await expect(globe).toHaveAttribute('data-marker-center-css-px', '3');
+  await expect(globe).toHaveAttribute(
+    'data-cross-section-interior-draw-count',
+    '1',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-marker-diagnostic-state',
+    'idle-rotation',
+  );
+  await expect(globe).not.toHaveAttribute('data-camera-distance', /.+/);
+  await expect(globe).not.toHaveAttribute(
+    'data-marker-diagnostic-revision',
+    /.+/,
+  );
+
+  await globe.focus();
+  await page.keyboard.press('=');
+  await expect(globe).toHaveAttribute(
+    'data-marker-diagnostic-state',
+    'sampled',
+  );
+  await expect(globe).toHaveAttribute('data-camera-distance', /.+/);
+  await expect(globe).toHaveAttribute(
+    'data-marker-diagnostic-revision',
+    /[1-9]\d*/,
+  );
+  const idleRevision = await globe.getAttribute(
+    'data-marker-diagnostic-revision',
+  );
+  await page.waitForTimeout(250);
+  await expect(globe).toHaveAttribute(
+    'data-marker-diagnostic-revision',
+    idleRevision!,
+  );
+
+  const originalViewport = page.viewportSize();
+  if (!originalViewport) throw new Error('Viewport size is unavailable.');
+  await page.setViewportSize({
+    width: originalViewport.width - 20,
+    height: originalViewport.height - 20,
+  });
+  await expect
+    .poll(async () =>
+      Number(await globe.getAttribute('data-marker-diagnostic-revision')),
+    )
+    .toBeGreaterThan(Number(idleRevision));
+  await expect(globe).toHaveAttribute(
+    'data-marker-diagnostic-reason',
+    'resize',
+  );
+
+  async function expectProjectedMarkerSize() {
+    const evidence = await globe.evaluate((element) => ({
+      actualCssDiameter: Number(element.dataset.markerOriginActualCssDiameter),
+      target: element.dataset.markerOriginTarget,
+    }));
+    expect(Number.isFinite(evidence.actualCssDiameter)).toBe(true);
+    expect(evidence.target).toBe('31.2304,121.4737');
+    expect(evidence.actualCssDiameter).toBeGreaterThanOrEqual(10);
+    expect(evidence.actualCssDiameter).toBeLessThanOrEqual(12);
+  }
+
+  for (let index = 0; index < 16; index += 1) {
+    await page.keyboard.press('=');
+  }
+  await expect(globe).toHaveAttribute('data-camera-distance', '2.15');
+  await expect(globe).not.toHaveAttribute(
+    'data-marker-diagnostic-revision',
+    idleRevision!,
+  );
+  await expectProjectedMarkerSize();
+
+  for (let index = 0; index < 24; index += 1) {
+    await page.keyboard.press('-');
+  }
+  await expect(globe).toHaveAttribute('data-camera-distance', '5');
+  await expectProjectedMarkerSize();
+});
+
+test('clears marker diagnostics by mode and refreshes them for point focus', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./');
+  const globe = page.getByRole('region', { name: '交互式三维地球' });
+  await expect(globe).toHaveAttribute(
+    'data-marker-diagnostic-revision',
+    /[1-9]\d*/,
+  );
+  await expect(globe).toHaveAttribute(
+    'data-marker-origin-target',
+    '31.2304,121.4737',
+  );
+
+  await page.getByRole('button', { name: /发展的不同侧面/ }).click();
+  await expect(globe).not.toHaveAttribute(
+    'data-marker-diagnostic-revision',
+    /.+/,
+  );
+  await expect(globe).not.toHaveAttribute('data-marker-origin-target', /.+/);
+  await expect(globe).not.toHaveAttribute(
+    'data-marker-origin-actual-css-diameter',
+    /.+/,
+  );
+
+  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await expect(globe).toHaveAttribute(
+    'data-marker-diagnostic-revision',
+    /[1-9]\d*/,
+  );
+  const revisionBeforePoint = Number(
+    await globe.getAttribute('data-marker-diagnostic-revision'),
+  );
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开地点控件' }).click();
+  }
+  await page.getByLabel('搜索本地城市').fill('Tokyo');
+  await page.getByRole('button', { name: /东京/ }).click();
+
+  await expect(globe).toHaveAttribute(
+    'data-marker-origin-target',
+    '35.6762,139.6503',
+  );
+  await expect
+    .poll(async () =>
+      Number(await globe.getAttribute('data-marker-diagnostic-revision')),
+    )
+    .toBeGreaterThanOrEqual(1);
+  await expect(globe).toHaveAttribute(
+    'data-marker-origin-actual-css-diameter',
+    /.+/,
+  );
+  expect(
+    Number(await globe.getAttribute('data-marker-diagnostic-revision')),
+  ).toBeGreaterThanOrEqual(revisionBeforePoint);
+
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开地点控件' }).click();
+  }
+  const revisionBeforeFocus = Number(
+    await globe.getAttribute('data-marker-diagnostic-revision'),
+  );
+  await page.getByRole('button', { name: '翻到对跖点' }).click();
+  await expectCameraCenter(page, -35.6762, -40.3497);
+  await expect
+    .poll(async () =>
+      Number(await globe.getAttribute('data-marker-diagnostic-revision')),
+    )
+    .toBeGreaterThan(revisionBeforeFocus);
+});
+
+test('keeps the Sunline subsolar marker on its legacy sphere-ring geometry', async ({
+  page,
+}) => {
+  await page.goto('./?mode=sunline&time=2024-03-20T12%3A00Z&v=1');
+  const globe = page.getByRole('region', { name: '交互式三维地球' });
+
+  await expect(globe).toHaveAttribute(
+    'data-sunline-marker-geometry',
+    'legacy-sphere-ring',
+  );
+  await expect(globe).not.toHaveAttribute('data-marker-role-count', /.+/);
+  await expect(page.getByText('太阳高度', { exact: true })).toBeVisible();
+});
+
+test('keeps overlapping selected and subsolar roles visible and depth-occluded', async ({
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(
+    './?mode=sunline&point=-0.15%2C1.98&time=2024-03-20T12%3A00Z&v=1',
+  );
+  const globe = page.getByRole('region', { name: '交互式三维地球' });
+
+  await expect(globe).toHaveAttribute(
+    'data-sunline-selected-projected-center',
+    /.+/,
+  );
+  await expect(globe).toHaveAttribute(
+    'data-sunline-solar-projected-center',
+    /.+/,
+  );
+  const selectedCenter = (await globe.getAttribute(
+    'data-sunline-selected-projected-center',
+  ))!
+    .split(',')
+    .map(Number);
+  const solarCenter = (await globe.getAttribute(
+    'data-sunline-solar-projected-center',
+  ))!
+    .split(',')
+    .map(Number);
+  expect(
+    Math.hypot(
+      selectedCenter[0]! - solarCenter[0]!,
+      selectedCenter[1]! - solarCenter[1]!,
+    ),
+  ).toBeLessThan(2);
+  await expect(globe).toHaveAttribute(
+    'data-sunline-selected-front-facing',
+    'true',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-sunline-solar-front-facing',
+    'true',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-sunline-selected-material',
+    'depthTest:true,depthWrite:false,renderOrder:6',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-sunline-solar-material',
+    'depthTest:true,depthWrite:false,renderOrder:5',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-sunline-radius-order',
+    'selected>solar>highlight>mask',
+  );
+
+  await page.getByRole('button', { name: /地球另一端/ }).click();
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开地点控件' }).click();
+  }
+  await page.getByRole('button', { name: '翻到对跖点' }).click();
+  await expectCameraCenter(page, 0.15, -178.02);
+  await page.getByRole('button', { name: /日照线/ }).click();
+  await expect(globe).toHaveAttribute(
+    'data-sunline-selected-front-facing',
+    'false',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-sunline-solar-front-facing',
+    'false',
+  );
+});
+
+test('projects Sunline diagnostics through idle globe rotation only when sampled', async ({
+  page,
+}) => {
+  await page.goto('./?mode=sunline&point=0%2C0&time=2024-03-20T12%3A00Z&v=1');
+  const globe = page.getByRole('region', { name: '交互式三维地球' });
+  await expect(globe).toHaveAttribute(
+    'data-sunline-diagnostic-revision',
+    /[1-9]\d*/,
+  );
+  const initialRevision = Number(
+    await globe.getAttribute('data-sunline-diagnostic-revision'),
+  );
+  const initialCenter = (await globe.getAttribute(
+    'data-sunline-selected-projected-center',
+  ))!
+    .split(',')
+    .map(Number);
+  const initialViewport = page.viewportSize();
+  if (!initialViewport) throw new Error('Viewport size is unavailable.');
+
+  await page.waitForTimeout(800);
+  await expect(globe).toHaveAttribute(
+    'data-sunline-diagnostic-revision',
+    String(initialRevision),
+  );
+
+  const resizedViewport = {
+    width: initialViewport.width - 20,
+    height: initialViewport.height - 20,
+  };
+  await page.setViewportSize(resizedViewport);
+  await expect
+    .poll(async () =>
+      Number(await globe.getAttribute('data-sunline-diagnostic-revision')),
+    )
+    .toBeGreaterThan(initialRevision);
+  await expect(globe).toHaveAttribute(
+    'data-sunline-diagnostic-reason',
+    'resize',
+  );
+  const rotatedCenter = (await globe.getAttribute(
+    'data-sunline-selected-projected-center',
+  ))!
+    .split(',')
+    .map(Number);
+  const initialNormalizedX = initialCenter[0]! / initialViewport.width;
+  const rotatedNormalizedX = rotatedCenter[0]! / resizedViewport.width;
+  expect(Math.abs(rotatedNormalizedX - initialNormalizedX)).toBeGreaterThan(
+    0.002,
+  );
+});
+
+test('resamples Sunline projections once for fixed-time and playback changes', async ({
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('./?mode=sunline&point=0%2C0&time=2024-03-20T12%3A00Z&v=1');
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开日照线控件' }).click();
+  }
+  const globe = page.getByRole('region', { name: '交互式三维地球' });
+  const timeline = page.getByRole('slider', { name: /UTC 时间/ });
+  await expect(globe).toHaveAttribute(
+    'data-sunline-selected-projected-center',
+    /.+/,
+  );
+  await expect(globe).toHaveAttribute(
+    'data-sunline-solar-projected-center',
+    /.+/,
+  );
+  const initialRevision = Number(
+    await globe.getAttribute('data-sunline-diagnostic-revision'),
+  );
+  const initialSelectedCenter = await globe.getAttribute(
+    'data-sunline-selected-projected-center',
+  );
+  const initialSolarCenter = await globe.getAttribute(
+    'data-sunline-solar-projected-center',
+  );
+
+  await timeline.fill('0');
+  await expect
+    .poll(async () =>
+      Number(await globe.getAttribute('data-sunline-diagnostic-revision')),
+    )
+    .toBeGreaterThan(initialRevision);
+  await expect(globe).toHaveAttribute(
+    'data-sunline-diagnostic-reason',
+    'position',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-sunline-selected-projected-center',
+    initialSelectedCenter!,
+  );
+  await expect(globe).not.toHaveAttribute(
+    'data-sunline-solar-projected-center',
+    initialSolarCenter!,
+  );
+
+  const fixedRevision = Number(
+    await globe.getAttribute('data-sunline-diagnostic-revision'),
+  );
+  const fixedSolarCenter = await globe.getAttribute(
+    'data-sunline-solar-projected-center',
+  );
+  await page.getByRole('button', { name: '播放一天' }).click();
+  await expect
+    .poll(async () =>
+      Number(await globe.getAttribute('data-sunline-diagnostic-revision')),
+    )
+    .toBeGreaterThan(fixedRevision);
+  await expect(globe).not.toHaveAttribute(
+    'data-sunline-solar-projected-center',
+    fixedSolarCenter!,
+  );
+  await page.getByRole('button', { name: '暂停' }).click();
+});
+
+for (const observation of [
+  {
+    side: 'day',
+    point: '6%2C-1',
+    target: '6,-1',
+    country: 'Ghana',
+  },
+  {
+    side: 'night',
+    point: '35.6762%2C139.6503',
+    target: '35.6762,139.6503',
+    country: 'Japan',
+  },
+] as const) {
+  test(`keeps Sunline selection legible on the ${observation.side} hemisphere`, async ({
+    page,
+  }) => {
+    await page.goto(
+      `./?mode=sunline&point=${observation.point}&time=2024-03-20T12%3A00Z&v=1`,
+    );
+    const globe = page.getByRole('region', { name: '交互式三维地球' });
+
+    await expect(
+      page.getByText(observation.country, { exact: true }),
+    ).toBeVisible();
+    await expect(globe).toHaveAttribute(
+      'data-selected-country',
+      observation.country,
+    );
+    await expect(globe).toHaveAttribute(
+      'data-sunline-selected-marker-target',
+      observation.target,
+    );
+    await expect(globe).toHaveAttribute(
+      'data-sunline-selected-marker-role',
+      'precision-point',
+    );
+    await expect(globe).toHaveAttribute(
+      'data-sunline-layer-order',
+      'mask,highlight,solar,selected-point',
+    );
+    await expect(globe).toHaveAttribute('data-sunline-night-max-alpha', '0.4');
+  });
+}
+
+test('selects reviewed night-side land through the Sunline mask with a real pointer', async ({
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('./?mode=sunline&time=2024-03-20T12%3A00Z&v=1');
+  await expect(page).not.toHaveURL(/point=/);
+
+  await page.getByRole('button', { name: /地球另一端/ }).click();
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开地点控件' }).click();
+  }
+  await page.getByLabel('搜索本地城市').fill('Tokyo');
+  await page.getByRole('button', { name: /东京/ }).click();
+  await expectCameraCenter(page, 35.6762, 139.6503);
+  await page.getByRole('button', { name: /日照线/ }).click();
+
+  const globe = page.getByRole('region', { name: '交互式三维地球' });
+  const canvas = page.locator('canvas');
+  const clickPoint = await canvas.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const offsets = [
+      [0.005, 0],
+      [-0.005, 0],
+      [0, -0.005],
+      [0, 0.005],
+      [0.01, 0],
+      [-0.01, 0],
+      [0, -0.01],
+      [0, 0.01],
+      [0.015, 0],
+      [-0.015, 0],
+      [0, -0.015],
+      [0, 0.015],
+      [0.02, 0],
+      [-0.02, 0],
+      [0, -0.02],
+      [0, 0.02],
+    ];
+    for (const [xOffset, yOffset] of offsets) {
+      const x = bounds.left + bounds.width * (0.5 + xOffset);
+      const y = bounds.top + bounds.height * (0.5 + yOffset);
+      if (document.elementFromPoint(x, y) === element) return { x, y };
+    }
+    return null;
+  });
+  if (!clickPoint) throw new Error('Focused globe is covered by page UI.');
+  const pointBeforeClick = new URL(page.url()).searchParams.get('point');
+  expect(pointBeforeClick).toBe('35.6762,139.6503');
+  await page.mouse.click(clickPoint.x, clickPoint.y);
+
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get('point'))
+    .not.toBe(pointBeforeClick);
+  const point = new URL(page.url()).searchParams.get('point');
+  if (!point) throw new Error('Pointer selection did not serialize a point.');
+  const [latitude, longitude] = point.split(',').map(Number);
+  expect(Math.abs(latitude - 35.6762)).toBeLessThan(
+    testInfo.project.name === 'mobile' ? 5 : 2,
+  );
+  expect(Math.abs(longitude - 139.6503)).toBeLessThan(2);
+
+  const result = page.getByRole('complementary', { name: '太阳位置结果' });
+  await expect(result.getByText('Japan', { exact: true })).toBeVisible();
+  await expect(result.getByText('夜晚', { exact: true })).toBeVisible();
+  await expect(globe).toHaveAttribute('data-selected-country', 'Japan');
+  await expect(globe).toHaveAttribute(
+    'data-sunline-highlight-country',
+    'Japan',
+  );
+  const markerTarget = await globe.getAttribute(
+    'data-sunline-selected-marker-target',
+  );
+  if (!markerTarget) throw new Error('Selected marker diagnostic is missing.');
+  const [markerLatitude, markerLongitude] = markerTarget.split(',').map(Number);
+  expect(Math.abs(markerLatitude - latitude)).toBeLessThan(0.0001);
+  expect(Math.abs(markerLongitude - longitude)).toBeLessThan(0.0001);
+  await expect(globe).toHaveAttribute(
+    'data-sunline-selected-marker-role',
+    'precision-point',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-sunline-layer-order',
+    'mask,highlight,solar,selected-point',
+  );
+  await expect(globe).toHaveAttribute('data-sunline-night-max-alpha', '0.4');
 });
 
 test('dismisses the first-interaction hint after real globe use', async ({
@@ -275,6 +847,115 @@ test('keeps compact result, collapsed controls, and mode navigation separate', a
       overlaps(desktopRectangles[0], desktopRectangles[second]),
       `title overlaps ${desktopSurfaceNames[second]}`,
     ).toBe(false);
+  }
+});
+
+test('contains compact mode introductions above result surfaces', async ({
+  page,
+}) => {
+  const scenarios = [
+    {
+      name: 'Other Side',
+      path: './',
+      panel: 'place-controls',
+      result: '结果',
+      ready: 'Santa Fe, Argentina',
+      globeAttribute: ['data-marker-roles', 'origin,antipode'],
+    },
+    {
+      name: 'Development',
+      path: './?mode=development&indicator=hdi&year=2023&v=1',
+      panel: 'development-controls',
+      result: null,
+      ready: null,
+      globeAttribute: null,
+    },
+    {
+      name: 'Sunline',
+      path: './?mode=sunline&time=2024-03-20T12%3A00Z&v=1',
+      panel: 'sunline-controls',
+      result: '太阳位置结果',
+      ready: '太阳高度',
+      globeAttribute: [
+        'data-sunline-layer-order',
+        'mask,highlight,solar,selected-point',
+      ],
+    },
+  ] as const;
+
+  for (const viewport of [
+    { width: 320, height: 568 },
+    { width: 390, height: 844 },
+  ]) {
+    for (const scenario of scenarios) {
+      await page.setViewportSize(viewport);
+      await page.goto(scenario.path);
+      if (scenario.ready) {
+        await expect(
+          page.getByText(scenario.ready, { exact: true }),
+        ).toBeVisible();
+      }
+
+      const stage = page.getByTestId('app-stage');
+      const intro = page.locator('section[data-mode]');
+      const title = intro.getByRole('heading', { level: 1 });
+      const description = intro.locator(':scope > p:last-child');
+      const globe = page.getByRole('region', { name: '交互式三维地球' });
+      const result = scenario.result
+        ? page.getByRole('complementary', { name: scenario.result })
+        : null;
+      const controls = page.locator(`[data-mode-panel="${scenario.panel}"]`);
+      const navigation = page.getByRole('navigation', { name: '观察模式' });
+      await expect(globe.locator('canvas')).toBeVisible();
+      if (scenario.globeAttribute) {
+        await expect(globe).toHaveAttribute(
+          scenario.globeAttribute[0],
+          scenario.globeAttribute[1],
+        );
+      }
+
+      const rectangles = {
+        stage: await stage.boundingBox(),
+        intro: await intro.boundingBox(),
+        title: await title.boundingBox(),
+        description: await description.boundingBox(),
+        result: result ? await result.boundingBox() : null,
+        globe: await globe.boundingBox(),
+        controls: await controls.boundingBox(),
+        navigation: await navigation.boundingBox(),
+      };
+      for (const [name, rectangle] of Object.entries(rectangles)) {
+        if (name === 'result' && !result) continue;
+        expect(
+          rectangle,
+          `${scenario.name} ${name} rectangle at ${viewport.width}x${viewport.height}`,
+        ).not.toBeNull();
+      }
+
+      for (const name of ['title', 'description'] as const) {
+        const rectangle = rectangles[name]!;
+        expect(
+          rectangle.y,
+          `${scenario.name} ${name} starts inside stage at ${viewport.width}x${viewport.height}`,
+        ).toBeGreaterThanOrEqual(rectangles.stage!.y);
+        expect(
+          rectangle.y + rectangle.height,
+          `${scenario.name} ${name} ends inside stage at ${viewport.width}x${viewport.height}`,
+        ).toBeLessThanOrEqual(
+          rectangles.stage!.y + rectangles.stage!.height + 0.5,
+        );
+        expect(
+          overlaps(rectangle, rectangles.globe),
+          `${scenario.name} ${name} keeps the title-over-globe composition at ${viewport.width}x${viewport.height}`,
+        ).toBe(true);
+        if (rectangles.result) {
+          expect(
+            overlaps(rectangle, rectangles.result),
+            `${scenario.name} ${name} overlaps result at ${viewport.width}x${viewport.height}`,
+          ).toBe(false);
+        }
+      }
+    }
   }
 });
 
@@ -567,6 +1248,7 @@ test('keeps every expanded compact drawer and navigation reachable', async ({
 
   for (const viewport of [
     { width: 320, height: 568 },
+    { width: 390, height: 844 },
     { width: 760, height: 568 },
   ]) {
     for (const scenario of scenarios) {
@@ -576,6 +1258,7 @@ test('keeps every expanded compact drawer and navigation reachable', async ({
       await expect(scenario.ready()).toBeVisible();
 
       const panel = page.locator(`[data-mode-panel="${scenario.panel}"]`);
+      const panelHeader = panel.locator(':scope > div').first();
       const panelBody = panel.locator(':scope > div').nth(1);
       const stage = page.getByTestId('app-stage');
       const navigation = page.getByRole('navigation', { name: '观察模式' });
@@ -584,6 +1267,44 @@ test('keeps every expanded compact drawer and navigation reachable', async ({
       await expect(panel).toBeVisible();
       await expect(panelBody).toHaveCSS('overflow-y', 'auto');
       await expect(navigation).toBeVisible();
+
+      const panelLayout = await panel.evaluate((element) => {
+        const header = element.children[0] as HTMLElement;
+        const body = element.children[1] as HTMLElement;
+        return {
+          bodyClientHeight: body.clientHeight,
+          bodyScrollHeight: body.scrollHeight,
+          headerHeight: header.getBoundingClientRect().height,
+        };
+      });
+      expect(
+        panelLayout.headerHeight,
+        `${scenario.panel} header height at ${viewport.width}x${viewport.height}`,
+      ).toBeGreaterThanOrEqual(44);
+      expect(
+        panelLayout.bodyClientHeight,
+        `${scenario.panel} body client height at ${viewport.width}x${viewport.height}`,
+      ).toBeGreaterThanOrEqual(96);
+      if (viewport.width === 320 && viewport.height === 568) {
+        expect(
+          panelLayout.bodyScrollHeight,
+          `${scenario.panel} body scroll height at ${viewport.width}x${viewport.height}`,
+        ).toBeGreaterThan(panelLayout.bodyClientHeight);
+      }
+
+      const scrolled = await panelBody.evaluate((element) => {
+        element.scrollTop = element.scrollHeight;
+        return element.scrollTop;
+      });
+      if (panelLayout.bodyScrollHeight > panelLayout.bodyClientHeight) {
+        expect(
+          scrolled,
+          `${scenario.panel} internal scroll at ${viewport.width}x${viewport.height}`,
+        ).toBeGreaterThan(0);
+      }
+      await panelBody.evaluate((element) => {
+        element.scrollTop = 0;
+      });
 
       const stageRectangle = await stage.boundingBox();
       expect(stageRectangle).not.toBeNull();
@@ -606,19 +1327,32 @@ test('keeps every expanded compact drawer and navigation reachable', async ({
           viewport.height,
         );
       }
-      for (let first = 0; first < rectangles.length; first += 1) {
-        for (let second = first + 1; second < rectangles.length; second += 1) {
-          expect(overlaps(rectangles[first], rectangles[second])).toBe(false);
-        }
-      }
+      const panelRectangle = await panel.boundingBox();
+      const navigationRectangle = await navigation.boundingBox();
+      expect(
+        overlaps(panelRectangle, navigationRectangle),
+        `${scenario.panel} overlaps navigation at ${viewport.width}x${viewport.height}`,
+      ).toBe(false);
 
       const primary = scenario.primary();
       await primary.scrollIntoViewIfNeeded();
       await expect(primary).toBeVisible();
       const primaryRectangle = await primary.boundingBox();
-      const panelRectangle = await panel.boundingBox();
+      const panelBodyRectangle = await panelBody.boundingBox();
+      const panelHeaderRectangle = await panelHeader.boundingBox();
       expect(primaryRectangle).not.toBeNull();
       expect(panelRectangle).not.toBeNull();
+      expect(panelBodyRectangle).not.toBeNull();
+      expect(panelHeaderRectangle).not.toBeNull();
+      expect(primaryRectangle!.y).toBeGreaterThanOrEqual(panelBodyRectangle!.y);
+      expect(
+        primaryRectangle!.y + primaryRectangle!.height,
+      ).toBeLessThanOrEqual(
+        panelBodyRectangle!.y + panelBodyRectangle!.height + 0.5,
+      );
+      expect(primaryRectangle!.y).toBeGreaterThanOrEqual(
+        panelHeaderRectangle!.y + panelHeaderRectangle!.height,
+      );
       expect(primaryRectangle!.y).toBeGreaterThanOrEqual(panelRectangle!.y);
       expect(
         primaryRectangle!.y + primaryRectangle!.height,
@@ -766,6 +1500,134 @@ test('rotates and selects the globe from the keyboard', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect(page).not.toHaveURL(/point=31.2304%2C121.4737/);
   await expect(globe).toBeFocused();
+});
+
+test('toggles bilateral camera focus and frees it after manual movement', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./');
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开地点控件' }).click();
+  }
+
+  const urlBefore = page.url();
+  const viewAntipode = page.getByRole('button', { name: '翻到对跖点' });
+  await expect(viewAntipode).toBeVisible();
+  await viewAntipode.click();
+  await expect(page.getByRole('button', { name: '返回起点' })).toBeVisible();
+  await expectCameraCenter(page, -31.2304, -58.5263);
+
+  const canvas = page.locator('canvas');
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('Globe canvas has no bounding box.');
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 60, y + 8, { steps: 5 });
+  await page.mouse.up();
+  await expectCameraDiagnosticCleared(page);
+  await expect(page.getByRole('button', { name: '翻到对跖点' })).toBeVisible();
+
+  await page.getByRole('button', { name: '翻到对跖点' }).click();
+  const globe = page.getByRole('region', { name: '交互式三维地球' });
+  await globe.focus();
+  await page.keyboard.press('ArrowRight');
+  await expectCameraDiagnosticCleared(page);
+  await expect(page.getByRole('button', { name: '翻到对跖点' })).toBeVisible();
+
+  await page.getByRole('button', { name: '翻到对跖点' }).click();
+  await page.getByRole('button', { name: '返回起点' }).click();
+  await expect(page.getByRole('button', { name: '翻到对跖点' })).toBeVisible();
+  await expectCameraCenter(page, 31.2304, 121.4737);
+  await expect(page).toHaveURL(urlBefore);
+});
+
+test('resets bilateral focus for new points and mode round trips', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./');
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开地点控件' }).click();
+  }
+  await page.getByRole('button', { name: '翻到对跖点' }).click();
+  await expect(page.getByRole('button', { name: '返回起点' })).toBeVisible();
+  await expectCameraCenter(page, -31.2304, -58.5263);
+
+  await page.getByRole('button', { name: /发展的不同侧面/ }).click();
+  await expectCameraDiagnosticCleared(page);
+  await page.getByRole('button', { name: /地球另一端/ }).click();
+
+  await page.getByLabel('搜索本地城市').fill('Tokyo');
+  await page.getByRole('button', { name: /东京/ }).click();
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开地点控件' }).click();
+  }
+  await expect(page.getByRole('button', { name: '翻到对跖点' })).toBeVisible();
+
+  await page.getByRole('button', { name: '翻到对跖点' }).click();
+  await page.getByRole('button', { name: /发展的不同侧面/ }).click();
+  await page.getByRole('button', { name: /地球另一端/ }).click();
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开地点控件' }).click();
+  }
+  await expect(page.getByRole('button', { name: '翻到对跖点' })).toBeVisible();
+});
+
+test('focuses the nearest indexed place without changing the relation or URL', async ({
+  page,
+}) => {
+  await page.goto('./');
+  const result = page.getByRole('complementary', { name: '位置结果' });
+  const place = page.getByRole('button', { name: /Santa Fe, Argentina/ });
+  await expect(place).toBeVisible();
+  const relationBefore = await result.textContent();
+  const urlBefore = page.url();
+
+  await place.focus();
+  await expect(place).toBeFocused();
+  await page.keyboard.press('Enter');
+
+  await expectCameraCenter(page, -31.623872, -60.690001);
+  await expect(page).toHaveURL(urlBefore);
+  await expect(result).toHaveText(relationBefore ?? '');
+});
+
+test('uses exact bilateral labels in English', async ({ page }, testInfo) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: '切换为英文' }).click();
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: 'Expand place controls' }).click();
+  }
+
+  await page.getByRole('button', { name: 'View antipode' }).click();
+  await expect(
+    page.getByRole('button', { name: 'Return to origin' }),
+  ).toBeVisible();
+});
+
+test('focuses bilateral targets immediately with reduced motion', async ({
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('./');
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开地点控件' }).click();
+  }
+
+  const viewAntipode = page.getByRole('button', { name: '翻到对跖点' });
+  await viewAntipode.click();
+  await expect(page.getByRole('button', { name: '返回起点' })).toBeVisible();
+  await expectCameraCenter(page, -31.2304, -58.5263);
+  await expect(
+    page.getByRole('region', { name: '交互式三维地球' }),
+  ).toHaveAttribute('data-camera-focus-motion', 'instant');
+  await page.getByRole('button', { name: '返回起点' }).click();
+  await expect(page.getByRole('button', { name: '翻到对跖点' })).toBeVisible();
+  await expectCameraCenter(page, 31.2304, 121.4737);
+  await expect(
+    page.getByRole('region', { name: '交互式三维地球' }),
+  ).toHaveAttribute('data-camera-focus-motion', 'instant');
 });
 
 test('does not turn a globe drag into a point selection', async ({ page }) => {
@@ -1028,6 +1890,18 @@ test('keeps development map, controls, URL and table synchronized', async ({
   await expect(page).toHaveURL(/indicator=income/);
   await panel.getByRole('slider', { name: /年份/ }).fill('2010');
   await expect(page).toHaveURL(/year=2010/);
+});
+
+test('exposes every Development legend bin with non-color semantics', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./?mode=development&indicator=hdi&year=2023&v=1');
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开发展控件' }).click();
+  }
+  await expect(page.getByRole('img', { name: /指数区间，上限/ })).toHaveCount(
+    6,
+  );
 });
 
 test('signposts Development evidence that continues below the panel', async ({
@@ -1309,10 +2183,51 @@ test('keeps the flip-to-antipode target at least 44px tall at compact widths', a
     await page.goto('./');
     await page.getByRole('button', { name: '展开地点控件' }).click();
     await expectMinimumHeight(
-      page.getByRole('button', { name: '翻到另一端' }),
+      page.getByRole('button', { name: '翻到对跖点' }),
       44,
     );
   }
+});
+
+test('keeps the nearest-place target at least 44px tall at compact widths', async ({
+  page,
+}) => {
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 320, height: 568 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('./');
+    await expectMinimumHeight(
+      page.getByRole('button', { name: /Santa Fe, Argentina/ }),
+      44,
+    );
+  }
+});
+
+test('gives the nearest-place relation hover and active feedback without layout shift', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('./');
+  const place = page.getByRole('button', { name: /Santa Fe, Argentina/ });
+  const before = await place.boundingBox();
+  const resting = await place.evaluate(
+    (element) => getComputedStyle(element).backgroundColor,
+  );
+  await place.hover();
+  const hovered = await place.evaluate(
+    (element) => getComputedStyle(element).backgroundColor,
+  );
+  expect(hovered).not.toBe(resting);
+  expect(await place.boundingBox()).toEqual(before);
+  await page.mouse.down();
+  const active = await place.evaluate(
+    (element) => getComputedStyle(element).backgroundColor,
+  );
+  expect(active).not.toBe(hovered);
+  expect(await place.boundingBox()).toEqual(before);
+  await page.mouse.up();
 });
 
 test('uses the accent focus ring for keyboard form and disclosure controls only', async ({
@@ -1348,6 +2263,87 @@ test('uses the accent focus ring for keyboard form and disclosure controls only'
   ).toBe('none');
 });
 
+test('uses the bright parchment atlas contract across modes and modal surfaces', async ({
+  page,
+}) => {
+  const scenarios = [
+    { path: './', panel: 'place-controls', expand: '展开地点控件' },
+    {
+      path: './?mode=development&indicator=hdi&year=2023&v=1',
+      panel: 'development-controls',
+      expand: '展开发展控件',
+    },
+    {
+      path: './?mode=sunline&time=2024-03-20T12%3A00Z&v=1',
+      panel: 'sunline-controls',
+      expand: '展开日照线控件',
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    await page.goto(scenario.path);
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
+      'content',
+      '#f3eddf',
+    );
+    await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
+
+    const panel = page.locator(`[data-mode-panel="${scenario.panel}"]`);
+    if ((await panel.getAttribute('data-expanded')) === 'false') {
+      await page.getByRole('button', { name: scenario.expand }).click();
+    }
+    const surface = await panel.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        backdrop: style.backdropFilter,
+        background: style.backgroundColor,
+        color: style.color,
+      };
+    });
+    expect(surface.backdrop).toBe('none');
+    expect(surface.background).toMatch(/^rgb\(/u);
+    expect(surface.background).not.toMatch(/rgba\([^)]*,\s*0\.[0-9]+\)/u);
+    expect(
+      contrastRatio(surface.color, surface.background),
+    ).toBeGreaterThanOrEqual(4.5);
+
+    const control = panel
+      .locator('input:visible, select:visible, button:visible')
+      .first();
+    await expect(control).toBeVisible();
+    await expect(control).toHaveCSS('color-scheme', 'light');
+    const controlColors = await control.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { background: style.backgroundColor, color: style.color };
+    });
+    expect(
+      contrastRatio(controlColors.color, controlColors.background),
+    ).toBeGreaterThanOrEqual(4.5);
+    await control.focus();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Shift+Tab');
+    await expectAccentFocusRing(control);
+
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+  }
+
+  await page.goto('./');
+  await page.getByRole('button', { name: '分享' }).click();
+  const share = page.getByRole('dialog', { name: '分享这一视角' });
+  await expectPaperModal(share);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: '模式图鉴' }).click();
+  await expectPaperModal(
+    page.getByRole('dialog', { name: '三种观察地球的方式' }),
+  );
+});
+
 async function expectMinimumHeight(
   locator: import('@playwright/test').Locator,
   minimum: number,
@@ -1368,6 +2364,23 @@ async function expectAccentFocusRing(
   expect(
     await locator.evaluate((element) => getComputedStyle(element).outlineWidth),
   ).toBe('2px');
+}
+
+async function expectPaperModal(locator: import('@playwright/test').Locator) {
+  await expect(locator).toBeVisible();
+  const style = await locator.evaluate((element) => {
+    const computed = getComputedStyle(element);
+    return {
+      backdrop: computed.backdropFilter,
+      background: computed.backgroundColor,
+      color: computed.color,
+    };
+  });
+  expect(style.backdrop).toBe('none');
+  expect(style.background).not.toMatch(/rgba\([^)]*,\s*0\.[0-9]+\)/u);
+  expect(contrastRatio(style.color, style.background)).toBeGreaterThanOrEqual(
+    4.5,
+  );
 }
 
 function overlaps(

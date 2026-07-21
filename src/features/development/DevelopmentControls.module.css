@@ -3,8 +3,8 @@
   z-index: 30;
   bottom: 7rem;
   border: 1px solid var(--color-line);
-  background: rgb(8 11 15 / 90%);
-  backdrop-filter: blur(18px);
+  background: var(--color-panel);
+  box-shadow: var(--shadow-paper);
 }
 
 .developmentPanel {
@@ -192,7 +192,7 @@
   padding: 0.45rem 0.55rem;
   border: 1px solid var(--color-line);
   color: var(--color-accent);
-  background: rgb(8 11 15 / 94%);
+  background: var(--color-panel);
   font: inherit;
   font-size: 0.62rem;
   cursor: pointer;
@@ -331,7 +331,9 @@
   display: grid;
   width: min(52rem, calc(100vw - 5rem));
   grid-template-rows: auto 1fr;
-  box-shadow: 0 0 0 100vmax rgb(3 5 7 / 58%);
+  box-shadow:
+    0 0 0 100vmax rgb(73 62 48 / 24%),
+    var(--shadow-paper);
 }
 
 .tableHeading {
@@ -397,7 +399,7 @@
 
 .tablePanel tr[data-selected='true'] {
   color: var(--color-accent);
-  background: rgb(184 207 185 / 8%);
+  background: #e8eee8;
 }
 
 @media (max-width: 760px) {

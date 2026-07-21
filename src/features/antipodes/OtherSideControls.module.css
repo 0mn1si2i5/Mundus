@@ -1,5 +1,5 @@
 .panel {
-  background: rgb(8 11 15 / 88%);
+  background: var(--color-panel);
 }
 
 .secondary,
@@ -131,7 +131,7 @@
 
 .error {
   margin: 0.65rem 0 0;
-  color: #d8a99c;
+  color: var(--color-vermilion);
   font-size: 0.68rem;
 }
 

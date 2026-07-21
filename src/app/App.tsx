@@ -69,8 +69,10 @@ export function App() {
   const [atlasOpen, setAtlasOpen] = useState(false);
   const locale = useAppStore((state) => state.locale);
   const activeMode = useAppStore((state) => state.activeMode);
+  const point = useAppStore((state) => state.point);
   const hoveredCountry = useAppStore((state) => state.hoveredCountry);
   const selectMode = useAppStore((state) => state.selectMode);
+  const requestCameraFocus = useAppStore((state) => state.requestCameraFocus);
   const setLocale = useAppStore((state) => state.setLocale);
   const t = messages[locale];
   const mode = MODE_DEFINITIONS[activeMode];
@@ -181,6 +183,7 @@ export function App() {
         >
           <Suspense fallback={<GlobeFallback label={t.loadingGlobe} />}>
             <GlobeViewport
+              diagnosticResetKey={`${activeMode}:${point.latitude},${point.longitude}`}
               fallbackLabel={t.fallback}
               contextLostLabel={t.contextLost}
               ariaLabel={t.globeLabel}
@@ -196,7 +199,11 @@ export function App() {
         </ErrorBoundary>
       </div>
 
-      <ModeResult locale={locale} presentation={presentation} />
+      <ModeResult
+        locale={locale}
+        presentation={presentation}
+        onCameraFocus={requestCameraFocus}
+      />
 
       {hoveredCountry ? (
         <p className={styles.hoverLabel}>{hoveredCountry.name}</p>

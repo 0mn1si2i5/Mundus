@@ -5,6 +5,9 @@ import { feature } from 'topojson-client';
 import type { GeometryCollection, Topology } from 'topojson-specification';
 import atlas from 'world-atlas/countries-110m.json';
 import type { GeoPoint } from './geo';
+import type { CountryRef } from './country';
+
+export type { CountryRef } from './country';
 
 interface AtlasProperties {
   name: string;
@@ -20,11 +23,6 @@ export interface CountryFeatureProperties {
 }
 
 export type CountryFeature = Feature<Geometry, CountryFeatureProperties>;
-
-export interface CountryRef {
-  countryId: string;
-  name: string;
-}
 
 interface IndexedCountry {
   feature: CountryFeature;
@@ -53,6 +51,12 @@ export interface CountryHighlightTexture {
 }
 
 let cachedDataset: CountryDataset | undefined;
+
+export const COUNTRY_TEXTURE_STYLE = {
+  oceanColor: '#c7d2cd',
+  landColor: '#ddd2b5',
+  borderColor: 'rgba(67, 66, 58, 0.82)',
+} as const;
 
 const EXCEPTION_COUNTRY_IDS: Readonly<Record<string, string>> = {
   'N. Cyprus': 'ne-x-northern-cyprus',
@@ -195,8 +199,8 @@ export function createCountryHighlightTexture(
     texture,
     update(hoveredCountryId, selectedCountryId) {
       context.clearRect(0, 0, canvas.width, canvas.height);
-      drawCountry(context, path, dataset, selectedCountryId, '#d6cfae', 0.78);
-      drawCountry(context, path, dataset, hoveredCountryId, '#9bc9bb', 0.58);
+      drawCountry(context, path, dataset, selectedCountryId, '#c98755', 0.82);
+      drawCountry(context, path, dataset, hoveredCountryId, '#779c91', 0.68);
       texture.needsUpdate = true;
     },
   };
@@ -206,9 +210,7 @@ export function getCountryTextureStyle(
   textureWidth: number,
 ): CountryTextureStyle {
   return {
-    oceanColor: '#142a30',
-    landColor: '#304944',
-    borderColor: 'rgba(196, 218, 204, 0.46)',
+    ...COUNTRY_TEXTURE_STYLE,
     borderWidth: Math.max(1, textureWidth / 2048),
   };
 }
