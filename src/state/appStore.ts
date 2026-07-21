@@ -1,12 +1,17 @@
 import { create } from 'zustand';
 import type { Locale } from '../i18n/messages';
 import type { ModeId } from '../features/modes/modeRegistry';
-import type { CountryRef } from '../features/globe/countryData';
-import type { GeoPoint } from '../features/globe/geo';
+import type { CountryRef } from '../features/globe/country';
+import { antipodeOf, type GeoPoint } from '../features/antipodes/geography';
 import type { DevelopmentIndicator } from '../features/development/developmentData';
 import { parseUrlState } from './urlState';
 import type { SunlineClockMode } from './urlState';
 import { clampSunlineTime } from '../features/sunline/solar';
+
+export interface CameraFocusIntent {
+  side: 'origin' | 'antipode' | 'free' | 'nearest-place';
+  target: GeoPoint | null;
+}
 
 interface AppState {
   locale: Locale;
@@ -20,7 +25,7 @@ interface AppState {
   selectedCountry: CountryRef | null;
   antipodeCountry: CountryRef | null;
   hoveredCountry: CountryRef | null;
-  cameraTarget: GeoPoint | null;
+  cameraFocusIntent: CameraFocusIntent;
   hasInteracted: boolean;
   hasMeaningfulInteraction: boolean;
   selectMode: (mode: ModeId) => void;
@@ -36,8 +41,10 @@ interface AppState {
   setSelectedCountry: (country: CountryRef | null) => void;
   setAntipodeCountry: (country: CountryRef | null) => void;
   setHoveredCountry: (country: CountryRef | null) => void;
+  toggleAntipodeFocus: () => void;
   requestCameraFocus: (point: GeoPoint) => void;
   clearCameraTarget: () => void;
+  setCameraFocusFree: () => void;
   markInteraction: () => void;
   markMeaningfulInteraction: () => void;
 }
@@ -58,7 +65,7 @@ export const useAppStore = create<AppState>((set) => ({
   selectedCountry: null,
   antipodeCountry: null,
   hoveredCountry: null,
-  cameraTarget: null,
+  cameraFocusIntent: { side: 'origin', target: null },
   hasInteracted: false,
   hasMeaningfulInteraction: false,
   sunlinePlaying: false,
@@ -66,13 +73,13 @@ export const useAppStore = create<AppState>((set) => ({
     set({
       activeMode,
       hoveredCountry: null,
-      cameraTarget: null,
+      cameraFocusIntent: { side: 'free', target: null },
       sunlinePlaying: false,
     }),
   selectPoint: (point) =>
     set({
       point,
-      cameraTarget: point,
+      cameraFocusIntent: { side: 'origin', target: point },
       hasInteracted: true,
       hasMeaningfulInteraction: true,
     }),
@@ -137,9 +144,29 @@ export const useAppStore = create<AppState>((set) => ({
         ? state
         : { hoveredCountry },
     ),
-  requestCameraFocus: (cameraTarget) =>
-    set({ cameraTarget, hasInteracted: true }),
-  clearCameraTarget: () => set({ cameraTarget: null }),
+  toggleAntipodeFocus: () =>
+    set((state) => {
+      const side =
+        state.cameraFocusIntent.side === 'antipode' ? 'origin' : 'antipode';
+      return {
+        cameraFocusIntent: {
+          side,
+          target: side === 'origin' ? state.point : antipodeOf(state.point),
+        },
+        hasInteracted: true,
+      };
+    }),
+  requestCameraFocus: (target) =>
+    set({
+      cameraFocusIntent: { side: 'nearest-place', target },
+      hasInteracted: true,
+    }),
+  clearCameraTarget: () =>
+    set((state) => ({
+      cameraFocusIntent: { ...state.cameraFocusIntent, target: null },
+    })),
+  setCameraFocusFree: () =>
+    set({ cameraFocusIntent: { side: 'free', target: null } }),
   markInteraction: () => set({ hasInteracted: true }),
   markMeaningfulInteraction: () =>
     set({ hasInteracted: true, hasMeaningfulInteraction: true }),

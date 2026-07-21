@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { normalizeLongitude, type GeoPoint } from '../features/globe/geo';
+import {
+  normalizeLongitude,
+  type GeoPoint,
+} from '../features/antipodes/geography';
 import type { ModeId } from '../features/modes/modeRegistry';
 import type { DevelopmentIndicator } from '../features/development/developmentData';
 import {

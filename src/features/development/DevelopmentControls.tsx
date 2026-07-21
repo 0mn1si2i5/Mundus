@@ -296,6 +296,8 @@ export function DevelopmentControls({
                   {LEGEND_VALUES.map((value) => (
                     <i
                       key={value}
+                      role="img"
+                      aria-label={developmentBinLabel(locale, value)}
                       style={{ backgroundColor: developmentColor(value) }}
                     />
                   ))}
@@ -357,6 +359,24 @@ export function DevelopmentControls({
       ) : null}
     </>
   );
+}
+
+function developmentBinLabel(locale: Locale, value: number) {
+  const upperBound =
+    value < 0.4
+      ? 0.4
+      : value < 0.55
+        ? 0.55
+        : value < 0.7
+          ? 0.7
+          : value < 0.8
+            ? 0.8
+            : value < 0.9
+              ? 0.9
+              : 1;
+  return locale === 'zh'
+    ? `指数区间，上限 ${upperBound.toFixed(2)}`
+    : `Index bin, upper bound ${upperBound.toFixed(2)}`;
 }
 
 function DevelopmentEvidenceView({

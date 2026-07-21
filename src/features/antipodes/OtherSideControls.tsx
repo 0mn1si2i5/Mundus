@@ -3,7 +3,6 @@ import { z } from 'zod';
 import type { Locale } from '../../i18n/messages';
 import { useAppStore } from '../../state/appStore';
 import { ModePanel, type ModePanelHandle } from '../controls/ModePanel';
-import { antipodeOf } from '../globe/geo';
 import { FEATURED_CITIES, searchCities, type CityEntry } from './cities';
 import styles from './OtherSideControls.module.css';
 
@@ -32,11 +31,12 @@ const COPY = {
     locating: '正在定位…',
     locationError: '无法读取位置，请检查浏览器权限。',
     invalid: '纬度需在 ±90°、经度需在 ±180° 内。',
-    flip: '翻到另一端',
+    viewAntipode: '翻到对跖点',
+    returnOrigin: '返回起点',
     examples: '精选起点',
     method: '数据与方法',
     methodText:
-      '对跖点通过纬度取反并将经度旋转 180° 计算。国家或海洋判断使用 Natural Earth 110m；最近聚居地使用 Natural Earth 50m 精选点，并非完整城市名录。边界是制图表达，不是领土法律权威。',
+      '对跖点通过纬度取反并将经度旋转 180° 计算。端点附近的实线贴合地表，虚线表示穿过不透明地球内部的剖面，并不表示地球透明。国家或海洋判断使用 Natural Earth 110m；最近聚居地使用 Natural Earth 50m 精选点，并非完整城市名录。边界是制图表达，不是领土法律权威。',
     attribution: 'Made with Natural Earth · 公共领域数据',
     source: 'Natural Earth 来源',
     terms: '使用条款',
@@ -55,11 +55,12 @@ const COPY = {
     locating: 'Locating…',
     locationError: 'Location is unavailable. Check browser permission.',
     invalid: 'Latitude must be within ±90° and longitude within ±180°.',
-    flip: 'See the other side',
+    viewAntipode: 'View antipode',
+    returnOrigin: 'Return to origin',
     examples: 'Featured starts',
     method: 'Data and method',
     methodText:
-      'The antipode negates latitude and rotates longitude by 180°. Country or ocean lookup uses Natural Earth 110m; the nearest populated place uses the selected Natural Earth 50m index, not a complete gazetteer. Boundaries are a cartographic view, not a legal authority on territorial status.',
+      'The antipode negates latitude and rotates longitude by 180°. Solid endpoint pieces hug the surface; the dashed line denotes a section through the opaque Earth, not a transparent globe. Country or ocean lookup uses Natural Earth 110m; the nearest populated place uses the selected Natural Earth 50m index, not a complete gazetteer. Boundaries are a cartographic view, not a legal authority on territorial status.',
     attribution: 'Made with Natural Earth · public domain data',
     source: 'Natural Earth source',
     terms: 'Terms of use',
@@ -73,7 +74,8 @@ const EXAMPLE_IDS = new Set(['shanghai', 'madrid', 'honolulu']);
 export function OtherSideControls({ locale }: { locale: Locale }) {
   const point = useAppStore((state) => state.point);
   const selectPoint = useAppStore((state) => state.selectPoint);
-  const requestCameraFocus = useAppStore((state) => state.requestCameraFocus);
+  const cameraSide = useAppStore((state) => state.cameraFocusIntent.side);
+  const toggleAntipodeFocus = useAppStore((state) => state.toggleAntipodeFocus);
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [locating, setLocating] = useState(false);
@@ -136,9 +138,10 @@ export function OtherSideControls({ locale }: { locale: Locale }) {
         <button
           type="button"
           className={styles.flip}
-          onClick={() => requestCameraFocus(antipodeOf(point))}
+          onClick={toggleAntipodeFocus}
         >
-          {copy.flip} <span aria-hidden="true">↗</span>
+          {cameraSide === 'antipode' ? copy.returnOrigin : copy.viewAntipode}{' '}
+          <span aria-hidden="true">↗</span>
         </button>
       }
     >

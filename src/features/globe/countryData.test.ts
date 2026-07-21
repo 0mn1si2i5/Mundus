@@ -36,11 +36,11 @@ describe('country texture rendering', () => {
     expect(getCountryTextureStyle(2048).borderWidth).toBeGreaterThanOrEqual(1);
   });
 
-  it('uses restrained but readable museum surface colors', () => {
+  it('uses a bright parchment atlas palette with dark ink borders', () => {
     expect(getCountryTextureStyle(2048)).toMatchObject({
-      oceanColor: '#142a30',
-      landColor: '#304944',
-      borderColor: 'rgba(196, 218, 204, 0.46)',
+      oceanColor: '#c7d2cd',
+      landColor: '#ddd2b5',
+      borderColor: 'rgba(67, 66, 58, 0.82)',
     });
   });
 

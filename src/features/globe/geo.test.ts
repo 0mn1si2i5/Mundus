@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   antipodeOf,
+  createAntipodeCrossSection,
   createGraticuleLines,
+  createLineSegmentPositions,
   geoToVector3,
+  markerWorldDiameter,
   normalizeLongitude,
   vector3ToGeo,
 } from './geo';
@@ -35,6 +38,87 @@ describe('geographic coordinates', () => {
     if (Math.abs(point.latitude) !== 90) {
       expect(actual.longitude).toBeCloseTo(point.longitude, 8);
     }
+  });
+});
+
+describe('precision globe markers', () => {
+  it.each([2.15, 5])(
+    'projects an 11 CSS px marker at camera distance %s',
+    (cameraDistance) => {
+      const viewportHeight = 720;
+      const verticalFov = 38;
+      const markerDistance = cameraDistance - 1.003;
+      const diameter = markerWorldDiameter(
+        11,
+        markerDistance,
+        verticalFov,
+        viewportHeight,
+      );
+      const projectedPixels =
+        (diameter * viewportHeight) /
+        (2 * markerDistance * Math.tan((verticalFov * Math.PI) / 360));
+
+      expect(projectedPixels).toBeCloseTo(11, 10);
+    },
+  );
+
+  it('rejects invalid projection inputs rather than producing bad geometry', () => {
+    expect(markerWorldDiameter(11, 0, 38, 720)).toBe(0);
+    expect(markerWorldDiameter(11, 2, 38, 0)).toBe(0);
+    expect(markerWorldDiameter(Number.NaN, 2, 38, 720)).toBe(0);
+  });
+});
+
+describe('antipode cartographic cross-section', () => {
+  const section = createAntipodeCrossSection(
+    geoToVector3({ latitude: 31.2304, longitude: 121.4737 }).normalize(),
+  );
+
+  it('anchors short endpoint pieces at each surface', () => {
+    expect(section.surfaceSegments).toHaveLength(2);
+    for (const [inner, surface] of section.surfaceSegments) {
+      expect(inner.length()).toBeCloseTo(0.86, 10);
+      expect(surface.length()).toBeCloseTo(1.004, 10);
+    }
+    expect(
+      section.surfaceSegments[0]![1]!.clone()
+        .add(section.surfaceSegments[1]![1]!)
+        .length(),
+    ).toBeCloseTo(0, 10);
+  });
+
+  it('keeps every interior dash finite, symmetric, and away from the surface', () => {
+    expect(section.interiorSegments.length).toBeGreaterThan(4);
+    for (const segment of section.interiorSegments) {
+      for (const point of segment) {
+        expect(point.toArray().every(Number.isFinite)).toBe(true);
+        expect(point.length()).toBeLessThanOrEqual(0.78);
+      }
+    }
+
+    const samples = section.interiorSegments.flatMap(([start, end]) => [
+      start,
+      end,
+    ]);
+    for (const sample of samples) {
+      expect(
+        samples.some(
+          (candidate) => candidate.clone().add(sample).length() < 1e-10,
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it('places the center node at the exact globe center', () => {
+    expect(section.center.toArray()).toEqual([0, 0, 0]);
+  });
+
+  it('packs all interior dashes into one finite line-segment buffer', () => {
+    const positions = createLineSegmentPositions(section.interiorSegments);
+
+    expect(positions).toBeInstanceOf(Float32Array);
+    expect(positions).toHaveLength(section.interiorSegments.length * 2 * 3);
+    expect(Array.from(positions).every(Number.isFinite)).toBe(true);
   });
 });
 

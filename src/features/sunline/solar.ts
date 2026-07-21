@@ -1,5 +1,11 @@
-import { MathUtils } from 'three';
-import { normalizeLongitude, type GeoPoint } from '../globe/geo';
+import { normalizeLongitude, type GeoPoint } from '../antipodes/geography';
+
+const DEG_TO_RAD = Math.PI / 180;
+const RAD_TO_DEG = 180 / Math.PI;
+const clamp = (value: number, minimum: number, maximum: number) =>
+  Math.max(minimum, Math.min(maximum, value));
+const degToRad = (degrees: number) => degrees * DEG_TO_RAD;
+const radToDeg = (radians: number) => radians * RAD_TO_DEG;
 
 export const SUNLINE_MIN_TIME_MS = Date.UTC(2000, 0, 1);
 export const SUNLINE_MAX_TIME_MS = Date.UTC(2099, 11, 31, 23, 59);
@@ -27,7 +33,7 @@ export function roundToUtcMinute(timestampMs: number): number {
 }
 
 export function clampSunlineTime(timestampMs: number): number {
-  return MathUtils.clamp(
+  return clamp(
     roundToUtcMinute(timestampMs),
     SUNLINE_MIN_TIME_MS,
     SUNLINE_MAX_TIME_MS,
@@ -65,10 +71,10 @@ export function solarPosition(timestampMs: number): SolarPosition {
   );
 
   return {
-    declinationDegrees: MathUtils.radToDeg(declinationRadians),
+    declinationDegrees: radToDeg(declinationRadians),
     equationOfTimeMinutes,
     subsolarPoint: {
-      latitude: MathUtils.radToDeg(declinationRadians),
+      latitude: radToDeg(declinationRadians),
       longitude: subsolarLongitude,
     },
   };
@@ -79,8 +85,8 @@ export function observeSun(
   timestampMs: number,
 ): SolarObservation {
   const position = solarPosition(timestampMs);
-  const latitude = MathUtils.degToRad(point.latitude);
-  const declination = MathUtils.degToRad(position.declinationDegrees);
+  const latitude = degToRad(point.latitude);
+  const declination = degToRad(position.declinationDegrees);
   const date = new Date(timestampMs);
   const utcMinutes =
     date.getUTCHours() * 60 + date.getUTCMinutes() + date.getUTCSeconds() / 60;
@@ -88,13 +94,11 @@ export function observeSun(
     utcMinutes + position.equationOfTimeMinutes + 4 * point.longitude,
     1440,
   );
-  const hourAngle = MathUtils.degToRad(trueSolarMinutes / 4 - 180);
+  const hourAngle = degToRad(trueSolarMinutes / 4 - 180);
   const sineAltitude =
     Math.sin(latitude) * Math.sin(declination) +
     Math.cos(latitude) * Math.cos(declination) * Math.cos(hourAngle);
-  const altitudeDegrees = MathUtils.radToDeg(
-    Math.asin(MathUtils.clamp(sineAltitude, -1, 1)),
-  );
+  const altitudeDegrees = radToDeg(Math.asin(clamp(sineAltitude, -1, 1)));
 
   return {
     altitudeDegrees,
@@ -118,9 +122,9 @@ export function solarEventsUtc(
     date.getUTCDate(),
   );
   const noonPosition = solarPosition(utcMidnight + 12 * 60 * 60_000);
-  const latitude = MathUtils.degToRad(point.latitude);
-  const declination = MathUtils.degToRad(noonPosition.declinationDegrees);
-  const zenith = MathUtils.degToRad(90 - SUNRISE_ALTITUDE_DEGREES);
+  const latitude = degToRad(point.latitude);
+  const declination = degToRad(noonPosition.declinationDegrees);
+  const zenith = degToRad(90 - SUNRISE_ALTITUDE_DEGREES);
   const cosineHourAngle =
     Math.cos(zenith) / (Math.cos(latitude) * Math.cos(declination)) -
     Math.tan(latitude) * Math.tan(declination);
@@ -132,7 +136,7 @@ export function solarEventsUtc(
     return { status: 'polar-night', sunriseMs: null, sunsetMs: null };
   }
 
-  const hourAngleDegrees = MathUtils.radToDeg(Math.acos(cosineHourAngle));
+  const hourAngleDegrees = radToDeg(Math.acos(cosineHourAngle));
   const solarNoonMinutes =
     720 - 4 * point.longitude - noonPosition.equationOfTimeMinutes;
   return {
