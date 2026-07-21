@@ -17,8 +17,22 @@ import {
   type Ref,
   type RefObject,
 } from 'react';
-import type { Group, PerspectiveCamera, ShaderMaterial } from 'three';
-import { Color, MathUtils, Quaternion, Vector3 } from 'three';
+import type {
+  Group,
+  Mesh,
+  MeshBasicMaterial,
+  MeshStandardMaterial,
+  PerspectiveCamera,
+  ShaderMaterial,
+} from 'three';
+import {
+  BackSide,
+  Color,
+  FrontSide,
+  MathUtils,
+  Quaternion,
+  Vector3,
+} from 'three';
 import { useAppStore } from '../../state/appStore';
 import { useFrameBenchmark } from '../performance/useFrameBenchmark';
 import {
@@ -43,6 +57,7 @@ import {
 } from './interaction';
 import { detectQualityProfile, type QualityProfile } from './quality';
 import {
+  ANTIPODE_DRAG_RENDERING,
   GLOBE_COLOR_CONTRACT,
   GLOBE_RENDERING,
   SUNLINE_RENDERING,
@@ -76,6 +91,13 @@ interface GlobeKeyboardController {
   selectCenter: () => void;
 }
 
+interface PointerStart {
+  x: number;
+  y: number;
+  pointerType: string;
+  dragging: boolean;
+}
+
 export function GlobeViewport({
   diagnosticResetKey,
   fallbackLabel,
@@ -91,10 +113,15 @@ export function GlobeViewport({
 }: GlobeViewportProps) {
   const [supported] = useState(supportsWebGL2);
   const [profile] = useState(detectQualityProfile);
+  const [dragDiagnosticsEnabled] = useState(() =>
+    new URLSearchParams(window.location.search).has('dragDiagnostics'),
+  );
   const [contextLost, setContextLost] = useState(false);
   const viewport = useRef<HTMLDivElement>(null);
   const keyboardController = useRef<GlobeKeyboardController>(null);
-  const pointerStarts = useRef(new Map<number, { x: number; y: number }>());
+  const [pointerStarts] = useState(() => new Map<number, PointerStart>());
+  const [antipodeDragActive, setAntipodeDragActive] = useState(false);
+  const [dragModeActive, setDragModeActive] = useState(showAntipodes);
   const [keyboardStatus, setKeyboardStatus] = useState('');
   const benchmark = useFrameBenchmark(profile.level);
   const markMeaningfulInteraction = useAppStore(
@@ -103,6 +130,12 @@ export function GlobeViewport({
   const setCameraFocusFree = useAppStore((state) => state.setCameraFocusFree);
   const point = useAppStore((state) => state.point);
   const selectedCountry = useAppStore((state) => state.selectedCountry);
+  const antipodeDragVisible = showAntipodes && antipodeDragActive;
+  if (dragModeActive !== showAntipodes) {
+    pointerStarts.clear();
+    setAntipodeDragActive(false);
+    setDragModeActive(showAntipodes);
+  }
 
   function clearCameraDiagnostic() {
     const element = viewport.current;
@@ -165,16 +198,84 @@ export function GlobeViewport({
     element.dataset.sunlineDiagnosticReason = reason;
   }
 
+  function recordCenterGlowFrame(revision: number) {
+    const element = viewport.current;
+    if (!element || !showAntipodes) return;
+    element.dataset.antipodeCenterGlowRevision = String(revision);
+  }
+
+  function recordCenterGlowMode(mode: 'static' | 'deterministic') {
+    const element = viewport.current;
+    if (!element || !showAntipodes) return;
+    element.dataset.antipodeCenterGlowFlicker = mode;
+  }
+
+  function recordAntipodeSceneDiagnostic(
+    outer: AntipodeMaterialEvidence,
+    inner: AntipodeMaterialEvidence,
+  ) {
+    const element = viewport.current;
+    if (!element || !showAntipodes) return;
+    element.dataset.antipodeOuterMaterial = materialEvidenceDiagnostic(outer);
+    element.dataset.antipodeInnerMaterial = materialEvidenceDiagnostic(inner);
+    element.dataset.antipodeHitSphere = 'enabled';
+  }
+
+  function recordAntipodeLayerDiagnostic(
+    base: string,
+    dragShellVisible: string,
+    highlight: string,
+  ) {
+    const element = viewport.current;
+    if (!element || !showAntipodes) return;
+    element.dataset.antipodeBaseSurface = base;
+    element.dataset.antipodeDragShellVisible = dragShellVisible;
+    element.dataset.antipodeHighlight = highlight;
+  }
+
+  function recordHitSpherePick() {
+    const element = viewport.current;
+    if (!element || !showAntipodes) return;
+    element.dataset.antipodeHitSpherePickRevision = String(
+      Number(element.dataset.antipodeHitSpherePickRevision ?? 0) + 1,
+    );
+  }
+
+  function syncDragActive() {
+    const active = Array.from(pointerStarts.values()).some(
+      (pointer) => pointer.dragging,
+    );
+    setAntipodeDragActive((current) => (current === active ? current : active));
+  }
+
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    pointerStarts.current.set(event.pointerId, {
+    pointerStarts.set(event.pointerId, {
       x: event.clientX,
       y: event.clientY,
+      pointerType: event.pointerType,
+      dragging: false,
     });
   }
 
+  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const start = pointerStarts.get(event.pointerId);
+    if (!start || start.dragging) return;
+    const threshold =
+      start.pointerType === 'touch'
+        ? TOUCH_CLICK_DRAG_THRESHOLD_PX
+        : CLICK_DRAG_THRESHOLD_PX;
+    if (
+      Math.hypot(event.clientX - start.x, event.clientY - start.y) > threshold
+    ) {
+      start.dragging = true;
+      syncDragActive();
+    }
+  }
+
   function handlePointerUp(event: ReactPointerEvent<HTMLDivElement>) {
-    const start = pointerStarts.current.get(event.pointerId);
-    pointerStarts.current.delete(event.pointerId);
+    const start = pointerStarts.get(event.pointerId);
+    pointerStarts.delete(event.pointerId);
+    syncDragActive();
     if (!start) return;
     const distance = Math.hypot(
       event.clientX - start.x,
@@ -239,6 +340,8 @@ export function GlobeViewport({
     if (!canvas) return;
     const lost = (event: Event) => {
       event.preventDefault();
+      pointerStarts.clear();
+      setAntipodeDragActive(false);
       setContextLost(true);
     };
     const restored = () => {
@@ -250,7 +353,19 @@ export function GlobeViewport({
       canvas.removeEventListener('webglcontextlost', lost);
       canvas.removeEventListener('webglcontextrestored', restored);
     };
-  }, []);
+  }, [pointerStarts]);
+  useEffect(() => {
+    const pointers = pointerStarts;
+    const clear = () => {
+      pointers.clear();
+      setAntipodeDragActive(false);
+    };
+    window.addEventListener('blur', clear);
+    return () => {
+      window.removeEventListener('blur', clear);
+      pointers.clear();
+    };
+  }, [pointerStarts]);
   useEffect(() => {
     clearCameraDiagnostic();
     const element = viewport.current;
@@ -264,6 +379,10 @@ export function GlobeViewport({
       element.dataset.markerDiagnosticState = 'idle-rotation';
     } else {
       delete element.dataset.markerDiagnosticState;
+      delete element.dataset.antipodeOuterMaterial;
+      delete element.dataset.antipodeInnerMaterial;
+      delete element.dataset.antipodeHitSphere;
+      delete element.dataset.antipodeHitSpherePickRevision;
     }
   }, [diagnosticResetKey, showAntipodes]);
 
@@ -288,6 +407,27 @@ export function GlobeViewport({
       data-marker-roles={showAntipodes ? 'origin,antipode' : undefined}
       data-marker-center-css-px={showAntipodes ? 3 : undefined}
       data-cross-section-interior-draw-count={showAntipodes ? 1 : undefined}
+      data-antipode-drag-state={
+        showAntipodes
+          ? antipodeDragVisible
+            ? 'active'
+            : 'inactive'
+          : undefined
+      }
+      data-antipode-inner-wall-visible={
+        showAntipodes ? String(antipodeDragVisible) : undefined
+      }
+      data-antipode-center-glow-visible={
+        showAntipodes ? String(antipodeDragVisible) : undefined
+      }
+      data-antipode-center-glow-flicker={
+        showAntipodes && antipodeDragVisible
+          ? 'pending'
+          : showAntipodes
+            ? 'off'
+            : undefined
+      }
+      data-antipode-center-glow-revision={showAntipodes ? '0' : undefined}
       data-sunline-marker-geometry={sunline ? 'legacy-sphere-ring' : undefined}
       data-sunline-night-max-alpha={
         sunline ? SUNLINE_RENDERING.night.maxAlpha : undefined
@@ -321,8 +461,16 @@ export function GlobeViewport({
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      onPointerCancel={(event) => pointerStarts.current.delete(event.pointerId)}
+      onPointerCancel={(event) => {
+        pointerStarts.delete(event.pointerId);
+        syncDragActive();
+      }}
+      onLostPointerCapture={(event) => {
+        pointerStarts.delete(event.pointerId);
+        syncDragActive();
+      }}
       onWheel={() => {
         clearCameraDiagnostic();
         markMeaningfulInteraction();
@@ -349,11 +497,18 @@ export function GlobeViewport({
           keyboardController={keyboardController}
           countryFills={countryFills}
           showAntipodes={showAntipodes}
+          antipodeDragActive={antipodeDragVisible}
+          dragDiagnosticsEnabled={dragDiagnosticsEnabled}
           sunline={sunline}
           onCameraFocusStart={clearCameraDiagnostic}
           onCameraFocusComplete={recordCameraDiagnostic}
           onMarkerDiagnostic={recordMarkerDiagnostic}
           onSunlineProjectionDiagnostic={recordSunlineProjectionDiagnostic}
+          onCenterGlowFrame={recordCenterGlowFrame}
+          onCenterGlowMode={recordCenterGlowMode}
+          onAntipodeSceneDiagnostic={recordAntipodeSceneDiagnostic}
+          onAntipodeLayerDiagnostic={recordAntipodeLayerDiagnostic}
+          onHitSpherePick={recordHitSpherePick}
         />
       </Canvas>
       {contextLost ? (
@@ -378,6 +533,8 @@ interface GlobeSceneProps {
   keyboardController: Ref<GlobeKeyboardController>;
   countryFills: ReadonlyMap<string, string> | null;
   showAntipodes: boolean;
+  antipodeDragActive: boolean;
+  dragDiagnosticsEnabled: boolean;
   sunline: SunlineRenderState | null;
   onCameraFocusStart: () => void;
   onCameraFocusComplete: (
@@ -396,6 +553,25 @@ interface GlobeSceneProps {
     solar: ProjectedMarkerEvidence,
     reason: SunlineDiagnosticReason,
   ) => void;
+  onCenterGlowFrame: (revision: number) => void;
+  onCenterGlowMode: (mode: 'static' | 'deterministic') => void;
+  onAntipodeSceneDiagnostic: (
+    outer: AntipodeMaterialEvidence,
+    inner: AntipodeMaterialEvidence,
+  ) => void;
+  onAntipodeLayerDiagnostic: (
+    base: string,
+    dragShellVisible: string,
+    highlight: string,
+  ) => void;
+  onHitSpherePick: () => void;
+}
+
+interface AntipodeMaterialEvidence {
+  side: number;
+  depthWrite: boolean;
+  renderOrder: number;
+  radius: number;
 }
 
 function GlobeScene({
@@ -405,11 +581,18 @@ function GlobeScene({
   keyboardController,
   countryFills,
   showAntipodes,
+  antipodeDragActive,
+  dragDiagnosticsEnabled,
   sunline,
   onCameraFocusStart,
   onCameraFocusComplete,
   onMarkerDiagnostic,
   onSunlineProjectionDiagnostic,
+  onCenterGlowFrame,
+  onCenterGlowMode,
+  onAntipodeSceneDiagnostic,
+  onAntipodeLayerDiagnostic,
+  onHitSpherePick,
 }: GlobeSceneProps) {
   const point = useAppStore((state) => state.point);
   const selectedCountry = useAppStore((state) => state.selectedCountry);
@@ -429,9 +612,17 @@ function GlobeScene({
   const interactionStart = useRef<Vector3>(null);
   const markerDiagnostic = useRef<MarkerDiagnosticHandle>(null);
   const sunlineDiagnostic = useRef<SunlineDiagnosticHandle>(null);
+  const outerShell = useRef<Mesh>(null);
+  const outerMaterial = useRef<MeshStandardMaterial>(null);
+  const baseSurface = useRef<Mesh>(null);
+  const baseMaterial = useRef<MeshStandardMaterial>(null);
+  const highlightMesh = useRef<Mesh>(null);
+  const highlightMaterial = useRef<MeshBasicMaterial>(null);
+  const innerWall = useRef<Mesh>(null);
+  const innerMaterial = useRef<MeshBasicMaterial>(null);
   const { camera, gl, invalidate } = useThree();
-  const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
   const reducedMotion = useReducedMotion();
+  const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
   const countries = useMemo(() => getCountryDataset(), []);
   const texture = useMemo(
     () =>
@@ -535,6 +726,55 @@ function GlobeScene({
     invalidate();
   }, [invalidate, point, showAntipodes]);
   useEffect(() => {
+    invalidate();
+  }, [antipodeDragActive, invalidate]);
+  useEffect(() => {
+    if (!showAntipodes) return;
+    const outerMesh = outerShell.current;
+    const outer = outerMaterial.current;
+    const innerMesh = innerWall.current;
+    const inner = innerMaterial.current;
+    const baseMesh = baseSurface.current;
+    const base = baseMaterial.current;
+    const highlight = highlightMesh.current;
+    const highlightSurface = highlightMaterial.current;
+    if (
+      !outerMesh ||
+      !outer ||
+      !innerMesh ||
+      !inner ||
+      !baseMesh ||
+      !base ||
+      !highlight ||
+      !highlightSurface
+    )
+      return;
+    onAntipodeSceneDiagnostic(
+      {
+        side: outer.side,
+        depthWrite: outer.depthWrite,
+        renderOrder: outerMesh.renderOrder,
+        radius: outerMesh.scale.x,
+      },
+      {
+        side: inner.side,
+        depthWrite: inner.depthWrite,
+        renderOrder: innerMesh.renderOrder,
+        radius: innerMesh.scale.x,
+      },
+    );
+    onAntipodeLayerDiagnostic(
+      `visible:${baseMesh.visible},transparent:${base.transparent},depthWrite:${base.depthWrite},renderOrder:${baseMesh.renderOrder},radius:${baseMesh.scale.x}`,
+      String(outerMesh.visible),
+      `visible:${highlight.visible},renderOrder:${highlight.renderOrder},radius:${highlight.scale.x},depthWrite:${highlightSurface.depthWrite}`,
+    );
+  }, [
+    antipodeDragActive,
+    onAntipodeLayerDiagnostic,
+    onAntipodeSceneDiagnostic,
+    showAntipodes,
+  ]);
+  useEffect(() => {
     highlights.update(
       hoveredCountry?.countryId ?? null,
       selectedCountry?.countryId ?? null,
@@ -594,6 +834,7 @@ function GlobeScene({
 
   function handleSelect(event: ThreeEvent<PointerEvent>) {
     event.stopPropagation();
+    onHitSpherePick();
     const threshold =
       event.pointerType === 'touch' ? TOUCH_CLICK_DRAG_THRESHOLD_PX : undefined;
     if (!isSelectionGesture(event.delta, threshold)) {
@@ -638,27 +879,89 @@ function GlobeScene({
           />
         ) : null}
         <mesh
+          onPointerEnter={onHitSpherePick}
           onClick={handleSelect}
           onPointerMove={handleHover}
           onPointerOut={() => setHoveredCountry(null)}
         >
           <sphereGeometry args={[1, ...profile.sphereSegments]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
+        <mesh
+          ref={baseSurface}
+          visible={!antipodeDragActive}
+          renderOrder={0}
+          raycast={ignoreRaycast}
+        >
+          <sphereGeometry args={[1, ...profile.sphereSegments]} />
           <meshStandardMaterial
+            ref={baseMaterial}
             map={texture}
             roughness={GLOBE_RENDERING.material.roughness}
             metalness={GLOBE_RENDERING.material.metalness}
+            depthTest
+            depthWrite
           />
         </mesh>
         <mesh
-          scale={sunline ? SUNLINE_RENDERING.highlight.radius : 1.002}
-          renderOrder={sunline ? SUNLINE_RENDERING.highlight.renderOrder : 1}
+          ref={outerShell}
+          visible={antipodeDragActive}
+          renderOrder={ANTIPODE_DRAG_RENDERING.outerShell.renderOrder}
+          raycast={ignoreRaycast}
+        >
+          <sphereGeometry args={[1, ...profile.sphereSegments]} />
+          <meshStandardMaterial
+            ref={outerMaterial}
+            map={texture}
+            roughness={GLOBE_RENDERING.material.roughness}
+            metalness={GLOBE_RENDERING.material.metalness}
+            color={ANTIPODE_DRAG_RENDERING.outerShell.color}
+            transparent
+            opacity={ANTIPODE_DRAG_RENDERING.outerShell.dragOpacity}
+            side={ANTIPODE_DRAG_RENDERING.outerShell.side}
+            depthTest={ANTIPODE_DRAG_RENDERING.outerShell.depthTest}
+            depthWrite={ANTIPODE_DRAG_RENDERING.outerShell.depthWrite}
+          />
+        </mesh>
+        <mesh
+          ref={innerWall}
+          visible={antipodeDragActive}
+          scale={ANTIPODE_DRAG_RENDERING.innerWall.radius}
+          renderOrder={ANTIPODE_DRAG_RENDERING.innerWall.renderOrder}
+          raycast={ignoreRaycast}
         >
           <sphereGeometry args={[1, ...profile.sphereSegments]} />
           <meshBasicMaterial
+            ref={innerMaterial}
+            color={ANTIPODE_DRAG_RENDERING.innerWall.color}
+            transparent
+            opacity={ANTIPODE_DRAG_RENDERING.innerWall.opacity}
+            side={ANTIPODE_DRAG_RENDERING.innerWall.side}
+            depthTest={ANTIPODE_DRAG_RENDERING.innerWall.depthTest}
+            depthWrite={ANTIPODE_DRAG_RENDERING.innerWall.depthWrite}
+          />
+        </mesh>
+        <mesh
+          ref={highlightMesh}
+          scale={
+            sunline
+              ? SUNLINE_RENDERING.highlight.radius
+              : ANTIPODE_DRAG_RENDERING.highlight.radius
+          }
+          renderOrder={
+            sunline
+              ? SUNLINE_RENDERING.highlight.renderOrder
+              : ANTIPODE_DRAG_RENDERING.highlight.renderOrder
+          }
+          raycast={ignoreRaycast}
+        >
+          <sphereGeometry args={[1, ...profile.sphereSegments]} />
+          <meshBasicMaterial
+            ref={highlightMaterial}
             map={highlights.texture}
             transparent
-            depthTest={SUNLINE_RENDERING.highlight.depthTest}
-            depthWrite={SUNLINE_RENDERING.highlight.depthWrite}
+            depthTest
+            depthWrite={false}
           />
         </mesh>
         <GeographicGraticule sunline={Boolean(sunline)} />
@@ -705,6 +1008,13 @@ function GlobeScene({
               role="antipode"
             />
             <AntipodeCrossSection section={crossSection} />
+            <CenterCandleGlow
+              active={antipodeDragActive}
+              reducedMotion={reducedMotion}
+              diagnosticsEnabled={dragDiagnosticsEnabled}
+              onFrame={onCenterGlowFrame}
+              onMode={onCenterGlowMode}
+            />
           </>
         ) : null}
       </group>
@@ -1180,6 +1490,16 @@ function materialDiagnostic(material: {
   return `depthTest:${material.depthTest},depthWrite:${material.depthWrite},renderOrder:${material.renderOrder}`;
 }
 
+function materialEvidenceDiagnostic(material: AntipodeMaterialEvidence) {
+  const side =
+    material.side === FrontSide
+      ? 'FrontSide'
+      : material.side === BackSide
+        ? 'BackSide'
+        : String(material.side);
+  return `side:${side},depthWrite:${material.depthWrite},renderOrder:${material.renderOrder},radius:${material.radius}`;
+}
+
 function SolarMarker({
   position,
   color,
@@ -1260,9 +1580,114 @@ function AntipodeCrossSection({
           transparent
           opacity={0.72}
           depthTest={false}
+          depthWrite={ANTIPODE_DRAG_RENDERING.centerNode.depthWrite}
         />
       </mesh>
     </>
+  );
+}
+
+function CenterCandleGlow({
+  active,
+  reducedMotion,
+  diagnosticsEnabled,
+  onFrame,
+  onMode,
+}: {
+  active: boolean;
+  reducedMotion: boolean;
+  diagnosticsEnabled: boolean;
+  onFrame: (revision: number) => void;
+  onMode: (mode: 'static' | 'deterministic') => void;
+}) {
+  const core = useRef<Mesh>(null);
+  const halo = useRef<Mesh>(null);
+  const coreMaterial = useRef<MeshBasicMaterial>(null);
+  const haloMaterial = useRef<MeshBasicMaterial>(null);
+  const frameRevision = useRef(0);
+  const lastReportedAt = useRef(0);
+  const { invalidate } = useThree();
+
+  useFrame(({ clock }) => {
+    if (!active || reducedMotion) return;
+    frameRevision.current += 1;
+    const flicker =
+      1 +
+      ANTIPODE_DRAG_RENDERING.centerGlow.flickerAmplitude *
+        (0.62 * Math.sin(clock.elapsedTime * 11.3) +
+          0.38 * Math.sin(clock.elapsedTime * 17.1 + 0.7));
+    core.current?.scale.setScalar(flicker);
+    halo.current?.scale.setScalar(2 - flicker);
+    if (coreMaterial.current) {
+      coreMaterial.current.opacity =
+        ANTIPODE_DRAG_RENDERING.centerGlow.core.opacity * flicker;
+    }
+    if (haloMaterial.current) {
+      haloMaterial.current.opacity =
+        ANTIPODE_DRAG_RENDERING.centerGlow.halo.opacity * flicker;
+    }
+    if (
+      diagnosticsEnabled &&
+      clock.elapsedTime - lastReportedAt.current >= 0.1
+    ) {
+      lastReportedAt.current = clock.elapsedTime;
+      onFrame(frameRevision.current);
+    }
+    invalidate();
+  });
+
+  useEffect(() => {
+    if (active) onMode(reducedMotion ? 'static' : 'deterministic');
+    if (active) {
+      frameRevision.current = 0;
+      lastReportedAt.current = -Infinity;
+      invalidate();
+    }
+    if (active && !reducedMotion) return;
+    core.current?.scale.setScalar(1);
+    halo.current?.scale.setScalar(1);
+    if (coreMaterial.current) {
+      coreMaterial.current.opacity =
+        ANTIPODE_DRAG_RENDERING.centerGlow.core.opacity;
+    }
+    if (haloMaterial.current) {
+      haloMaterial.current.opacity =
+        ANTIPODE_DRAG_RENDERING.centerGlow.halo.opacity;
+    }
+  }, [active, diagnosticsEnabled, invalidate, onMode, reducedMotion]);
+
+  return (
+    <group
+      visible={active}
+      renderOrder={ANTIPODE_DRAG_RENDERING.centerGlow.renderOrder}
+    >
+      <mesh ref={core} raycast={ignoreRaycast}>
+        <sphereGeometry
+          args={[ANTIPODE_DRAG_RENDERING.centerGlow.core.radius, 16, 16]}
+        />
+        <meshBasicMaterial
+          ref={coreMaterial}
+          color={ANTIPODE_DRAG_RENDERING.centerGlow.core.color}
+          transparent
+          opacity={ANTIPODE_DRAG_RENDERING.centerGlow.core.opacity}
+          depthTest={ANTIPODE_DRAG_RENDERING.centerGlow.core.depthTest}
+          depthWrite={ANTIPODE_DRAG_RENDERING.centerGlow.core.depthWrite}
+        />
+      </mesh>
+      <mesh ref={halo} raycast={ignoreRaycast}>
+        <sphereGeometry
+          args={[ANTIPODE_DRAG_RENDERING.centerGlow.halo.radius, 20, 20]}
+        />
+        <meshBasicMaterial
+          ref={haloMaterial}
+          color={ANTIPODE_DRAG_RENDERING.centerGlow.halo.color}
+          transparent
+          opacity={ANTIPODE_DRAG_RENDERING.centerGlow.halo.opacity}
+          depthTest={ANTIPODE_DRAG_RENDERING.centerGlow.halo.depthTest}
+          depthWrite={ANTIPODE_DRAG_RENDERING.centerGlow.halo.depthWrite}
+        />
+      </mesh>
+    </group>
   );
 }
 
