@@ -5,7 +5,6 @@ import {
   createGraticuleLines,
   createLineSegmentPositions,
   geoToVector3,
-  markerWorldDiameter,
   normalizeLongitude,
   vector3ToGeo,
 } from './geo';
@@ -38,34 +37,6 @@ describe('geographic coordinates', () => {
     if (Math.abs(point.latitude) !== 90) {
       expect(actual.longitude).toBeCloseTo(point.longitude, 8);
     }
-  });
-});
-
-describe('precision globe markers', () => {
-  it.each([2.15, 5])(
-    'projects an 11 CSS px marker at camera distance %s',
-    (cameraDistance) => {
-      const viewportHeight = 720;
-      const verticalFov = 38;
-      const markerDistance = cameraDistance - 1.003;
-      const diameter = markerWorldDiameter(
-        11,
-        markerDistance,
-        verticalFov,
-        viewportHeight,
-      );
-      const projectedPixels =
-        (diameter * viewportHeight) /
-        (2 * markerDistance * Math.tan((verticalFov * Math.PI) / 360));
-
-      expect(projectedPixels).toBeCloseTo(11, 10);
-    },
-  );
-
-  it('rejects invalid projection inputs rather than producing bad geometry', () => {
-    expect(markerWorldDiameter(11, 0, 38, 720)).toBe(0);
-    expect(markerWorldDiameter(11, 2, 38, 0)).toBe(0);
-    expect(markerWorldDiameter(Number.NaN, 2, 38, 720)).toBe(0);
   });
 });
 

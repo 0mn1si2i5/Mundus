@@ -9,8 +9,10 @@ careful about the limits of its data.
 
 The V1 scope is intentionally limited to three modes:
 
-- **Other Side** calculates an antipode and identifies the country, ocean, and
-  nearest place represented in the bundled Natural Earth selection.
+- **Other Side** calculates exact antipodal endpoints and shows the nearest
+  eligible major city to each endpoint in the bundled GeoNames snapshot. These
+  are represented major-city results, not nearest settlements, boundaries, or
+  built areas.
 - **Development, Unpacked** compares reported HDI with derived health,
   education, and income dimension indices from the UNDP Human Development
   Report 2025 dataset.

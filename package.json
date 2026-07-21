@@ -10,7 +10,6 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build && node scripts/copy-release-notices.mjs",
-    "data:places": "node scripts/build-populated-places.mjs",
     "data:development": "node scripts/build-undp-development.mjs",
     "data:cities": "node scripts/build-geonames-major-cities.mjs tmp/geonames",
     "data:verify": "node scripts/verify-generated-data.mjs",

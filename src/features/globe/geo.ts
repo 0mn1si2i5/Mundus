@@ -31,30 +31,6 @@ export function geoToVector3(point: GeoPoint, radius = 1): Vector3 {
   );
 }
 
-export function markerWorldDiameter(
-  targetCssPixels: number,
-  projectionDepth: number,
-  verticalFovDegrees: number,
-  viewportCssHeight: number,
-): number {
-  if (
-    !Number.isFinite(targetCssPixels) ||
-    targetCssPixels <= 0 ||
-    !Number.isFinite(projectionDepth) ||
-    projectionDepth <= 0 ||
-    !Number.isFinite(verticalFovDegrees) ||
-    verticalFovDegrees <= 0 ||
-    !Number.isFinite(viewportCssHeight) ||
-    viewportCssHeight <= 0
-  ) {
-    return 0;
-  }
-
-  const visibleHeight =
-    2 * projectionDepth * Math.tan((verticalFovDegrees * DEG_TO_RAD) / 2);
-  return (targetCssPixels * visibleHeight) / viewportCssHeight;
-}
-
 export function createAntipodeCrossSection(
   originDirection: Vector3,
 ): AntipodeCrossSection {

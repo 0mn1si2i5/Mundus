@@ -1,6 +1,7 @@
 # GeoNames major-city index
 
-The Other Side autocomplete uses a reviewed GeoNames snapshot retrieved on
+The Other Side autocomplete and bilateral nearest-major-city relation use a
+reviewed GeoNames snapshot retrieved on
 2026-07-21. All five source files are pinned by SHA-256 in
 `src/data/manifests/geonames-major-cities.json`; raw archives remain ignored.
 
@@ -31,5 +32,8 @@ the exact manifest URLs into ignored `tmp/geonames/`, verified before atomic
 rename, and valid cached sources are reused. A checksum mismatch fails closed;
 raw downloads are not committed.
 
-GeoNames supplies search. The visible nearest-place result remains the separate
-Natural Earth 50m selection and retains its narrower semantics.
+The visible relation searches this same immutable index independently from the
+exact origin and exact antipode. Results mean nearest eligible represented
+major city, not nearest settlement, administrative boundary, or built area;
+distance ties retain the index's deterministic population and GeoNames ID
+ordering.

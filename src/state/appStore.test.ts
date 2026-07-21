@@ -152,7 +152,7 @@ describe('camera focus intent', () => {
     });
   });
 
-  it('distinguishes manual movement from nearest-place focus', () => {
+  it('distinguishes manual movement from major-city focus', () => {
     useAppStore.getState().toggleAntipodeFocus();
     useAppStore.getState().setCameraFocusFree();
     expect(useAppStore.getState().cameraFocusIntent).toEqual({
@@ -163,7 +163,7 @@ describe('camera focus intent', () => {
     const place = { latitude: -31.6333, longitude: -60.7 };
     useAppStore.getState().requestCameraFocus(place);
     expect(useAppStore.getState().cameraFocusIntent).toEqual({
-      side: 'nearest-place',
+      side: 'major-city',
       target: place,
     });
     expect(useAppStore.getState().point).toEqual(origin);

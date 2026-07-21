@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import naturalEarthManifest from './manifests/natural-earth-110m.json';
-import populatedPlacesManifest from './manifests/natural-earth-populated-places-50m.json';
 import undpDevelopmentManifest from './manifests/undp-hdr-2025-development.json';
 import geoNamesMajorCitiesManifest from './manifests/geonames-major-cities.json';
 
@@ -43,7 +42,6 @@ export type DataManifest = z.infer<typeof dataManifestSchema>;
 
 export const DATA_MANIFESTS: readonly DataManifest[] = [
   dataManifestSchema.parse(naturalEarthManifest),
-  dataManifestSchema.parse(populatedPlacesManifest),
   dataManifestSchema.parse(undpDevelopmentManifest),
   dataManifestSchema.parse(geoNamesMajorCitiesManifest),
 ];

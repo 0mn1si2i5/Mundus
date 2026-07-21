@@ -37,7 +37,7 @@ const COPY = {
     examples: '精选起点',
     method: '数据与方法',
     methodText:
-      '对跖点通过纬度取反并将经度旋转 180° 计算。端点附近的实线贴合地表，虚线表示穿过不透明地球内部的剖面，并不表示地球透明。主要城市搜索使用 GeoNames 固定快照；国家或海洋判断使用 Natural Earth 110m；最近聚居地仍使用 Natural Earth 50m 精选点，并非完整城市名录。边界是制图表达，不是领土法律权威。',
+      '对跖点通过纬度取反并将经度旋转 180° 计算。端点附近的实线贴合地表，虚线表示穿过不透明地球内部的剖面，并不表示地球透明。双侧最近主要城市与搜索共用 GeoNames 固定快照；城市结果仅限符合条件的收录项，并非最近聚居地、行政边界或建成区。国家或海洋判断使用 Natural Earth 110m；边界是制图表达，不是领土法律权威。',
     attribution: 'Made with Natural Earth · 公共领域数据',
     source: 'Natural Earth 来源',
     terms: '使用条款',
@@ -62,7 +62,7 @@ const COPY = {
     examples: 'Featured starts',
     method: 'Data and method',
     methodText:
-      'The antipode negates latitude and rotates longitude by 180°. Solid endpoint pieces hug the surface; the dashed line denotes a section through the opaque Earth, not a transparent globe. Major-city search uses a fixed GeoNames snapshot; country or ocean lookup uses Natural Earth 110m; the nearest populated place still uses the selected Natural Earth 50m index, not a complete gazetteer. Boundaries are a cartographic view, not a legal authority on territorial status.',
+      'The antipode negates latitude and rotates longitude by 180°. Solid endpoint pieces hug the surface; the dashed line denotes a section through the opaque Earth, not a transparent globe. Bilateral nearest-major-city results and search share one fixed GeoNames snapshot; city results are limited to eligible indexed entries, not nearest settlements, administrative boundaries, or built areas. Country or ocean lookup uses Natural Earth 110m; boundaries are a cartographic view, not a legal authority on territorial status.',
     attribution: 'Made with Natural Earth · public domain data',
     source: 'Natural Earth source',
     terms: 'Terms of use',

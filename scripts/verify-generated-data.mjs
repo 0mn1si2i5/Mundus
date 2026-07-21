@@ -15,11 +15,6 @@ const assets = [
     budgets: true,
   },
   {
-    manifest: 'src/data/manifests/natural-earth-populated-places-50m.json',
-    asset: 'src/data/generated/natural-earth-populated-places-50m.json',
-    hashField: 'derivedAssetSha256',
-  },
-  {
     manifest: 'src/data/manifests/undp-hdr-2025-development.json',
     asset: 'src/data/generated/undp-hdr-2025-development.json',
     hashField: 'derivedAssetSha256',
