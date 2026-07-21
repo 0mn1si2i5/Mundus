@@ -84,6 +84,13 @@ async function expectVectorReady(page: Page, detail: '110m' | '50m') {
     .toBeGreaterThanOrEqual(4);
 }
 
+async function expectAntipodeRelationReady(page: Page) {
+  const globe = globeRegion(page);
+  await expect(globe).toHaveAttribute('data-antipode-relation-state', 'ready');
+  await expect(page.getByTestId('antipode-relation-status')).toBeHidden();
+  await expect(globe).toHaveAttribute('data-antipode-relation-arc-count', '2');
+}
+
 test('loads only the quality-selected vector resolution and hides raster after readiness', async ({
   page,
 }, testInfo) => {
@@ -2321,6 +2328,7 @@ test('focuses a represented major city without changing the exact relation or UR
   page,
 }) => {
   await page.goto('./');
+  await expectAntipodeRelationReady(page);
   const result = page.getByRole('complementary', { name: '位置结果' });
   const city = page.getByRole('button', { name: /康科迪亚 查看城市/ });
   await expect(city).toBeVisible();
