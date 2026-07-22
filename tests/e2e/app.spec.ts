@@ -793,14 +793,23 @@ test('keeps exact marker roles and center dots legible across the zoom range', a
     'data-marker-diagnostic-revision',
     /[1-9]\d*/,
   );
+  await expect
+    .poll(async () =>
+      Number(await globe.getAttribute('data-marker-diagnostic-revision')),
+    )
+    .toBeGreaterThan(initialRevision);
+  await expect
+    .poll(async () =>
+      Number(
+        await globe.getAttribute('data-antipode-relation-diagnostic-revision'),
+      ),
+    )
+    .toBeGreaterThan(Number(initialRelationRevision));
   const idleRevision = await globe.getAttribute(
     'data-marker-diagnostic-revision',
   );
   const relationRevisionAfterKeyboard = Number(
     await globe.getAttribute('data-antipode-relation-diagnostic-revision'),
-  );
-  expect(relationRevisionAfterKeyboard).toBeGreaterThan(
-    Number(initialRelationRevision),
   );
   await page.waitForTimeout(250);
   await expect(globe).toHaveAttribute(
@@ -859,9 +868,18 @@ test('keeps exact marker roles and center dots legible across the zoom range', a
     expect(evidence.antipodeCityCssDiameter).toBeLessThanOrEqual(8.5);
   }
 
-  for (let index = 0; index < 16; index += 1) {
-    await page.keyboard.press('=');
+  async function zoomUntil(key: '=' | '-', target: string, maximum: number) {
+    for (let index = 0; index < maximum; index += 1) {
+      const previous = await globe.getAttribute('data-camera-distance');
+      if (previous === target) return;
+      await page.keyboard.press(key);
+      await expect
+        .poll(() => globe.getAttribute('data-camera-distance'))
+        .not.toBe(previous);
+    }
   }
+
+  await zoomUntil('=', '2.15', 16);
   await expect(globe).toHaveAttribute('data-camera-distance', '2.15');
   await expect(globe).not.toHaveAttribute(
     'data-marker-diagnostic-revision',
@@ -875,9 +893,7 @@ test('keeps exact marker roles and center dots legible across the zoom range', a
   );
   await expectProjectedMarkerSize();
 
-  for (let index = 0; index < 24; index += 1) {
-    await page.keyboard.press('-');
-  }
+  await zoomUntil('-', '5', 24);
   await expect(globe).toHaveAttribute('data-camera-distance', '5');
   expect(
     Number(
