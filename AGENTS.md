@@ -119,22 +119,24 @@ Do not begin by scanning random implementation files. Read the following in
 order so product intent and release boundaries remain intact:
 
 1. `AGENTS.md` — this startup and execution contract.
-2. `docs/MVP_RELEASE_PLAN.md` — release packets, P0/P1/P2 rules, and final
+2. `docs/ROADMAP_HANDOFF.md` — planning layers, GHSL phase gates, current
+   handoff entry point, and post-GHSL direction.
+3. `docs/MVP_RELEASE_PLAN.md` — release packets, P0/P1/P2 rules, and final
    acceptance checklist.
-3. `docs/RELEASE_RUNBOOK.md` — exact Pages artifact, deploy, live-smoke, and
+4. `docs/RELEASE_RUNBOOK.md` — exact Pages artifact, deploy, live-smoke, and
    rollback behavior.
-4. `README.md` and `README.zh-CN.md` — public product promise and operator
+5. `README.md` and `README.zh-CN.md` — public product promise and operator
    commands.
-5. `docs/IMPLEMENTATION.md` — completed product slices and evidence history.
-6. `docs/EXECUTION_PLAN.md` — V1-to-V1.1 sequencing. Do not start Milestones 3
+6. `docs/IMPLEMENTATION.md` — completed product slices and evidence history.
+7. `docs/EXECUTION_PLAN.md` — V1-to-V1.1 sequencing. Do not start Milestones 3
    or 4 during this assignment.
-7. `docs/PROJECT_PLAN.md` — stable product scope, experience principles,
+8. `docs/PROJECT_PLAN.md` — stable product scope, experience principles,
    architecture boundaries, data policy, and release acceptance.
-8. `SECURITY.md`, `DATA_SOURCES.md`, and `THIRD_PARTY_LICENSES.md` — public
+9. `SECURITY.md`, `DATA_SOURCES.md`, and `THIRD_PARTY_LICENSES.md` — public
    security and licensing contract.
-9. `.github/workflows/ci.yml` and `.github/workflows/pages.yml` — remote gates
-   and deployment permissions.
-10. `package.json`, `vite.config.ts`, `playwright.config.ts`, and
+10. `.github/workflows/ci.yml` and `.github/workflows/pages.yml` — remote gates
+    and deployment permissions.
+11. `package.json`, `vite.config.ts`, `playwright.config.ts`, and
     `playwright.live.config.ts` — local gate, artifact policy, and browser
     projects.
 
