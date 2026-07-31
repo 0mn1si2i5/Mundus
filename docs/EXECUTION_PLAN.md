@@ -1,19 +1,22 @@
-# Mundus V1 → V1.1 execution plan
+# Mundus V1 historical execution plan
 
-- Status: active
+- Status: superseded after completed V1.0.0 release
 - Updated: 2026-07-20
 - Active branch: `codex/v1-release-evidence`
 - Product plan: [PROJECT_PLAN.md](PROJECT_PLAN.md)
 - Implementation record: [IMPLEMENTATION.md](IMPLEMENTATION.md)
 
-This file is the operating plan for the current release goal. It records order,
+This file is a historical operating plan. It records order,
 review gates, and evidence without replacing the stable product decisions in
 `PROJECT_PLAN.md`.
 
 ## Goal boundary
 
-Deliver a public, deployed V1 whose three modes complete their promised product
-loops, then deliver V1.1 with a licensed GHSL Human Terrain vertical slice.
+V1.0.0 was delivered at `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`.
+The current unpublished product candidate is **V1.1.0 Parchment Atlas**. The
+population-density fourth-mode direction later in this file is superseded.
+Human Morphology is a shared overlay and reserves **V1.2.0** only after GHSL
+Plans 1–7 complete.
 Pleiades/Wikidata cultural work remains a later goal.
 
 The goal is complete only when the release is public, deployed, documented,
@@ -142,9 +145,9 @@ Acceptance:
 
 ## Milestone 2 — public V1 release
 
-Status: **in progress**. Public surface PR #2 and Pages-path PR #3 are merged.
-The first public deployment at `40c4ab2` passed CI, Pages deployment, and
-desktop/mobile live smoke; final evidence, redeployment, tag, and Release remain.
+Status: **completed historical milestone**. Public surface PR #2, Pages-path PR
+#3, and final evidence PR #4 are merged. Final CI, Pages, desktop/mobile live
+smoke, tag, and Release agree on `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`.
 
 The smallest responsible public-showcase slice is defined in
 [MVP_RELEASE_PLAN.md](MVP_RELEASE_PLAN.md). Execute that plan first. The
@@ -181,12 +184,13 @@ skipped gate.
 Gate: do not switch the repository public until security, licensing, governance,
 CI, deployment rehearsal, and final clean-tree reviews all pass.
 
-## Milestone 3 — GHSL Human Terrain data foundation
+## Superseded history — GHSL population-density foundation
 
-Status: **pending Milestone 2**.
+Status: **superseded; do not execute the bullets below**. The accepted Human
+Morphology direction and Plans 1–7 in `ROADMAP_HANDOFF.md` replace this fourth-mode proposal.
 
 - Product contract: answer “How does human settlement form a continuous terrain
-  across Earth?” with global 2020 population density in people/km². V1.1 has one
+  across Earth?” with global 2020 population density in people/km². This historical proposal had one
   fixed year, a documented logarithmic color transform, explicit zero/nodata and
   ocean semantics, and numeric point results; built-up surface and time playback
   remain later work.
@@ -206,9 +210,9 @@ Status: **pending Milestone 2**.
 Gate: independent data/license review, reproducible rebuild, hash match, global
 coverage, user-visible units/transform, nodata policy, and size/GPU budgets.
 
-## Milestone 4 — Human Terrain V1.1
+## Superseded history — Human Terrain fourth mode
 
-Status: **pending Milestone 3**.
+Status: **superseded; do not execute**.
 
 - Add the fourth curated observation mode through the finite mode orchestration
   boundary; do not expose renderer/camera internals.
@@ -219,7 +223,8 @@ Status: **pending Milestone 3**.
   entry as one vertical slice.
 - Measure cached switch feedback, frame profile, memory/resource lifecycle, and
   real-device behavior available at release time.
-- Review, merge, deploy, tag `v1.1.0`, and verify using the same publication loop.
+- Historical tag proposal `v1.1.0` is withdrawn. Human Morphology reserves
+  V1.2.0 only if the accepted shared-overlay Plans 1–7 complete.
 
 ## Deferred after this goal
 

@@ -103,24 +103,39 @@ Plan 1 budgets and later service contracts must inform them.
 
 ## 5. Current Execution Checkpoint
 
+Release identity is canonical:
+
+- **V1.0.0** — verified public baseline at
+  `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`;
+- **V1.1.0 Parchment Atlas** — current unpublished local candidate: parchment
+  presentation, drag cross-section, bilingual GeoNames search, bilateral city
+  relations, and Natural Earth vector globe;
+- **V1.2.0 Human Morphology** — reserved for the later shared GHSL overlay only
+  after Plans 1–7 and owner gates complete.
+
+`package.json` is private build metadata; its `0.1.0` value is not a product
+release identity.
+
 Plan 1 is approved and is being executed with Subagent-Driven Development in:
 
 - worktree: `.worktrees/codex-ghsl-global-proof`;
 - branch: `codex/ghsl-global-proof`.
 
-At the handoff checkpoint recorded while creating this index:
+Current evidence at the 2026-07-31 convergence checkpoint:
 
 - Plan 1 Tasks 1 through 11 passed implementation, specification review, and
   code-quality review;
-- Task 12, recoverable job orchestration, is under correction after
-  specification review;
-- Task 13, representative-region review, has not started;
+- Task 12 recoverable orchestration is implemented on the active GHSL branch;
+- Task 13 representative-region review passed with 8,701 forms, 1,150,677
+  scoped authoritative runs, zero false negatives, and ten-region manual review;
 - Task 14, global Build A, has not started;
 - Task 15, independent Build B, has not started;
 - Task 16, final review package and owner budget gate, has not started;
-- the technical decision remains `STOP_GLOBAL_MORPHOLOGY` because corrected
-  global geometry, final packing/index evidence, and two reproducible builds are
-  incomplete.
+- before Build A/B, the V1.1.0 Parchment Atlas product candidate must complete
+  release convergence and receive a clear owner-reviewed publication decision;
+- the final Plan 1 technical decision is pending because two independent
+  reproducible global builds are incomplete. The earlier STOP report is
+  historical evidence, not the current terminal decision.
 
 This checkpoint is orientation, not immutable truth. Before acting, inspect the
 execution worktree, local master plan, active detailed plan, ignored proof

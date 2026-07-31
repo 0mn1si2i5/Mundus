@@ -2,6 +2,11 @@
 
 本文只记录当前实施切片；稳定的产品与架构决策仍以 [PROJECT_PLAN.md](PROJECT_PLAN.md) 为准。
 
+部署状态必须与实施状态分开理解：公开 V1.0.0 固定在
+`a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`；本文顶部的 Natural Earth
+矢量球、GeoNames 双语搜索、双侧城市关系、拖拽剖面和羊皮纸视觉属于尚未发布的
+**V1.1.0 Parchment Atlas** 候选。实现与本地门通过不等于已部署。
+
 当前执行目标、批次门槛和审阅循环见 [EXECUTION_PLAN.md](EXECUTION_PLAN.md)。
 
 ## Natural Earth 完整矢量球面
@@ -23,7 +28,7 @@
 实体设备性能；本次没有可用实体硬件，medium/high 50m 的实体手机/桌面采样仍是
 后续发布验证项。
 
-## V1 MVP 发布：首次 Pages 部署已验证，最终发布证据待合并
+## V1.0.0 发布：完成并线上验证
 
 - [x] 阶段 1–4 私有基线完成三方审阅、纠错复验与远端 CI 同步
 - [x] 一次性首次操作提示与 Mode Atlas
@@ -36,7 +41,7 @@
 - [x] PR #3 通过发布审阅并合并到 `main`
 - [x] 仓库已公开，Pages、`main` 保护和私密漏洞报告已启用
 - [x] 首次 Pages 部署和桌面/移动自动线上冒烟通过
-- [ ] 合并最终证据 PR，再次部署验证并创建 `v1.0.0` 与 GitHub Release
+- [x] 最终证据 PR #4 合并；最终 `main`、Pages、`v1.0.0` 标签和 GitHub Release 均指向 `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`
 
 2026-07-20 合并前历史检查点：私有 `main` 位于 `fc0ce78`；当前分支
 `codex/v1-pages-release` 位于 `5c8fb25`。PR #3 可合并，远端 `quality`、
@@ -52,11 +57,11 @@
 [Pages](https://github.com/0mn1si2i5/Mundus/actions/runs/29722665114) 均通过；
 `pages-artifact`、`deploy-pages` 和桌面/移动 `live-smoke` 完整成功。线上地址
 为 <https://0mn1si2i5.github.io/Mundus/>，HTTPS 请求返回 200 和预期文档
-标题。最终标签必须等待本证据变更合并后的同 SHA 部署再次通过。
+标题。该首次部署随后由最终证据提交的同 SHA 部署、标签与 Release 闭环取代。
 
-零上下文执行线程必须先阅读仓库根目录的 [AGENTS.md](../AGENTS.md)，然后按
-[MVP_RELEASE_PLAN.md](MVP_RELEASE_PLAN.md) 与
-[RELEASE_RUNBOOK.md](RELEASE_RUNBOOK.md) 完成剩余发布闭环。
+零上下文执行线程必须先阅读仓库根目录的 [AGENTS.md](../AGENTS.md) 和
+[ROADMAP_HANDOFF.md](ROADMAP_HANDOFF.md)。V1 发布计划与 runbook 是已完成历史，
+不得据此重复创建 V1.0.0。
 
 基线检查点为私有 `main` 的 `1d627e6`：本地 57 个单元测试、31 个浏览器测试通过（1 个桌面专属生命周期用例在移动项目按设计跳过），远端 quality 与 browser-smoke 均通过。公开发布仍以执行计划中的产品、安全、许可和部署门槛为准。
 

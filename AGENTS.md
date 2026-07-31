@@ -1,8 +1,32 @@
 # Mundus execution-agent startup guide
 
+## Current authority — V1.0.0 live; V1.1.0 candidate unpublished
+
+Mundus V1.0.0 is released. Public `main`, Pages, tag `v1.0.0`, and the GitHub
+Release target `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`. The verified site is
+<https://0mn1si2i5.github.io/Mundus/>.
+
+Local `main` contains the unpublished **V1.1.0 Parchment Atlas** candidate:
+parchment presentation, drag cross-section, bilingual GeoNames search,
+bilateral city relations, and the Natural Earth vector globe. Local checks do
+not make those changes live. Do not merge, deploy, tag, or create a Release
+without explicit owner authorization for the exact candidate.
+
+GHSL Human Morphology is a shared overlay, not a fourth mode. Reserve product
+identity **V1.2.0** for it only if Plans 1–7 and their approval gates complete.
+The active roadmap authority is `docs/ROADMAP_HANDOFF.md`; older V1 release text
+below is durable history unless current Git and remote evidence agree with it.
+
 This file is the required starting point for an agent entering this repository
 with no previous context. Read it completely before changing files or remote
 state.
+
+## Frozen V1 release history below
+
+Sections 1–13 below preserve the completed V1.0.0 execution contract and must
+not be executed as current release instructions. Current work starts from
+`docs/ROADMAP_HANDOFF.md` and the active approved detailed plan. In particular,
+do not repeat V1 visibility, deployment, tag, or Release actions.
 
 ## 1. Your assignment
 
@@ -79,7 +103,8 @@ become stale. Run the refresh commands in Section 5 before acting.
 - `main` branch protection: enabled with strict `quality`, `browser-smoke`, and
   `pages-artifact` checks plus resolved review conversations
 - Private vulnerability reporting: enabled
-- Tags/releases: no `v1.0.0` release was found
+- Tags/releases at this historical snapshot: no `v1.0.0` release was found;
+  the current-authority section above records its later completion
 
 ### Pull requests
 
@@ -572,8 +597,8 @@ release is incomplete and identify the exact blocker.
 6. **Overbuilding open-source governance.** Contribution walkthroughs,
    marketplace contracts, Dependabot, and CodeQL are not MVP blockers unless a
    concrete review promotes them to P0/P1.
-7. **Adding a fourth mode.** GHSL Human Terrain is V1.1 and begins only after V1
-   release completion.
+7. **Adding a fourth mode.** Human Morphology is a shared overlay, not a mode;
+   V1.2.0 remains gated by GHSL Plans 1–7 and owner approval.
 8. **Breaking project Pages paths.** Root-relative assets can work locally and
    fail under `/Mundus/`; keep artifact verification intact.
 9. **Publishing source maps.** V1 intentionally prohibits them.
@@ -586,18 +611,19 @@ release is incomplete and identify the exact blocker.
 
 ## 15. Deferred roadmap
 
-After V1 is genuinely complete, the next accepted product direction is V1.1
-Human Terrain using a licensed GHSL global 2020 population-density slice. That
-future work has explicit asset/GPU budgets and data-license gates in
-`docs/EXECUTION_PLAN.md`.
+The current unpublished product candidate is V1.1.0 Parchment Atlas. Human
+Morphology reserves V1.2.0 only after GHSL Plans 1–7 and their budget/release
+gates complete. The current sequence is in `docs/ROADMAP_HANDOFF.md`.
 
-Do not begin it during this release assignment. Also defer Pleiades/Wikidata
-cultural exploration, plugin marketplaces, street-level GIS, weather, time-zone
-layers, offline/PWA work, accounts, and backend services.
+Continue only the approved GHSL plan named by the active roadmap; do not begin
+Plans 2–7 without their documented gates and owner authorization. Also defer
+Pleiades/Wikidata cultural exploration, plugin marketplaces, street-level GIS,
+weather, time-zone layers, offline/PWA work, accounts, and backend services.
 
-## 16. Copy-paste kickoff prompt
+## 16. Historical kickoff prompt
 
-If a controller needs to start a fresh execution thread, use:
+The prompt below is retained only as V1.0.0 history. Do not use it for a current
+execution thread; use the active roadmap and detailed continuation plan.
 
 > Work in `/Users/bytedance/Desktop/Zen/Mundus`. Read `AGENTS.md` completely,
 > then read the referenced release and product documents in its prescribed

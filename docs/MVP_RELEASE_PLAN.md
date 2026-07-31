@@ -1,17 +1,16 @@
 # Mundus V1 MVP release plan
 
-- Status: Packets A-C complete; Packet D is completing final evidence and release
+- Status: completed historical V1.0.0 plan
 - Prepared: 2026-07-16
 - Status refreshed: 2026-07-20
-- Current branch: `codex/v1-release-evidence`
-- Current checkpoint: first public deployment `40c4ab2`
+- Final commit/deployment/tag/Release: `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`
 - Production host: GitHub Pages
 - Production source: protected, reviewed `main`
 - Public fallback URL: `https://0mn1si2i5.github.io/Mundus/`
 - Durable entry point: optional user-owned custom domain, configured after the
   Pages URL is healthy
 
-This is the execution handoff for the smallest responsible public release. It
+This is the frozen execution record for the smallest responsible public release. It
 narrows the broader open-source work in [EXECUTION_PLAN.md](EXECUTION_PLAN.md)
 to the work that must be complete before a public showcase launch.
 
@@ -19,8 +18,9 @@ For a zero-context takeover, read the repository root
 [`AGENTS.md`](../AGENTS.md) first. PR #1 and PR #2 have been merged. PR #3 has
 been merged. The repository is public; Pages, `main` protection, and private
 vulnerability reporting are enabled; the first deployment and automated live
-smoke passed. Packet D still requires final evidence merge, redeployment, tag,
-and GitHub Release.
+smoke passed. Packet D, final evidence, redeployment, tag, and GitHub Release
+are complete. Do not execute the unchecked historical steps below as current
+work; use [ROADMAP_HANDOFF.md](ROADMAP_HANDOFF.md).
 
 ## 1. Release outcome
 
@@ -186,8 +186,9 @@ Gate C evidence:
 
 ### Packet D — public launch
 
-Status: **in progress**. Public settings and the first deployment are complete;
-final evidence, redeployment, and the matching tag/Release remain.
+Status: **completed** at
+`a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`. The numbered steps below are the
+historical launch procedure, not current instructions.
 
 This packet changes public external state. Execute it only after Gates A–C and a
 final product-owner visibility confirmation.
@@ -243,22 +244,20 @@ launch gate.
 
 ## 5. Final acceptance checklist
 
-- [ ] Gates A, B, C, and D have complete evidence.
+- [x] Gates A, B, C, and D have complete evidence.
 - [x] `pnpm check` and full Playwright pass on the first deployed commit.
 - [x] Remote CI and first Pages deployment pass.
-- [ ] No unresolved P0/P1 product, accessibility, data, license, or security
+- [x] No unresolved P0/P1 product, accessibility, data, license, or security
       finding remains.
 - [x] Automated live desktop and mobile smoke pass.
-- [ ] The three V1 modes, bilingual UI, sharing, attribution, and fallback paths
+- [x] The three V1 modes, bilingual UI, sharing, attribution, and fallback paths
       are available on the public URL.
-- [ ] README and repository homepage point to the live site from final `main`.
-- [ ] Pages deployment SHA = `main` release commit SHA = `v1.0.0` target SHA.
-- [ ] Known P2 limitations are written in the release, not silently forgotten.
+- [x] README and repository homepage point to the live site from final `main`.
+- [x] Pages deployment SHA = `main` release commit SHA = `v1.0.0` target SHA.
+- [x] Known P2 limitations are written in the release, not silently forgotten.
 
 ## 6. Handoff instruction for the execution thread
 
-Packets A-C and the first public deployment are complete. Resume at PR #4:
-review and merge the final evidence change, wait for its exact merge SHA to pass
-CI, Pages deployment, automated live smoke, and the remaining public-site
-product checklist, then create `v1.0.0` and the GitHub Release at that same SHA.
-Do not start V1.1, add product features, or broaden the contribution system.
+This handoff is complete history. PR #4, final CI/Pages/live smoke, `v1.0.0`,
+and the GitHub Release all closed at the same SHA. Current work starts from
+`ROADMAP_HANDOFF.md`; do not repeat the V1.0.0 publication steps.

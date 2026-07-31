@@ -7,7 +7,8 @@ through three different scientific lenses. It is designed as a small digital
 museum exhibit: direct enough to explore, explicit about its methods, and
 careful about the limits of its data.
 
-The V1 scope is intentionally limited to three modes:
+The product remains intentionally limited to three modes. This checkout is the
+unpublished **V1.1.0 Parchment Atlas** candidate:
 
 - **Other Side** calculates exact antipodal endpoints and shows the nearest
   eligible major city to each endpoint in the bundled GeoNames snapshot. These
@@ -19,9 +20,12 @@ The V1 scope is intentionally limited to three modes:
 - **Sunline** visualizes the day-night boundary and estimates solar position,
   sunrise, and sunset in UTC for educational use.
 
-Explore the verified live site at <https://0mn1si2i5.github.io/Mundus/>. Its
-GitHub Pages deployment is built from reviewed `main` and checked on desktop
-and mobile after each production deployment.
+The verified public **V1.0.0** site is
+<https://0mn1si2i5.github.io/Mundus/> at commit
+`a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`. It predates this checkout's
+parchment presentation, GeoNames bilateral city relations, and Natural Earth
+vector globe. Those candidate capabilities are not public until a separately
+authorized deployment passes desktop/mobile live verification.
 
 ## Run locally
 
@@ -43,7 +47,7 @@ pnpm test:e2e
 tests, and the production build. Production source maps are deliberately
 disabled for the V1 public artifact.
 
-The globe uses reproducibly generated Natural Earth vector spheres: low quality
+The local candidate uses reproducibly generated Natural Earth vector spheres: low quality
 loads 110m, while medium/high quality loads 50m. Country colors are supplied by
 a small palette texture, and the existing raster globe remains the loading and
 failure fallback.

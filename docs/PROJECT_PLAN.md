@@ -59,7 +59,7 @@ Mundus 是一个“数字博物馆展品 × 科学仪器 × 互动图鉴”式�
 - PWA、离线包和实时自然事件数据。
 - 幸福指数数据；在取得明确开放再分发许可前不打包 World Happiness Report/Gallup 数据。
 
-V1.1 优先加入基于 GHSL 的“人类地形”；后续文化模式优先采用 Wikidata、Pleiades 等许可清晰的数据源。
+V1.1.0 是当前尚未发布的 Parchment Atlas 产品候选；基于 GHSL 的 Human Morphology 是后续共享观察叠层，预留 V1.2.0 身份且必须先完成 Plans 1–7 与预算门。后续文化方向优先采用 Wikidata、Pleiades 等许可清晰的数据源。
 
 ## 3. 体验与视觉设计
 
