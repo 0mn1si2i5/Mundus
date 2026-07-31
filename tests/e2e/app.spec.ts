@@ -3232,7 +3232,7 @@ test('uses the accent focus ring for keyboard form and disclosure controls only'
   ).toBe('none');
 });
 
-test('uses the bright parchment atlas contract across modes and modal surfaces', async ({
+test('uses the bright parchment atlas contract across modes', async ({
   page,
 }) => {
   const scenarios = [
@@ -3301,7 +3301,11 @@ test('uses the bright parchment atlas contract across modes and modal surfaces',
       ),
     ).toBe(true);
   }
+});
 
+test('uses the bright parchment atlas contract across modal surfaces', async ({
+  page,
+}) => {
   await page.goto('./');
   await page.getByRole('button', { name: '分享' }).click();
   const share = page.getByRole('dialog', { name: '分享这一视角' });
