@@ -6,15 +6,24 @@ Mundus V1.0.0 is released. Public `main`, Pages, tag `v1.0.0`, and the GitHub
 Release target `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`. The verified site is
 <https://0mn1si2i5.github.io/Mundus/>.
 
-Local `main` contains the unpublished **V1.1.0 Parchment Atlas** candidate:
-parchment presentation, drag cross-section, bilingual GeoNames search,
-bilateral city relations, and the Natural Earth vector globe. Local checks do
-not make those changes live. Do not merge, deploy, tag, or create a Release
-without explicit owner authorization for the exact candidate.
+The current authorized work is convergence of the unpublished **V1.1.0
+Parchment Atlas** candidate on branch `codex/v1.1-parchment-convergence` in
+Draft PR #5: parchment presentation, drag cross-section, bilingual GeoNames
+search, bilateral city relations, and the Natural Earth vector globe. Local
+checks do not make those changes live. Do not merge, deploy, tag, or create a
+Release without explicit owner authorization for the exact candidate.
+
+The approved ignored local execution aid is in the primary checkout at
+`/Users/bytedance/Desktop/Zen/Mundus/docs/superpowers/plans/2026-08-01-mundus-v1.1-parchment-atlas-convergence.md`.
+Agents in linked worktrees read it there as read-only and must not copy or add
+it. Tracked handoffs and Draft PR #5 remain the durable authority and evidence.
 
 GHSL Human Morphology is a shared overlay, not a fourth mode. Reserve product
 identity **V1.2.0** for it only if Plans 1–7 and their approval gates complete.
-The active roadmap authority is `docs/ROADMAP_HANDOFF.md`; older V1 release text
+GHSL Plan 1 terminated with `STOP_GLOBAL_MORPHOLOGY` at
+`6e396d90ef215085a3d5bc8dbf602b6e4f239051`; Plans 2–7 are frozen. Its detailed
+recovery plan is historical evidence and does not authorize a restart. The
+active roadmap authority is `docs/ROADMAP_HANDOFF.md`; older V1 release text
 below is durable history unless current Git and remote evidence agree with it.
 
 This file is the required starting point for an agent entering this repository
@@ -25,8 +34,10 @@ state.
 
 Sections 1–13 below preserve the completed V1.0.0 execution contract and must
 not be executed as current release instructions. Current work starts from
-`docs/ROADMAP_HANDOFF.md` and the active approved detailed plan. In particular,
-do not repeat V1 visibility, deployment, tag, or Release actions.
+`docs/ROADMAP_HANDOFF.md`, the tracked terminal GHSL handoff, and the approved
+local V1.1 convergence plan named above. Draft PR #5 remains the durable review
+record. In particular, do not repeat V1 visibility, deployment, tag, or Release
+actions.
 
 ## 1. Your assignment
 
@@ -615,15 +626,17 @@ The current unpublished product candidate is V1.1.0 Parchment Atlas. Human
 Morphology reserves V1.2.0 only after GHSL Plans 1–7 and their budget/release
 gates complete. The current sequence is in `docs/ROADMAP_HANDOFF.md`.
 
-Continue only the approved GHSL plan named by the active roadmap; do not begin
-Plans 2–7 without their documented gates and owner authorization. Also defer
-Pleiades/Wikidata cultural exploration, plugin marketplaces, street-level GIS,
-weather, time-zone layers, offline/PWA work, accounts, and backend services.
+GHSL Plan 1 is terminal at `6e396d90ef215085a3d5bc8dbf602b6e4f239051`.
+Do not restart it or begin Plans 2–7 unless GHSL is separately reopened and
+approved. Continue V1.1 convergence on `codex/v1.1-parchment-convergence` in
+Draft PR #5. Also defer Pleiades/Wikidata cultural exploration, plugin
+marketplaces, street-level GIS, weather, time-zone layers, offline/PWA work,
+accounts, and backend services.
 
 ## 16. Historical kickoff prompt
 
 The prompt below is retained only as V1.0.0 history. Do not use it for a current
-execution thread; use the active roadmap and detailed continuation plan.
+execution thread; use the active roadmap and V1.1 convergence authority above.
 
 > Work in `/Users/bytedance/Desktop/Zen/Mundus`. Read `AGENTS.md` completely,
 > then read the referenced release and product documents in its prescribed

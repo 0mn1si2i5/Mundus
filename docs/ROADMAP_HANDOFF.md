@@ -26,18 +26,26 @@ The local-only master plan is expected at:
 It owns the order, dependencies, approval gates, and completion status of GHSL
 Plans 1 through 7. It does not replace the accepted scientific design.
 
-### Layer C: Active detailed plan
+### Layer C: Last approved detailed plan
 
-The currently approved detailed plan is expected at:
+The terminal recovery plan is expected at:
 
-`docs/superpowers/plans/2026-07-22-ghsl-global-feasibility-proof.md`
+`docs/superpowers/plans/2026-08-01-ghsl-plan1-48h-global-validation-recovery.md`
 
-It owns task-level files, TDD steps, commands, expected failures and successes,
-commit boundaries, long-job behavior, and the current execution checkpoint.
+It records the task-level files, TDD steps, commands, expected failures and
+successes, commit boundaries, long-job behavior, and terminal execution path.
+It is not authorization to restart or resume Plan 1.
 
 The files under `docs/superpowers/` are intentionally local-only through
 `.git/info/exclude`. They must not be added to Git unless the product owner
-explicitly changes that policy.
+explicitly changes that policy. Detailed migration and convergence plans there
+are local execution aids; durable decisions and final evidence belong in
+tracked documentation and PR #5.
+
+The approved ignored V1.1 execution aid is in the primary checkout at
+`/Users/bytedance/Desktop/Zen/Mundus/docs/superpowers/plans/2026-08-01-mundus-v1.1-parchment-atlas-convergence.md`.
+Agents in linked worktrees read it there as read-only and must not copy or add
+it. Tracked handoffs and Draft PR #5 remain the durable authority and evidence.
 
 ## 2. Authority Order
 
@@ -45,21 +53,24 @@ Use this order when documents disagree:
 
 1. Current product-owner instruction and explicit approval gates.
 2. Repository root `AGENTS.md` for Git, release, data, and remote-state safety.
-3. Accepted design:
+3. This repository-visible handoff index and
+   `docs/GHSL_EXECUTION_HANDOFF.md` for current status and sequencing.
+4. If GHSL is explicitly reopened, the accepted design:
    `docs/superpowers/specs/2026-07-22-ghsl-human-morphology-overlay-design.md`.
-4. This repository-visible handoff index for planning layers and high-level
-   sequencing.
-5. The local GHSL master plan for phase dependencies and status.
-6. The approved active detailed plan for task execution.
+5. If GHSL is explicitly reopened, the local master plan for phase dependencies.
+6. The last approved detailed GHSL plan as historical execution evidence only.
 7. Current Git, artifact, checkpoint, and test evidence.
 8. Older roadmap and status text.
 
 Current evidence overrides stale status snapshots, but implementation evidence
 must never silently change an accepted scientific or product contract.
 
-If the accepted design or local detailed plans are unavailable, stop and ask the
-product owner to restore or approve them. Do not reconstruct scientific rules,
-budgets, or implementation tasks from older roadmap prose.
+For current V1.1 convergence, the tracked terminal documents, Draft PR #5, and
+the approved ignored convergence plan named above govern; absent ignored GHSL
+source plans are not a blocker. If GHSL is explicitly reopened, stop until the
+accepted design, master plan, and a newly approved detailed plan are available.
+Never reconstruct scientific rules, budgets, or implementation tasks from older
+roadmap prose.
 
 ## 3. Accepted GHSL Direction
 
@@ -96,10 +107,10 @@ The GHSL project is divided into seven separately approved plans:
 | 6. Mode interpretations                   | Shared facts and at most one bounded finding in each existing mode                                                         | Plans 3, 4, and 5                                     |
 | 7. Global promotion and release           | Reproducible global artifact, Pages rehearsal, browser gates, deployment, live smoke, and release evidence                 | Plans 1 through 6 complete                            |
 
-Only Plan 1 currently has an approved detailed implementation plan. Plans 2
-through 7 must each be written and reviewed after their start gate passes. Do
-not create all detailed plans in advance merely to fill filenames; measured
-Plan 1 budgets and later service contracts must inform them.
+Plan 1 reached the terminal `STOP_GLOBAL_MORPHOLOGY` decision. Plans 2 through 7
+are frozen and blocked. Do not restart Plan 1 or prepare later detailed plans
+unless the project is separately reopened and the applicable owner gates are
+approved; measured Plan 1 evidence must inform any such decision.
 
 ## 5. Current Execution Checkpoint
 
@@ -116,35 +127,38 @@ Release identity is canonical:
 `package.json` is private build metadata; its `0.1.0` value is not a product
 release identity.
 
-Plan 1 is approved and is being executed with Subagent-Driven Development in:
+Plan 1 is terminal in:
 
 - worktree: `.worktrees/codex-ghsl-global-proof`;
-- branch: `codex/ghsl-global-proof`.
+- branch: `codex/ghsl-global-proof`;
+- terminal commit: `6e396d90ef215085a3d5bc8dbf602b6e4f239051`;
+- parent implementation commit: `e2d060518438b9b4b7c86cef53bbd5aeecd94341`.
 
-Current evidence at the 2026-07-31 convergence checkpoint:
+Verified terminal evidence at the 2026-08-01 checkpoint:
 
-- Plan 1 Tasks 1 through 11 passed implementation, specification review, and
-  code-quality review;
-- Task 12 recoverable orchestration is implemented on the active GHSL branch;
-- Task 13 representative-region review passed with 8,701 forms, 1,150,677
-  scoped authoritative runs, zero false negatives, and ten-region manual review;
-- Task 14, global Build A, has not started;
-- Task 15, independent Build B, has not started;
-- Task 16, final review package and owner budget gate, has not started;
-- before Build A/B, the V1.1.0 Parchment Atlas product candidate must complete
-  release convergence and receive a clear owner-reviewed publication decision;
-- the final Plan 1 technical decision is pending because two independent
-  reproducible global builds are incomplete. The earlier STOP report is
-  historical evidence, not the current terminal decision.
+- the strict global audit passed for 15,576/15,576 tiles, 100,070 retained
+  roots, 10,345,449 retained runs, and zero topology findings;
+- representative review passed with 8,701 forms, 1,150,677 scoped authoritative
+  runs, zero false negatives, and ten-region manual review;
+- implementation commit `e2d060518438b9b4b7c86cef53bbd5aeecd94341`
+  produced two independent containment and outline passes with exactly 100,070
+  successful outlines in each build and no failed or pending outline records;
+- Build A reached 10,000 fill records at about 9,261 records/hour, projecting
+  about 10.81 hours for the fill stage and breaching the approved eight-hour
+  ceiling;
+- Build A was checkpointed during fill and Build B after outline. Neither is a
+  complete formal build, and neither may be resumed, reused, copied, deleted,
+  or represented as completed Build A/B evidence;
+- the terminal decision is `STOP_GLOBAL_MORPHOLOGY`. Plans 2 through 7 are
+  frozen and blocked unless separately reopened and approved.
 
-This checkpoint is orientation, not immutable truth. Before acting, inspect the
-execution worktree, local master plan, active detailed plan, ignored proof
-evidence, and current tests. Never discard unknown or unfinished worktree
-changes.
+The concise terminal evidence and preserved output paths are recorded in
+`docs/GHSL_EXECUTION_HANDOFF.md`. Continue V1.1.0 Parchment Atlas convergence;
+do not treat local GHSL plans as current execution instructions.
 
 ## 6. Required Execution Workflow
 
-For every detailed GHSL task:
+If GHSL is separately reopened, every approved detailed task must:
 
 1. Work only in the approved isolated worktree and branch.
 2. Use TDD: observe the focused failure before implementation.
@@ -154,11 +168,12 @@ For every detailed GHSL task:
 6. Run an independent code-quality review.
 7. Correct every quality finding and re-review.
 8. Run proportionate focused tests and the required repository gate.
-9. Update the local master-plan and active-plan checkpoint.
+9. Update the local master-plan and approved detailed-plan checkpoint.
 
 Long global jobs must expose separate preflight, start, status, resume, verify,
 and report operations. A timeout is not a failed job. Never start or resume a
-job while status proves an existing owner process is live.
+job while status proves an existing owner process is live. This general policy
+does not authorize resuming the terminal Plan 1 outputs.
 
 ## 7. Status Vocabulary
 
@@ -182,6 +197,7 @@ Use status terms precisely:
 
 Stop and ask the product owner before:
 
+- reopening or restarting GHSL Plan 1, or starting any of Plans 2 through 7;
 - approving or loosening global file, byte, pack, fan-out, runner, fill, heap, or
   GPU ceilings;
 - changing the source, threshold, connectivity, minimum component size, strict
@@ -189,7 +205,8 @@ Stop and ask the product owner before:
 - reducing coverage to GeoNames-associated forms or a regional subset;
 - introducing nearest-form fallback, a backend, HTTP Range dependency, or GIS
   tiles;
-- starting runtime, URL, UI, or WebGL work before Plan 1 and its budget gate;
+- starting GHSL Human Morphology runtime, URL, UI, or WebGL work before Plan 1
+  is formally reopened and its budget gate passes;
 - beginning a post-GHSL product direction without an accepted design and plan;
 - pushing, opening a PR, deploying, tagging, releasing, or changing remote
   settings without the applicable authorization in `AGENTS.md`.
@@ -224,17 +241,19 @@ Also deferred after GHSL:
 
 ## 10. New-Agent Startup
 
-A new agent continuing GHSL must:
+A new agent must:
 
 1. Read `AGENTS.md` and this file completely.
-2. Refresh Git and inspect every dirty or ignored execution artifact.
-3. Read the accepted Human Morphology design completely.
-4. Read the local GHSL master plan and active detailed plan.
-5. Confirm which detailed task is approved and in progress.
-6. Inspect current evidence instead of relying on this checkpoint's counts.
-7. Continue the approved task through both review gates.
-8. Stop at the next product-owner approval gate.
+2. Read `docs/GHSL_EXECUTION_HANDOFF.md` as terminal evidence and status only.
+3. Preserve the stopped Build A/B outputs without resuming, reusing, copying,
+   deleting, or presenting them as complete formal builds.
+4. Read the approved ignored local execution aid read-only from
+   `/Users/bytedance/Desktop/Zen/Mundus/docs/superpowers/plans/2026-08-01-mundus-v1.1-parchment-atlas-convergence.md`,
+   then continue V1.1.0 Parchment Atlas convergence in Draft PR #5. Do not copy
+   or add the local plan; tracked handoffs and the PR remain durable.
+5. Keep GHSL Plans 2 through 7 frozen unless the project is separately reopened
+   and approved.
 
-If the task is instead post-GHSL product work, the agent must first confirm GHSL
-Plan 7 is genuinely complete, then run brainstorming and write a focused design.
+If GHSL or post-GHSL product work is later proposed, first obtain the applicable
+owner approval, then use the accepted design and a focused detailed plan.
 High-level direction in this file is never sufficient permission to implement.
