@@ -32,6 +32,15 @@ describe('mode registry', () => {
     }
   });
 
+  it('uses non-causal wording for the prominent English Development question', () => {
+    const question = MODE_DEFINITIONS.development.question.en;
+
+    expect(question).toBe(
+      'What different structures can underlie similar levels of development?',
+    );
+    expect(question).not.toMatch(/produce|cause/iu);
+  });
+
   it('validates Other Side coordinates', () => {
     const schema = MODE_DEFINITIONS.antipodes.stateSchema;
     expect(

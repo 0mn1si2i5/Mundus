@@ -58,7 +58,7 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
     titlePhrases: { zh: ['发展的', '不同侧面'] },
     question: {
       zh: '相近的发展水平，由哪些不同的结构组成？',
-      en: 'What different structures can produce similar levels of development?',
+      en: 'What different structures can underlie similar levels of development?',
     },
     summary: {
       zh: '拆开健康、教育与收入，观察相近结果背后的不同结构。',
