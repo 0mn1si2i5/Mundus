@@ -113,13 +113,17 @@ license.
 | Material                        | Version                           | Terms                                                         | Attribution                                                                                        |
 | ------------------------------- | --------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | Natural Earth Admin 0 countries | 4.1.0 through `world-atlas` 2.0.2 | Public domain                                                 | Made with Natural Earth                                                                            |
-| GeoNames major-city snapshot    | Retrieved 2026-07-21              | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)     | Contains GeoNames data, licensed under CC BY 4.0                                                   |
+| GeoNames major-city snapshot    | Captured 2026-08-01T09:39:05.688Z | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)     | Contains GeoNames data, licensed under CC BY 4.0                                                   |
 | UNDP HDR complete time series   | HDR 2025, 1990–2023               | [CC BY 3.0 IGO](https://hdr.undp.org/copyright-and-terms-use) | Source: United Nations Development Programme, Human Development Report 2025; transformed by Mundus |
 
 Natural Earth source and terms are documented at
 <https://www.naturalearthdata.com/about/terms-of-use/>. Exact source URLs,
 hashes, transformations, and caveats are in [DATA_SOURCES.md](DATA_SOURCES.md)
 and `src/data/manifests/`.
+
+The redistributed GeoNames material includes both the normalized immutable
+build input and its compact runtime index. Both remain under CC BY 4.0 with the
+attribution above; the large raw rolling downloads are not redistributed.
 
 ## Build-only software
 

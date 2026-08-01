@@ -1,8 +1,9 @@
 # GeoNames major-city index
 
 The Other Side autocomplete and bilateral nearest-major-city relation use a
-reviewed GeoNames snapshot retrieved on
-2026-07-21. All five source files are pinned by SHA-256 in
+reviewed GeoNames snapshot captured together at `2026-08-01T09:39:05.688Z`
+(`2026-08-01 17:39:05.688` Asia/Shanghai). All five official source files are
+pinned by captured SHA-256 and HTTP identity in
 `src/data/manifests/geonames-major-cities.json`; raw archives remain ignored.
 
 Candidate A retains every active `PPLA` and `PPLC`, plus active `PPL`, `PPLA2`,
@@ -17,20 +18,36 @@ OpenCC traditional Chinese to Simplified Chinese with `opencc-js` 1.4.1 using
 every distinct simplified derivative remains searchable. Only additional
 non-display English aliases are capped at two. No non-Chinese name is
 translated. Missing Chinese names remain explicit canonical fallbacks.
+That visible non-Chinese fallback remains a known P2 for final release evidence;
+this correction does not expand UI or claim translated coverage.
 
-The compact index has 6,944 ID-sorted rows, E5 coordinates, a lexical string
+The compact index has 6,953 ID-sorted rows, E5 coordinates, a lexical string
 table, complete accepted Chinese aliases, and bounded additional English
-aliases. The committed asset is 779,105 raw bytes and 274,846 gzip bytes. Its
-static decoded estimate is 3,116,420 bytes. Including decoder-precomputed,
+aliases. The committed asset is 780,004 raw bytes and 275,263 gzip bytes. Its
+static decoded estimate is 3,120,016 bytes. Including decoder-precomputed,
 deduplicated normalized display/country/admin/alias fields, per-city search
-objects, and alias references, the conservative runtime total is 4,758,952
+objects, and alias references, the conservative runtime total is 4,764,314
 bytes, below the 8 MiB gate. Its SHA-256 is
-`0d3b027c525497968cfcf7f44ac531310b97ff4585753f30af82e1b2741d63e3`.
+`b48d0d5c34229b2337a979f8362bef3c7075bf67644819fe32ebe691a5d440f4`.
 
-Run `pnpm data:cities` from a clean checkout. Missing sources are streamed from
-the exact manifest URLs into ignored `tmp/geonames/`, verified before atomic
-rename, and valid cached sources are reused. A checksum mismatch fails closed;
-raw downloads are not committed.
+The redistributed CC BY 4.0 immutable build input uses schema 2 and is 2,814,375
+bytes with SHA-256
+`49b3f2114d1e71277572b2773cb1e5b8242f3eb22a9e89598eb95b79408c5621`.
+It contains only normalized upstream fields and rows required to regenerate the
+runtime result exactly; empty alternate-name groups and redundant nested
+GeoNames IDs are omitted. The five ignored raw files total 205,999,947 bytes,
+including the 202,504,032-byte alternate-names archive.
+
+Run `pnpm data:cities` from a clean checkout for a deterministic offline build
+from that verified tracked input. Run `pnpm data:cities:capture` only for a
+reviewed refresh of all five rolling official inputs. Capture downloads to
+an ignored unique staging directory, records hashes from the bytes actually
+received, and keeps that source directory immutable through verification,
+extraction, generation, and tracked publication. It publishes the input and
+runtime before the manifest and rolls the prior complete generation back on a
+forward replacement failure. If rollback itself fails, every restore is still
+attempted, errors are aggregated, and recoverable staging/backups are retained.
+The rolling URLs alone are not a rebuild identity.
 
 The visible relation searches this same immutable index independently from the
 exact origin and exact antipode. Results mean nearest eligible represented

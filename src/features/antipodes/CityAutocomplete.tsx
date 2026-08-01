@@ -56,6 +56,34 @@ export function CityAutocomplete({
       ? searchGeoNamesCities(loadState.data, query, locale)
       : [];
   const visible = open && results.length > 0;
+  const ambiguous = new Set<string>();
+  if (visible) {
+    const tuples = new Map<string, GeoNamesCity[]>();
+    for (const city of results) {
+      const key = [
+        city.name[locale],
+        city.admin1?.[locale],
+        city.country[locale],
+      ]
+        .filter(Boolean)
+        .join('\u0000');
+      const matches = tuples.get(key) ?? [];
+      matches.push(city);
+      tuples.set(key, matches);
+    }
+    for (const matches of tuples.values()) {
+      if (
+        matches.length > 1 &&
+        new Set(
+          matches.map(
+            (city) => `${city.point.latitude},${city.point.longitude}`,
+          ),
+        ).size > 1
+      ) {
+        for (const city of matches) ambiguous.add(String(city.id));
+      }
+    }
+  }
 
   useEffect(() => {
     function closeForOutsidePointer(event: PointerEvent) {
@@ -169,6 +197,11 @@ export function CityAutocomplete({
               id={`city-option-${city.id}`}
               key={city.id}
               role="option"
+              aria-label={optionLabel(
+                city,
+                locale,
+                ambiguous.has(String(city.id)),
+              )}
               aria-selected={index === active}
               onMouseDown={(event) => pointerSelect(event, city)}
             >
@@ -178,6 +211,9 @@ export function CityAutocomplete({
                   .filter(Boolean)
                   .join(' · ')}
               </span>
+              {ambiguous.has(String(city.id)) ? (
+                <small>{coordinateLabel(city, locale)}</small>
+              ) : null}
               {locale === 'zh' && city.name.en !== city.name.zh ? (
                 <small>{city.name.en}</small>
               ) : null}
@@ -198,4 +234,37 @@ export function CityAutocomplete({
       ) : null}
     </div>
   );
+}
+
+function formatCoordinate(value: number, positive: string, negative: string) {
+  return `${value >= 0 ? '+' : '-'}${Math.abs(value).toFixed(5)}° ${value >= 0 ? positive : negative}`;
+}
+
+function coordinateLabel(city: GeoNamesCity, locale: Locale) {
+  const latitude = formatCoordinate(
+    city.point.latitude,
+    locale === 'en' ? 'N' : '北',
+    locale === 'en' ? 'S' : '南',
+  );
+  const longitude = formatCoordinate(
+    city.point.longitude,
+    locale === 'en' ? 'E' : '东',
+    locale === 'en' ? 'W' : '西',
+  );
+  return locale === 'en'
+    ? `latitude ${latitude}; longitude ${longitude}`
+    : `纬度 ${latitude}；经度 ${longitude}`;
+}
+
+function optionLabel(city: GeoNamesCity, locale: Locale, ambiguous: boolean) {
+  const values = [
+    city.name[locale],
+    city.admin1?.[locale],
+    city.country[locale],
+  ].filter(Boolean);
+  if (ambiguous) values.push(coordinateLabel(city, locale));
+  if (locale === 'zh' && city.name.en !== city.name.zh) {
+    values.push(`英文名 ${city.name.en}`);
+  }
+  return values.join(locale === 'en' ? '; ' : '；');
 }

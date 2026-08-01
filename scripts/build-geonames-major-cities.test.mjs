@@ -1,11 +1,19 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { EventEmitter } from 'node:events';
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import test from 'node:test';
+import * as geoNamesBuilder from './build-geonames-major-cities.mjs';
 import {
   buildCompactIndex,
   buildFeasibilityIndex,
@@ -24,6 +32,400 @@ import {
   simplifyExistingChineseNames,
   writeGeneratedAssetAtomically,
 } from './build-geonames-major-cities.mjs';
+
+test('exposes distinct immutable-input build and reviewed capture operations', () => {
+  assert.equal(typeof geoNamesBuilder.createImmutableBuildInput, 'function');
+  assert.equal(
+    typeof geoNamesBuilder.buildRuntimeFromImmutableInput,
+    'function',
+  );
+  assert.equal(typeof geoNamesBuilder.captureSourceFiles, 'function');
+});
+
+test('builds the runtime asset deterministically from normalized immutable input', () => {
+  const input = {
+    schemaVersion: 2,
+    cities: [parseCityRow(cityRow())],
+    countries: [{ code: 'CN', name: 'China', geoNameId: 10 }],
+    admin1: [{ key: 'CN.22', name: 'Beijing', geoNameId: 11 }],
+    alternateNames: [
+      [
+        1816670,
+        [
+          {
+            id: 1,
+            geoNameId: 1816670,
+            language: 'zh',
+            name: '北京',
+            preferred: true,
+          },
+        ],
+      ],
+    ],
+  };
+  const first = geoNamesBuilder.buildRuntimeFromImmutableInput(input);
+  const second = geoNamesBuilder.buildRuntimeFromImmutableInput(input);
+  assert.deepEqual(first, second);
+  assert.equal(first.asset.rows.length, 1);
+  assert.equal(first.asset.rows[0][0], 1816670);
+});
+
+test('immutable input retains only fields and name languages used by the runtime transform', () => {
+  const city = parseCityRow(cityRow());
+  const input = geoNamesBuilder.createImmutableBuildInput({
+    cities: [city],
+    countries: new Map([['CN', { code: 'CN', name: 'China', geoNameId: 10 }]]),
+    admin1: new Map([
+      ['CN.22', { key: 'CN.22', name: 'Beijing', geoNameId: 11 }],
+    ]),
+    alternateNames: new Map([
+      [
+        city.id,
+        [
+          {
+            id: 1,
+            geoNameId: city.id,
+            language: 'en',
+            name: 'Beijing',
+            preferred: true,
+          },
+          {
+            id: 2,
+            geoNameId: city.id,
+            language: 'zh',
+            name: '北京',
+            preferred: true,
+          },
+          {
+            id: 3,
+            geoNameId: city.id,
+            language: 'fr',
+            name: 'Pekin',
+            preferred: true,
+          },
+        ],
+      ],
+    ]),
+  });
+
+  assert.equal(input.schemaVersion, 2);
+  assert.equal(input.cities[0].sourceAliases, undefined);
+  assert.deepEqual(
+    input.alternateNames[0][1].map((name) => name.language),
+    ['en', 'zh'],
+  );
+  assert.equal(input.alternateNames[0][1][0].geoNameId, undefined);
+  assert.equal(
+    input.alternateNames.some(([, names]) => names.length === 0),
+    false,
+  );
+});
+
+test('GeoNames budgets accept exact limits and reject every over-limit measurement', () => {
+  const limits = {
+    records: 10_000,
+    rawBytes: 1.5 * 1024 * 1024,
+    gzipBytes: 450 * 1024,
+    staticDecodedBytesEstimate: 6 * 1024 * 1024,
+    runtimeDecodedBytesEstimate: 8 * 1024 * 1024,
+  };
+  assert.doesNotThrow(() => geoNamesBuilder.assertGeoNamesBudgets(limits));
+  for (const field of Object.keys(limits)) {
+    assert.throws(
+      () =>
+        geoNamesBuilder.assertGeoNamesBudgets({
+          ...limits,
+          [field]: limits[field] + 1,
+        }),
+      new RegExp(field),
+    );
+  }
+});
+
+test('over-budget capture preparation fails before changing tracked generation', async (context) => {
+  const root = await mkdtemp(join(tmpdir(), 'mundus-geonames-budget-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const paths = ['input.json', 'runtime.json', 'manifest.json'].map((name) =>
+    join(root, name),
+  );
+  await Promise.all(
+    paths.map((path, index) => writeFile(path, `old-${index}`)),
+  );
+
+  assert.throws(
+    () =>
+      geoNamesBuilder.prepareCapturePublication({
+        manifest: {},
+        capture: { sources: [] },
+        inputBytes: Buffer.from('{}'),
+        outputBytes: Buffer.alloc(1.5 * 1024 * 1024 + 1),
+        compact: { rows: [], asset: { strings: [], rows: [] } },
+        retrievedAt: '2026-08-01T10:11:12.345Z',
+      }),
+    /rawBytes/,
+  );
+  assert.deepEqual(
+    await Promise.all(paths.map((path) => readFile(path, 'utf8'))),
+    ['old-0', 'old-1', 'old-2'],
+  );
+});
+
+test('concurrent captures keep each unique source generation immutable through publication', async (context) => {
+  const releases = new Map();
+  const published = [];
+  let capturedA;
+  const makeCapture = (identity) => async (rawDir) => {
+    const sourceDir = join(rawDir, `capture-${identity}`);
+    await mkdir(sourceDir, { recursive: true });
+    await writeFile(join(sourceDir, 'identity.txt'), identity);
+    return {
+      sourceDir,
+      sources: [
+        { sourceName: identity, sha256: identity.repeat(64).slice(0, 64) },
+      ],
+    };
+  };
+  const publish = async ({ capture, retrievedAt }) => {
+    if (capture.sources[0].sourceName === 'A') {
+      capturedA = capture.sourceDir;
+      await new Promise((resolve) => releases.set('A', resolve));
+    }
+    published.push({
+      identity: await readFile(join(capture.sourceDir, 'identity.txt'), 'utf8'),
+      provenance: capture.sources[0].sourceName,
+      retrievedAt,
+    });
+  };
+  const options = {
+    root: join(tmpdir(), `mundus-race-${crypto.randomUUID()}`),
+    verifyCapture: async () => {},
+    publishCapture: publish,
+  };
+  context.after(() => rm(options.root, { recursive: true, force: true }));
+  await mkdir(join(options.root, 'src/data/manifests'), { recursive: true });
+  await writeFile(
+    join(options.root, 'src/data/manifests/geonames-major-cities.json'),
+    '{}',
+  );
+
+  const a = geoNamesBuilder.runCaptureCommand({
+    ...options,
+    captureImplementation: makeCapture('A'),
+    now: () => new Date('2026-08-01T10:00:00.000Z'),
+  });
+  while (!capturedA) await new Promise((resolve) => setImmediate(resolve));
+  await geoNamesBuilder.runCaptureCommand({
+    ...options,
+    captureImplementation: makeCapture('B'),
+    now: () => new Date('2026-08-01T11:00:00.000Z'),
+  });
+  releases.get('A')();
+  await a;
+
+  assert.deepEqual(published, [
+    {
+      identity: 'B',
+      provenance: 'B',
+      retrievedAt: '2026-08-01T11:00:00.000Z',
+    },
+    {
+      identity: 'A',
+      provenance: 'A',
+      retrievedAt: '2026-08-01T10:00:00.000Z',
+    },
+  ]);
+});
+
+test('rejects an immutable input whose bytes do not match its pinned identity', async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), 'mundus-geonames-input-'));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const path = join(directory, 'input.json');
+  await writeFile(path, '{"schemaVersion":1}\n');
+
+  await assert.rejects(
+    geoNamesBuilder.readVerifiedImmutableInput(path, '0'.repeat(64)),
+    /Immutable build input checksum mismatch/,
+  );
+});
+
+test('a new capture replaces an existing timestamp with the current retrieval time', () => {
+  const prepared = geoNamesBuilder.prepareCapturePublication({
+    manifest: {
+      upstreamCapture: { retrievedAt: '2026-07-21T00:00:00.000Z' },
+    },
+    capture: { sources: [] },
+    inputBytes: Buffer.from('{"schemaVersion":1}\n'),
+    outputBytes: Buffer.from('{"formatVersion":1,"strings":[],"rows":[]}\n'),
+    compact: { rows: [], asset: { strings: [], rows: [] } },
+    retrievedAt: '2026-08-01T10:11:12.345Z',
+  });
+
+  assert.equal(
+    prepared.manifest.upstreamCapture.retrievedAt,
+    '2026-08-01T10:11:12.345Z',
+  );
+  assert.equal(prepared.manifest.retrievedAt, '2026-08-01');
+});
+
+test('an explicit existing-capture rebuild may retain its captured timestamp', () => {
+  const retrievedAt = '2026-08-01T09:39:05.688Z';
+  const prepared = geoNamesBuilder.prepareCapturePublication({
+    manifest: { upstreamCapture: { retrievedAt } },
+    capture: { sources: [] },
+    inputBytes: Buffer.from('{"schemaVersion":1}\n'),
+    outputBytes: Buffer.from('{"formatVersion":1,"strings":[],"rows":[]}\n'),
+    compact: { rows: [], asset: { strings: [], rows: [] } },
+    retrievedAt,
+  });
+
+  assert.equal(prepared.manifest.upstreamCapture.retrievedAt, retrievedAt);
+});
+
+for (let failAt = 1; failAt <= 6; failAt += 1) {
+  test(`capture publication restores its prior complete generation when replace ${failAt} fails`, async (context) => {
+    const root = await mkdtemp(join(tmpdir(), 'mundus-geonames-publish-'));
+    context.after(() => rm(root, { recursive: true, force: true }));
+    const generated = join(root, 'src/data/generated');
+    const manifests = join(root, 'src/data/manifests');
+    await mkdir(generated, { recursive: true });
+    await mkdir(manifests, { recursive: true });
+    const paths = {
+      inputPath: join(generated, 'input.json'),
+      outputPath: join(generated, 'runtime.json'),
+      manifestPath: join(manifests, 'manifest.json'),
+    };
+    await Promise.all([
+      writeFile(paths.inputPath, 'old-input'),
+      writeFile(paths.outputPath, 'old-runtime'),
+      writeFile(paths.manifestPath, 'old-manifest'),
+    ]);
+    let renameCount = 0;
+    const { rename } = await import('node:fs/promises');
+
+    await assert.rejects(
+      geoNamesBuilder.publishCaptureArtifacts(
+        {
+          ...paths,
+          inputBytes: 'new-input',
+          outputBytes: 'new-runtime',
+          manifestBytes: 'new-manifest',
+        },
+        {
+          async rename(from, to) {
+            renameCount += 1;
+            if (renameCount === failAt) throw new Error(`replace ${failAt}`);
+            await rename(from, to);
+          },
+        },
+      ),
+      /replace/,
+    );
+
+    assert.deepEqual(
+      await Promise.all(
+        [paths.inputPath, paths.outputPath, paths.manifestPath].map((path) =>
+          readFile(path, 'utf8'),
+        ),
+      ),
+      ['old-input', 'old-runtime', 'old-manifest'],
+    );
+    assert.deepEqual(await readdir(generated), ['input.json', 'runtime.json']);
+    assert.deepEqual(await readdir(manifests), ['manifest.json']);
+    assert.deepEqual(await readdir(join(root, 'src/data')), [
+      'generated',
+      'manifests',
+    ]);
+  });
+}
+
+test('ordinary command path rebuilds exact output without raw sources or network', async (context) => {
+  const root = await mkdtemp(join(tmpdir(), 'mundus-geonames-command-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const generated = join(root, 'src/data/generated');
+  const manifests = join(root, 'src/data/manifests');
+  await mkdir(generated, { recursive: true });
+  await mkdir(manifests, { recursive: true });
+  const input = {
+    schemaVersion: 2,
+    cities: [parseCityRow(cityRow())],
+    countries: [{ code: 'CN', name: 'China', geoNameId: 10 }],
+    admin1: [{ key: 'CN.22', name: 'Beijing', geoNameId: 11 }],
+    alternateNames: [],
+  };
+  const inputBytes = Buffer.from(`${JSON.stringify(input)}\n`);
+  const expected = `${JSON.stringify(geoNamesBuilder.buildRuntimeFromImmutableInput(input).asset)}\n`;
+  await writeFile(join(generated, 'input.json'), inputBytes);
+  await writeFile(
+    join(manifests, 'manifest.json'),
+    JSON.stringify({
+      immutableBuildInput: {
+        path: 'src/data/generated/input.json',
+        sha256: createHash('sha256').update(inputBytes).digest('hex'),
+      },
+      derivedAsset: {
+        sha256: createHash('sha256').update(expected).digest('hex'),
+      },
+    }),
+  );
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    throw new Error('offline command must not fetch');
+  };
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  await geoNamesBuilder.runOfflineBuild({
+    root,
+    manifestPath: join(manifests, 'manifest.json'),
+    outputPath: join(generated, 'runtime.json'),
+  });
+
+  assert.equal(
+    await readFile(join(generated, 'runtime.json'), 'utf8'),
+    expected,
+  );
+  await assert.rejects(readFile(join(root, 'tmp/geonames')), /ENOENT/);
+});
+
+test('capture command path rejects a non-OK source without changing tracked generation', async (context) => {
+  const root = await mkdtemp(
+    join(tmpdir(), 'mundus-geonames-capture-command-'),
+  );
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const generated = join(root, 'src/data/generated');
+  const manifests = join(root, 'src/data/manifests');
+  await mkdir(generated, { recursive: true });
+  await mkdir(manifests, { recursive: true });
+  const inputPath = join(generated, 'geonames-major-cities-input.json');
+  const outputPath = join(generated, 'geonames-major-cities.json');
+  const manifestPath = join(manifests, 'geonames-major-cities.json');
+  await Promise.all([
+    writeFile(inputPath, 'old-input'),
+    writeFile(outputPath, 'old-runtime'),
+    writeFile(manifestPath, '{"version":"old"}\n'),
+  ]);
+
+  await assert.rejects(
+    geoNamesBuilder.runCaptureCommand({
+      root,
+      fetchImplementation: async () =>
+        new Response(null, { status: 503, statusText: 'Unavailable' }),
+      now: () => new Date('2026-08-01T12:00:00.000Z'),
+    }),
+    /capture failed: 503 Unavailable/,
+  );
+
+  assert.deepEqual(
+    await Promise.all(
+      [inputPath, outputPath, manifestPath].map((path) =>
+        readFile(path, 'utf8'),
+      ),
+    ),
+    ['old-input', 'old-runtime', '{"version":"old"}\n'],
+  );
+  assert.deepEqual(await readdir(join(root, 'tmp/geonames')), []);
+});
 
 const cityRow = ({
   id = '1816670',
@@ -462,6 +864,39 @@ test('rejects a corrupt cached source without replacing or downloading it', asyn
 
   assert.equal(requests, 0);
   assert.deepEqual(await readFile(join(directory, 'cities15000.zip')), cached);
+});
+
+test('does not publish any source when a reviewed multi-file capture mismatches', async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), 'mundus-geonames-capture-'));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const definitions = [
+    {
+      sourceName: 'first',
+      fileName: 'first.txt',
+      distributionUrl: 'https://example.test/first.txt',
+    },
+    {
+      sourceName: 'second',
+      fileName: 'second.txt',
+      distributionUrl: 'https://example.test/second.txt',
+    },
+  ];
+
+  await assert.rejects(
+    geoNamesBuilder.captureSourceFiles(
+      directory,
+      async (url) =>
+        url.endsWith('first.txt')
+          ? new Response('first')
+          : new Response('second', {
+              headers: { 'content-length': '99' },
+            }),
+      definitions,
+    ),
+    /source mismatch/,
+  );
+
+  assert.deepEqual(await readdir(directory), []);
 });
 
 function sourceManifest(fileName, bytes) {

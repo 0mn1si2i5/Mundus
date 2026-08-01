@@ -13,6 +13,7 @@ import { resolve } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import OpenCC from 'opencc-js';
+import { publishAssetSet } from './publish-asset-set.mjs';
 
 const ACTIVE_CODES = new Set([
   'PPL',
@@ -29,6 +30,17 @@ const LANGUAGE_RANK = new Map([
   ['zh', 2],
 ]);
 const traditionalToSimplified = OpenCC.Converter({ from: 't', to: 'cn' });
+const SOURCE_DEFINITIONS = [
+  ['GeoNames cities15000', 'cities15000.zip'],
+  ['GeoNames alternate names V2', 'alternateNamesV2.zip'],
+  ['GeoNames country info', 'countryInfo.txt'],
+  ['GeoNames admin-1 codes', 'admin1CodesASCII.txt'],
+  ['GeoNames dump readme', 'readme.txt'],
+].map(([sourceName, fileName]) => ({
+  sourceName,
+  fileName,
+  distributionUrl: `https://download.geonames.org/export/dump/${fileName}`,
+}));
 
 export function parseCityRow(line) {
   const columns = line.split('\t');
@@ -500,20 +512,152 @@ export function buildCompactIndex({
   };
 }
 
-async function run() {
-  const root = resolve(import.meta.dirname, '..');
-  const sourceDir = resolve(root, process.argv[2] ?? 'tmp/geonames');
-  const manifestPath = resolve(
-    root,
-    'src/data/manifests/geonames-major-cities.json',
+export function createImmutableBuildInput({
+  cities,
+  countries,
+  admin1,
+  alternateNames,
+}) {
+  const selectedCities = cities
+    .filter(
+      (city) => isEligibleCity(city) && hasExactJoins(city, countries, admin1),
+    )
+    .map(
+      ({
+        id,
+        canonicalName,
+        asciiName,
+        latitude,
+        longitude,
+        featureClass,
+        featureCode,
+        countryCode,
+        admin1Code,
+        population,
+      }) => ({
+        id,
+        canonicalName,
+        asciiName,
+        latitude,
+        longitude,
+        featureClass,
+        featureCode,
+        countryCode,
+        admin1Code,
+        population,
+      }),
+    )
+    .sort((a, b) => a.id - b.id);
+  const countryCodes = new Set(selectedCities.map((city) => city.countryCode));
+  const adminKeys = new Set(
+    selectedCities.map((city) => `${city.countryCode}.${city.admin1Code}`),
   );
-  const outputPath = resolve(
-    root,
-    'src/data/generated/geonames-major-cities.json',
-  );
-  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-  await ensureSourceFiles(sourceDir, manifest);
+  const selectedCountries = [...countries.values()]
+    .filter((country) => countryCodes.has(country.code))
+    .sort((a, b) => a.code.localeCompare(b.code, 'und'));
+  const selectedAdmin1 = [...admin1.values()]
+    .filter((admin) => adminKeys.has(admin.key))
+    .sort((a, b) => a.key.localeCompare(b.key, 'und'));
+  const relevantIds = new Set([
+    ...selectedCities.map((city) => city.id),
+    ...selectedCountries.map((country) => country.geoNameId),
+    ...selectedAdmin1.map((admin) => admin.geoNameId),
+  ]);
+  const selectedAlternates = [...alternateNames.entries()]
+    .filter(([id]) => relevantIds.has(id))
+    .map(([id, names]) => {
+      const selected = names
+        .filter(
+          (name) => name.language === 'en' || LANGUAGE_RANK.has(name.language),
+        )
+        .map(({ id: alternateId, language, name, preferred }) => ({
+          id: alternateId,
+          language,
+          name,
+          preferred,
+        }))
+        .sort((a, b) => a.id - b.id || a.name.localeCompare(b.name, 'und'));
+      return [id, selected];
+    })
+    .filter(([, names]) => names.length > 0)
+    .sort((a, b) => a[0] - b[0]);
+  return {
+    schemaVersion: 2,
+    cities: selectedCities,
+    countries: selectedCountries,
+    admin1: selectedAdmin1,
+    alternateNames: selectedAlternates,
+  };
+}
 
+export function buildRuntimeFromImmutableInput(input) {
+  if (input?.schemaVersion !== 2) {
+    throw new Error(
+      `Unsupported GeoNames immutable input schema: ${String(input?.schemaVersion)}`,
+    );
+  }
+  return buildFeasibilityIndex({
+    cities: input.cities,
+    countries: new Map(
+      input.countries.map((country) => [country.code, country]),
+    ),
+    admin1: new Map(input.admin1.map((admin) => [admin.key, admin])),
+    alternateNames: new Map(input.alternateNames),
+  });
+}
+
+export async function readVerifiedImmutableInput(path, expectedSha256) {
+  const bytes = await readFile(path);
+  const actual = createHash('sha256').update(bytes).digest('hex');
+  if (actual !== expectedSha256) {
+    throw new Error(
+      `Immutable build input checksum mismatch: expected ${expectedSha256}, received ${actual}`,
+    );
+  }
+  return { input: JSON.parse(bytes.toString('utf8')), bytes };
+}
+
+export async function runOfflineBuild({
+  root = resolve(import.meta.dirname, '..'),
+  manifestPath = resolve(root, 'src/data/manifests/geonames-major-cities.json'),
+  outputPath = resolve(root, 'src/data/generated/geonames-major-cities.json'),
+} = {}) {
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  const inputPath = resolve(root, manifest.immutableBuildInput.path);
+  const { input } = await readVerifiedImmutableInput(
+    inputPath,
+    manifest.immutableBuildInput.sha256,
+  );
+  const compact = buildRuntimeFromImmutableInput(input);
+  const output = `${JSON.stringify(compact.asset)}\n`;
+  const bytes = Buffer.from(output);
+  const report = {
+    records: compact.rows.length,
+    rawBytes: bytes.byteLength,
+    gzipBytes: gzipSync(bytes, { level: 9, mtime: 0 }).byteLength,
+    staticDecodedBytesEstimate: bytes.byteLength * 4,
+    runtimeDecodedBytesEstimate: estimateRuntimeDecodedBytes(
+      compact.asset,
+      bytes.byteLength,
+    ),
+    derivedAssetSha256: createHash('sha256').update(bytes).digest('hex'),
+    coverage: compact.coverage,
+  };
+  assertGeoNamesBudgets(report);
+  if (
+    manifest.derivedAsset.sha256 !== '0'.repeat(64) &&
+    manifest.derivedAsset.sha256 !== report.derivedAssetSha256
+  ) {
+    throw new Error(
+      `Derived asset checksum mismatch: expected ${manifest.derivedAsset.sha256}, received ${report.derivedAssetSha256}`,
+    );
+  }
+  await writeGeneratedAssetAtomically(outputPath, bytes);
+  console.log(JSON.stringify(report, null, 2));
+  return report;
+}
+
+async function parseCapturedSources(sourceDir) {
   const countries = new Map();
   await readLines(
     createReadStream(resolve(sourceDir, 'countryInfo.txt')),
@@ -530,21 +674,20 @@ async function run() {
       if (value) admin1.set(value.key, value);
     },
   );
-  const eligibleCities = [];
+  const cities = [];
   await readZipLines(
     resolve(sourceDir, 'cities15000.zip'),
     'cities15000.txt',
     (line) => {
       const value = parseCityRow(line);
-      if (isEligibleCity(value)) eligibleCities.push(value);
+      if (isEligibleCity(value)) cities.push(value);
     },
   );
-  const cities = eligibleCities.filter((city) =>
+  const joinedCities = cities.filter((city) =>
     hasExactJoins(city, countries, admin1),
   );
-  const excludedForJoin = eligibleCities.length - cities.length;
   const relevantIds = new Set([
-    ...cities.map((city) => city.id),
+    ...joinedCities.map((city) => city.id),
     ...countries.values().map((country) => country.geoNameId),
     ...admin1.values().map((admin) => admin.geoNameId),
   ]);
@@ -555,56 +698,279 @@ async function run() {
     (line) => {
       const value = parseAlternateNameRow(line);
       if (!value || !relevantIds.has(value.geoNameId)) return;
-      const values = alternateNames.get(value.geoNameId) ?? [];
-      values.push(value);
-      alternateNames.set(value.geoNameId, values);
+      const names = alternateNames.get(value.geoNameId) ?? [];
+      names.push(value);
+      alternateNames.set(value.geoNameId, names);
     },
   );
-  const compact = buildFeasibilityIndex({
-    cities: cities.filter((city) =>
-      candidateIncludesCity(
-        'A',
-        city,
-        hasRealChineseName(alternateNames.get(city.id) ?? []),
-      ),
-    ),
-    countries,
-    admin1,
-    alternateNames,
+  return { cities, countries, admin1, alternateNames };
+}
+
+export async function captureSourceFiles(
+  sourceDir,
+  fetchImplementation = fetch,
+  definitions = SOURCE_DEFINITIONS,
+) {
+  await mkdir(sourceDir, { recursive: true });
+  const staging = resolve(
+    sourceDir,
+    `.capture-${process.pid}-${crypto.randomUUID()}`,
+  );
+  await mkdir(staging);
+  const sources = [];
+  try {
+    for (const definition of definitions) {
+      const target = resolve(staging, definition.fileName);
+      const response = await fetchImplementation(definition.distributionUrl);
+      if (!response.ok || !response.body) {
+        throw new Error(
+          `${definition.fileName} capture failed: ${response.status} ${response.statusText}`,
+        );
+      }
+      await pipeline(
+        Readable.fromWeb(response.body),
+        createWriteStream(target, { flags: 'wx' }),
+      );
+      const size = (await stat(target)).size;
+      const contentLength = response.headers.get('content-length');
+      if (contentLength !== null && Number(contentLength) !== size) {
+        throw new Error(
+          `${definition.fileName} source mismatch: Content-Length ${contentLength}, captured ${size}`,
+        );
+      }
+      sources.push({
+        sourceName: definition.sourceName,
+        distributionUrl: definition.distributionUrl,
+        fileName: definition.fileName,
+        sha256: await sha256File(target),
+        rawBytes: size,
+        etag: response.headers.get('etag'),
+        lastModified: response.headers.get('last-modified'),
+      });
+    }
+    return { sourceDir: staging, sources };
+  } catch (error) {
+    await rm(staging, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+export async function runCaptureCommand({
+  root = resolve(import.meta.dirname, '..'),
+  rawDir = resolve(root, 'tmp/geonames'),
+  fetchImplementation = fetch,
+  now = () => new Date(),
+  captureImplementation = captureSourceFiles,
+  verifyCapture = ensureSourceFiles,
+  publishCapture: publishImplementation = publishCapture,
+  promoteCapture = promoteCapturedSources,
+} = {}) {
+  const manifestPath = resolve(
+    root,
+    'src/data/manifests/geonames-major-cities.json',
+  );
+  const inputPath = resolve(
+    root,
+    'src/data/generated/geonames-major-cities-input.json',
+  );
+  const outputPath = resolve(
+    root,
+    'src/data/generated/geonames-major-cities.json',
+  );
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  const capture = await captureImplementation(rawDir, fetchImplementation);
+  await verifyCapture(
+    capture.sourceDir,
+    { upstreamCapture: { sources: capture.sources } },
+    async () => {
+      throw new Error('captured sources must verify without another download');
+    },
+  );
+  const retrievedAt = now().toISOString();
+  await publishImplementation({
+    root,
+    manifestPath,
+    inputPath,
+    outputPath,
+    manifest,
+    capture,
+    retrievedAt,
   });
-  const output = `${JSON.stringify(compact.asset)}\n`;
-  const bytes = Buffer.from(output);
-  const report = {
+  await promoteCapture(capture.sourceDir, rawDir);
+}
+
+async function promoteCapturedSources(sourceDir, rawDir) {
+  const captured = resolve(rawDir, 'captured-current');
+  await rm(captured, { recursive: true, force: true });
+  await rename(sourceDir, captured);
+}
+
+async function rebuildCapturedInput() {
+  const root = resolve(import.meta.dirname, '..');
+  const manifestPath = resolve(
+    root,
+    'src/data/manifests/geonames-major-cities.json',
+  );
+  const inputPath = resolve(
+    root,
+    'src/data/generated/geonames-major-cities-input.json',
+  );
+  const outputPath = resolve(
+    root,
+    'src/data/generated/geonames-major-cities.json',
+  );
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  const sourceDir = resolve(
+    root,
+    process.argv[3] ?? 'tmp/geonames/captured-current',
+  );
+  await ensureSourceFiles(sourceDir, manifest, async () => {
+    throw new Error('captured sources must be present and checksum-valid');
+  });
+  await publishCapture({
+    root,
+    manifestPath,
+    inputPath,
+    outputPath,
+    manifest,
+    capture: {
+      sourceDir,
+      sources: manifest.upstreamCapture.sources,
+    },
+    retrievedAt: manifest.upstreamCapture.retrievedAt,
+  });
+}
+
+async function publishCapture({
+  root,
+  manifestPath,
+  inputPath,
+  outputPath,
+  manifest,
+  capture,
+  retrievedAt,
+}) {
+  const parsed = await parseCapturedSources(capture.sourceDir);
+  const immutable = createImmutableBuildInput(parsed);
+  const inputBytes = Buffer.from(`${JSON.stringify(immutable)}\n`);
+  const compact = buildRuntimeFromImmutableInput(immutable);
+  const outputBytes = Buffer.from(`${JSON.stringify(compact.asset)}\n`);
+  const prepared = prepareCapturePublication({
+    manifest,
+    capture,
+    inputBytes,
+    outputBytes,
+    compact,
+    retrievedAt,
+  });
+  await publishCaptureArtifacts({
+    inputPath,
+    outputPath,
+    manifestPath,
+    inputBytes,
+    outputBytes,
+    manifestBytes: prepared.manifestBytes,
+  });
+  console.log(
+    JSON.stringify(
+      {
+        retrievedAt,
+        sources: capture.sources,
+        immutableBuildInput: prepared.manifest.immutableBuildInput,
+        derivedAsset: prepared.manifest.derivedAsset,
+        recordCount: prepared.manifest.recordCount,
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+export function prepareCapturePublication({
+  manifest,
+  capture,
+  inputBytes,
+  outputBytes,
+  compact,
+  retrievedAt,
+}) {
+  const next = structuredClone(manifest);
+  next.version = `GeoNames capture ${retrievedAt}`;
+  next.retrievedAt = retrievedAt.slice(0, 10);
+  next.upstreamCapture = { retrievedAt, sources: capture.sources };
+  const measurements = {
     records: compact.rows.length,
-    rawBytes: bytes.byteLength,
-    gzipBytes: gzipSync(bytes, { level: 9, mtime: 0 }).byteLength,
-    staticDecodedBytesEstimate: bytes.byteLength * 4,
+    rawBytes: outputBytes.byteLength,
+    gzipBytes: gzipSync(outputBytes, { level: 9, mtime: 0 }).byteLength,
+    staticDecodedBytesEstimate: outputBytes.byteLength * 4,
     runtimeDecodedBytesEstimate: estimateRuntimeDecodedBytes(
       compact.asset,
-      bytes.byteLength,
+      outputBytes.byteLength,
     ),
-    derivedAssetSha256: createHash('sha256').update(bytes).digest('hex'),
-    coverage: compact.coverage,
-    excludedForJoin,
   };
-  if (
-    report.records > 10_000 ||
-    report.rawBytes > 1.5 * 1024 * 1024 ||
-    report.gzipBytes > 450 * 1024 ||
-    report.runtimeDecodedBytesEstimate > 8 * 1024 * 1024
-  ) {
-    throw new Error(`GeoNames budget exceeded: ${JSON.stringify(report)}`);
+  assertGeoNamesBudgets(measurements);
+  next.immutableBuildInput = {
+    path: 'src/data/generated/geonames-major-cities-input.json',
+    schemaVersion: 2,
+    sha256: createHash('sha256').update(inputBytes).digest('hex'),
+    rawBytes: inputBytes.byteLength,
+  };
+  next.derivedAsset = {
+    path: 'src/data/generated/geonames-major-cities.json',
+    sha256: createHash('sha256').update(outputBytes).digest('hex'),
+    rawBytes: outputBytes.byteLength,
+  };
+  delete next.distributionUrl;
+  delete next.sha256;
+  delete next.auxiliarySources;
+  delete next.derivedAssetSha256;
+  next.recordCount = measurements.records;
+  next.rawBytes = measurements.rawBytes;
+  next.gzipBytes = measurements.gzipBytes;
+  next.staticDecodedBytesEstimate = measurements.staticDecodedBytesEstimate;
+  next.runtimeDecodedBytesEstimate = measurements.runtimeDecodedBytesEstimate;
+  return {
+    manifest: next,
+    manifestBytes: Buffer.from(`${JSON.stringify(next, null, 2)}\n`),
+  };
+}
+
+export function assertGeoNamesBudgets(measurements) {
+  const limits = {
+    records: 10_000,
+    rawBytes: 1.5 * 1024 * 1024,
+    gzipBytes: 450 * 1024,
+    staticDecodedBytesEstimate: 6 * 1024 * 1024,
+    runtimeDecodedBytesEstimate: 8 * 1024 * 1024,
+  };
+  for (const [field, limit] of Object.entries(limits)) {
+    if (measurements[field] > limit) {
+      throw new Error(
+        `GeoNames budget exceeded: ${field} ${measurements[field]} > ${limit}`,
+      );
+    }
   }
-  if (
-    manifest.derivedAssetSha256 !== '0'.repeat(64) &&
-    manifest.derivedAssetSha256 !== report.derivedAssetSha256
-  ) {
-    throw new Error(
-      `Derived asset checksum mismatch: expected ${manifest.derivedAssetSha256}, received ${report.derivedAssetSha256}`,
-    );
-  }
-  await writeGeneratedAssetAtomically(outputPath, bytes);
-  console.log(JSON.stringify(report, null, 2));
+}
+
+export async function publishCaptureArtifacts(
+  {
+    inputPath,
+    outputPath,
+    manifestPath,
+    inputBytes,
+    outputBytes,
+    manifestBytes,
+  },
+  operations,
+) {
+  await publishAssetSet(
+    [
+      { path: inputPath, bytes: inputBytes },
+      { path: outputPath, bytes: outputBytes },
+      { path: manifestPath, bytes: manifestBytes },
+    ],
+    operations,
+  );
 }
 
 async function runFeasibility() {
@@ -899,12 +1265,9 @@ export async function ensureSourceFiles(
   fetchImplementation = fetch,
 ) {
   await mkdir(sourceDir, { recursive: true });
-  const sources = [
-    {
-      distributionUrl: manifest.distributionUrl,
-      sha256: manifest.sha256,
-    },
-    ...manifest.auxiliarySources,
+  const sources = manifest.upstreamCapture?.sources ?? [
+    { distributionUrl: manifest.distributionUrl, sha256: manifest.sha256 },
+    ...(manifest.auxiliarySources ?? []),
   ];
   for (const source of sources) {
     const fileName = new URL(source.distributionUrl).pathname.split('/').at(-1);
@@ -1066,6 +1429,16 @@ if (
   process.argv[1] &&
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
-  if (process.argv[2] === '--feasibility') await runFeasibility();
-  else await run();
+  if (process.argv[2] === '--capture')
+    await runCaptureCommand({
+      rawDir: resolve(
+        import.meta.dirname,
+        '..',
+        process.argv[3] ?? 'tmp/geonames',
+      ),
+    });
+  else if (process.argv[2] === '--rebuild-captured')
+    await rebuildCapturedInput();
+  else if (process.argv[2] === '--feasibility') await runFeasibility();
+  else await runOfflineBuild();
 }

@@ -12,21 +12,50 @@ const auxiliarySourceSchema = z.object({
   purpose: z.string().min(1),
 });
 
+const capturedSourceSchema = z.object({
+  sourceName: z.string().min(1),
+  distributionUrl: z.url(),
+  fileName: z.string().min(1),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  rawBytes: z.number().int().positive(),
+  etag: z.string().nullable(),
+  lastModified: z.string().nullable(),
+});
+
+const trackedAssetIdentitySchema = z.object({
+  path: z.string().min(1),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  rawBytes: z.number().int().positive(),
+});
+
 export const dataManifestSchema = z.object({
   id: z.string().min(1),
   sourceName: z.string().min(1),
   sourceUrl: z.url(),
-  distributionUrl: z.url(),
+  distributionUrl: z.url().optional(),
   licenseName: z.string().min(1),
   licenseUrl: z.url(),
   version: z.string().min(1),
   retrievedAt: z.iso.date(),
-  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  sha256: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
   derivedAssetSha256: z
     .string()
     .regex(/^[a-f0-9]{64}$/)
     .optional(),
   auxiliarySources: z.array(auxiliarySourceSchema).optional(),
+  upstreamCapture: z
+    .object({
+      retrievedAt: z.iso.datetime({ offset: true }),
+      sources: z.array(capturedSourceSchema).length(5),
+    })
+    .optional(),
+  immutableBuildInput: trackedAssetIdentitySchema
+    .extend({ schemaVersion: z.literal(2) })
+    .optional(),
+  derivedAsset: trackedAssetIdentitySchema.optional(),
   attribution: z.string().min(1),
   redistribution: z.enum(['allowed', 'restricted', 'unknown']),
   transformations: z.array(z.string().min(1)).min(1),

@@ -4,27 +4,29 @@ import { CityAutocomplete } from './CityAutocomplete';
 import type { GeoNamesCityLoadState } from './useGeoNamesCityIndex';
 import type { GeoNamesCity } from './geonamesCities';
 
-const cities: readonly GeoNamesCity[] = [
-  {
-    id: 1816670,
-    name: { en: 'Beijing', zh: '北京' },
-    country: { en: 'China', zh: '中国' },
-    admin1: { en: 'Beijing', zh: '北京' },
-    countryCode: 'CN',
-    point: { latitude: 39.9075, longitude: 116.39723 },
-    population: 11716620,
-    featureCode: 'PPLC',
+const beijing: GeoNamesCity = {
+  id: 1816670,
+  name: { en: 'Beijing', zh: '北京' },
+  country: { en: 'China', zh: '中国' },
+  admin1: { en: 'Beijing', zh: '北京' },
+  countryCode: 'CN',
+  point: { latitude: 39.9075, longitude: 116.39723 },
+  population: 11716620,
+  featureCode: 'PPLC',
+  aliases: [],
+  search: {
+    nameEn: 'beijing',
+    nameZh: '北京',
+    countryEn: 'china',
+    countryZh: '中国',
+    adminEn: 'beijing',
+    adminZh: '北京',
     aliases: [],
-    search: {
-      nameEn: 'beijing',
-      nameZh: '北京',
-      countryEn: 'china',
-      countryZh: '中国',
-      adminEn: 'beijing',
-      adminZh: '北京',
-      aliases: [],
-    },
   },
+};
+
+const cities: readonly GeoNamesCity[] = [
+  beijing,
   {
     id: 5128581,
     name: { en: 'New York City', zh: '纽约市' },
@@ -43,6 +45,44 @@ const cities: readonly GeoNamesCity[] = [
       adminEn: 'new york',
       adminZh: '纽约州',
       aliases: ['紐約市'],
+    },
+  },
+];
+
+const ambiguousCities: readonly GeoNamesCity[] = [
+  ...cities,
+  {
+    ...beijing,
+    id: 101,
+    name: { en: 'Springfield', zh: '春田' },
+    country: { en: 'Example', zh: '示例国' },
+    admin1: { en: 'Central', zh: '中央州' },
+    point: { latitude: 10.12345, longitude: -20.54321 },
+    search: {
+      ...beijing.search,
+      nameEn: 'springfield',
+      nameZh: '春田',
+      countryEn: 'example',
+      countryZh: '示例国',
+      adminEn: 'central',
+      adminZh: '中央州',
+    },
+  },
+  {
+    ...beijing,
+    id: 102,
+    name: { en: 'Springfield', zh: '春田' },
+    country: { en: 'Example', zh: '示例国' },
+    admin1: { en: 'Central', zh: '中央州' },
+    point: { latitude: -11.23456, longitude: 21.65432 },
+    search: {
+      ...beijing.search,
+      nameEn: 'springfield',
+      nameZh: '春田',
+      countryEn: 'example',
+      countryZh: '示例国',
+      adminEn: 'central',
+      adminZh: '中央州',
     },
   },
 ];
@@ -84,6 +124,69 @@ describe('CityAutocomplete', () => {
     expect(screen.getByRole('option', { name: /纽约市/ })).toBeInTheDocument();
     fireEvent.change(input, { target: { value: '紐約' } });
     expect(screen.getByRole('option', { name: /纽约市/ })).toBeInTheDocument();
+  });
+
+  it.each([
+    [
+      'en',
+      'Spring',
+      'Springfield; Central; Example; latitude +10.12345° N; longitude -20.54321° W',
+    ],
+    [
+      'zh',
+      '春田',
+      '春田；中央州；示例国；纬度 +10.12345° 北；经度 -20.54321° 西；英文名 Springfield',
+    ],
+  ] as const)(
+    'disambiguates duplicate visible localized tuples in %s without changing selection',
+    (locale, query, firstAccessibleName) => {
+      const onSelect = vi.fn();
+      render(
+        <CityAutocomplete
+          locale={locale}
+          loadState={{ status: 'ready', data: ambiguousCities }}
+          onSelect={onSelect}
+        />,
+      );
+      const input = screen.getByRole('combobox');
+      fireEvent.change(input, { target: { value: query } });
+      const options = screen.getAllByRole('option');
+
+      expect(options).toHaveLength(2);
+      expect(options[0]!).toHaveAccessibleName(firstAccessibleName);
+      expect(options[1]!).toHaveAccessibleName(
+        locale === 'en'
+          ? 'Springfield; Central; Example; latitude -11.23456° S; longitude +21.65432° E'
+          : '春田；中央州；示例国；纬度 -11.23456° 南；经度 +21.65432° 东；英文名 Springfield',
+      );
+      expect(options[0]!).not.toHaveAccessibleName(
+        options[1]!.textContent ?? '',
+      );
+
+      fireEvent.keyDown(input, { key: 'ArrowDown' });
+      fireEvent.keyDown(input, { key: 'Enter' });
+      expect(onSelect).toHaveBeenCalledWith(ambiguousCities[2]!);
+    },
+  );
+
+  it('leaves an unambiguous option label unchanged and pointer-selects its city', () => {
+    const onSelect = vi.fn();
+    render(
+      <CityAutocomplete
+        locale="en"
+        loadState={{ status: 'ready', data: ambiguousCities }}
+        onSelect={onSelect}
+      />,
+    );
+    fireEvent.change(screen.getByRole('combobox'), {
+      target: { value: 'Be' },
+    });
+    const option = screen.getByRole('option', {
+      name: 'Beijing; Beijing; China',
+    });
+    expect(option).not.toHaveTextContent('°');
+    fireEvent.mouseDown(option, { button: 0 });
+    expect(onSelect).toHaveBeenCalledWith(cities[0]);
   });
 
   it('closes on Escape and Tab without selection', () => {

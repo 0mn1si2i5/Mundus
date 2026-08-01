@@ -25,8 +25,13 @@ const assets = [
   },
   {
     manifest: 'src/data/manifests/geonames-major-cities.json',
+    asset: 'src/data/generated/geonames-major-cities-input.json',
+    hashField: 'immutableBuildInput.sha256',
+  },
+  {
+    manifest: 'src/data/manifests/geonames-major-cities.json',
     asset: 'src/data/generated/geonames-major-cities.json',
-    hashField: 'derivedAssetSha256',
+    hashField: 'derivedAsset.sha256',
     budgets: true,
   },
   {
@@ -79,6 +84,7 @@ for (const entry of assets) {
       measurements.recordCount > 10_000 ||
       measurements.rawBytes > 1.5 * 1024 * 1024 ||
       measurements.gzipBytes > 450 * 1024 ||
+      measurements.staticDecodedBytesEstimate > 6 * 1024 * 1024 ||
       manifest.runtimeDecodedBytesEstimate > 8 * 1024 * 1024
     ) {
       failed = true;

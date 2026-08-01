@@ -67,7 +67,8 @@ Sudan, Russia, and Antarctica); these are explicitly reported and use a narrow
 
 - Source: [GeoNames geographical database](https://www.geonames.org/)
 - Snapshot: `cities15000`, `alternateNamesV2`, `countryInfo`,
-  `admin1CodesASCII`, and upstream readme retrieved 2026-07-21
+  `admin1CodesASCII`, and upstream readme captured together at
+  `2026-08-01T09:39:05.688Z` (`2026-08-01 17:39:05.688` Asia/Shanghai)
 - Terms: [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/)
 - Use: offline bilingual major-city autocomplete and bilateral nearest
   represented major-city results in Other Side
@@ -85,7 +86,8 @@ Sudan, Russia, and Antarctica); these are explicitly reported and use a narrow
 - Attribution shown in the product: **Contains GeoNames data, licensed under CC
   BY 4.0**, with a no-warranty statement
 
-The final index contains 6,944 records. Its exact five source hashes, derived
+The final index contains 6,953 records. Its exact five captured source hashes,
+HTTP `ETag`/`Last-Modified` identities, immutable build-input hash, derived
 hash, size measurements, fallback policy, and transformation are recorded in
 `src/data/manifests/geonames-major-cities.json`. Missing Chinese source names
 remain explicit canonical fallbacks; non-Chinese names are never translated.
@@ -143,10 +145,46 @@ rebuild the GeoNames index from a clean checkout, run:
 pnpm data:cities
 ```
 
-The command creates ignored `tmp/geonames/` as needed, streams missing files
-from the exact manifest URLs to atomic temporary paths, verifies SHA-256 before
-renaming, and reuses only checksum-valid cached sources. Raw sources are never
-committed. Then run:
+The command reads only the tracked, immutable, normalized CC BY 4.0 build input
+at `src/data/generated/geonames-major-cities-input.json`, verifies its SHA-256,
+and atomically regenerates the runtime index. It performs no network access and
+does not require a raw cache. The compact input contains only eligible city
+fields, exact joined country/admin records, and relevant current English and
+Chinese alternate-name rows needed to reproduce name selection, OpenCC
+conversion, aliases, deterministic ordering, and every runtime field.
+The current schema 2 input omits empty alternate-name groups and the redundant
+nested GeoNames ID from each alternate row.
+
+A reviewed upstream refresh is a separate operation:
+
+```bash
+pnpm data:cities:capture
+```
+
+That command captures all five official rolling files into a unique ignored
+directory under `tmp/geonames/`, records the actual bytes' hashes and HTTP
+identities, and keeps that directory immutable through verification, extraction,
+generation, and tracked publication. A concurrent capture cannot replace the
+source path being parsed by another process. Overlapping generated destination
+sets are serialized by bounded filesystem locks containing owner PID, process
+identity, and acquisition time. Any existing lock waits for a bounded period and
+then fails closed; locks are never reclaimed automatically, even when old,
+malformed, or associated with a dead PID. An operator must inspect and manually
+recover any interrupted lock. Publication replaces the input and runtime before
+publishing the manifest last; a forward failure restores the prior complete
+generation. If restoration itself fails, all restores are still attempted, the
+publication and rollback errors are aggregated, and a durable owner-independent
+`recovery-required` sentinel remains in every held lock. Each lock begins with a
+`publication-active` sentinel; after a forward error, the recovery sentinel is
+atomically created in every lock before rollback starts. If sentinel creation is
+interrupted or fails, rollback does not start and the active sentinel remains a
+permanent automatic-recovery barrier. A fully successful rollback removes the
+recovery sentinel and permits normal owner-only lock release. Otherwise an
+operator must inspect the recorded staging/backup paths and perform manual
+recovery; there is intentionally no destructive automatic recovery command.
+Metadata may add diagnostic recovery paths, but reclamation safety does not
+depend on metadata. A mutable URL is provenance, not sufficient rebuild
+identity. Raw sources are never committed. Then run:
 
 ```bash
 pnpm data:verify

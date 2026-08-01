@@ -71,47 +71,48 @@ describe('data registry', () => {
 
     expect(manifest).toMatchObject({
       sourceName: 'GeoNames geographical database',
-      distributionUrl:
-        'https://download.geonames.org/export/dump/cities15000.zip',
       licenseName: 'CC BY 4.0',
-      retrievedAt: '2026-07-21',
-      sha256:
-        '6c84524d26553d8657d4fda1853ac2c4fafbd5d45885a862c04e16c8604c1ec7',
+      upstreamCapture: {
+        retrievedAt: expect.stringMatching(/^2026-08-01T/),
+        sources: expect.arrayContaining([
+          expect.objectContaining({
+            distributionUrl:
+              'https://download.geonames.org/export/dump/cities15000.zip',
+            sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+          }),
+        ]),
+      },
+      immutableBuildInput: {
+        path: 'src/data/generated/geonames-major-cities-input.json',
+        schemaVersion: 2,
+        sha256:
+          '49b3f2114d1e71277572b2773cb1e5b8242f3eb22a9e89598eb95b79408c5621',
+        rawBytes: 2814375,
+      },
+      derivedAsset: {
+        path: 'src/data/generated/geonames-major-cities.json',
+        sha256:
+          'b48d0d5c34229b2337a979f8362bef3c7075bf67644819fe32ebe691a5d440f4',
+        rawBytes: 780004,
+      },
       attribution: 'Contains GeoNames data, licensed under CC BY 4.0',
-      recordCount: expect.any(Number),
-      rawBytes: expect.any(Number),
-      gzipBytes: expect.any(Number),
-      staticDecodedBytesEstimate: expect.any(Number),
-      runtimeDecodedBytesEstimate: expect.any(Number),
+      recordCount: 6953,
+      rawBytes: 780004,
+      gzipBytes: 275263,
+      staticDecodedBytesEstimate: 3120016,
+      runtimeDecodedBytesEstimate: 4764314,
     });
-    expect(manifest?.auxiliarySources).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          distributionUrl:
-            'https://download.geonames.org/export/dump/alternateNamesV2.zip',
-          sha256:
-            '77c5dbcdf73799beaf416813a6b062eb8b0ff0a21b80a3338dcee95592b64c6b',
-        }),
-        expect.objectContaining({
-          distributionUrl:
-            'https://download.geonames.org/export/dump/countryInfo.txt',
-          sha256:
-            '93bafc525813f22e4711ff9ed6d626343094ce48c26388dc7c49189b3d7d5512',
-        }),
-        expect.objectContaining({
-          distributionUrl:
-            'https://download.geonames.org/export/dump/admin1CodesASCII.txt',
-          sha256:
-            '34784457b76b988a669dff7c3e4b104e4902c0875643cff019281ac79dfa2992',
-        }),
-        expect.objectContaining({
-          distributionUrl:
-            'https://download.geonames.org/export/dump/readme.txt',
-          sha256:
-            'b1957379b6c1242c700c98ac9a8aa0a09f56c3c0a50ee72175527005f48ef2c5',
-        }),
-      ]),
-    );
+    expect(manifest).not.toHaveProperty('distributionUrl');
+    expect(manifest).not.toHaveProperty('sha256');
+    expect(
+      manifest?.upstreamCapture?.sources.map((source) => source.sha256),
+    ).toEqual([
+      '9ba4c24f8b514081139a813be393f2f01e98a7a059e5f3ac8c96c786bf532481',
+      'd46fc26c590c29e663792dd9bc5dc07322ee99567681ee45ee0df9f935c04204',
+      '93bafc525813f22e4711ff9ed6d626343094ce48c26388dc7c49189b3d7d5512',
+      '34784457b76b988a669dff7c3e4b104e4902c0875643cff019281ac79dfa2992',
+      'b1957379b6c1242c700c98ac9a8aa0a09f56c3c0a50ee72175527005f48ef2c5',
+    ]);
     expect(manifest?.recordCount).toBeLessThanOrEqual(10_000);
     expect(manifest?.rawBytes).toBeLessThanOrEqual(1.5 * 1024 * 1024);
     expect(manifest?.gzipBytes).toBeLessThanOrEqual(450 * 1024);
