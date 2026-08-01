@@ -2,14 +2,16 @@
 
 本文只记录当前实施切片；稳定的产品与架构决策仍以 [PROJECT_PLAN.md](PROJECT_PLAN.md) 为准。
 
-部署状态必须与实施状态分开理解：公开 V1.0.0 固定在
-`a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`；本文顶部的 Natural Earth
-矢量球、GeoNames 双语搜索、双侧城市关系、拖拽剖面和羊皮纸视觉属于尚未发布的
-**V1.1.0 Parchment Atlas** 候选。实现与本地门通过不等于已部署。
+部署状态必须与 tag/Release 状态分开理解：**V1.1.0 Parchment Atlas**
+已在 2026-08-02 通过受保护 `main`、Pages、线上冒烟和桌面/移动人工验收公开。
+Natural Earth 矢量球、GeoNames 双语搜索、双侧城市关系、拖拽剖面和羊皮纸视觉
+属于当前公开产品。`v1.0.0` tag 与现有 GitHub Release 仍固定在
+`a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`；尚未创建 V1.1 tag 或 Release。
 
 当前执行目标、批次门槛和审阅循环见 [EXECUTION_PLAN.md](EXECUTION_PLAN.md)。
-V1.1 候选的验收、测试、审阅与发布边界见
-[2026-08-01 候选证据](2026-08-01-v1.1-parchment-atlas-candidate.md)。
+V1.1 的候选期验收、测试、审阅与发布边界见
+[2026-08-01 候选证据](2026-08-01-v1.1-parchment-atlas-candidate.md)和
+[publication packet](2026-08-01-v1.1-publication-packet.md)。
 
 ## Natural Earth 完整矢量球面
 

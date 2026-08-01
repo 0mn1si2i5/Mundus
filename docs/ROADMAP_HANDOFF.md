@@ -42,10 +42,10 @@ explicitly changes that policy. Detailed migration and convergence plans there
 are local execution aids; durable decisions and final evidence belong in
 tracked documentation and PR #5.
 
-The approved ignored V1.1 execution aid is in the primary checkout at
+The completed V1.1 execution aid remains ignored in the primary checkout at
 `/Users/bytedance/Desktop/Zen/Mundus/docs/superpowers/plans/2026-08-01-mundus-v1.1-parchment-atlas-convergence.md`.
-Agents in linked worktrees read it there as read-only and must not copy or add
-it. Tracked handoffs and Draft PR #5 remain the durable authority and evidence.
+It and merged PR #5/#6 are historical evidence only. Agents must not copy or
+add the ignored plan, or execute its convergence and publication steps again.
 
 ## 2. Authority Order
 
@@ -65,12 +65,11 @@ Use this order when documents disagree:
 Current evidence overrides stale status snapshots, but implementation evidence
 must never silently change an accepted scientific or product contract.
 
-For current V1.1 convergence, the tracked terminal documents, Draft PR #5, and
-the approved ignored convergence plan named above govern; absent ignored GHSL
-source plans are not a blocker. If GHSL is explicitly reopened, stop until the
-accepted design, master plan, and a newly approved detailed plan are available.
-Never reconstruct scientific rules, budgets, or implementation tasks from older
-roadmap prose.
+V1.1 convergence is complete. The tracked terminal documents and merged PR
+#5/#6 preserve its evidence; the ignored convergence plan is not current
+authority. If GHSL is explicitly reopened, stop until the accepted design,
+master plan, and a newly approved detailed plan are available. Never reconstruct
+scientific rules, budgets, or implementation tasks from older roadmap prose.
 
 ## 3. Accepted GHSL Direction
 
@@ -117,10 +116,14 @@ approved; measured Plan 1 evidence must inform any such decision.
 Release identity is canonical:
 
 - **V1.0.0** — verified public baseline at
-  `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`;
-- **V1.1.0 Parchment Atlas** — current unpublished local candidate: parchment
+  `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`; tag `v1.0.0` and the existing
+  GitHub Release still target this commit;
+- **V1.1.0 Parchment Atlas** — current public Pages product: parchment
   presentation, drag cross-section, bilingual GeoNames search, bilateral city
-  relations, and Natural Earth vector globe;
+  relations, and Natural Earth vector globe. The implementation entered
+  protected `main` at `1a9c44700e2154186708772a7773fd8972a7aaf2` and passed
+  same-SHA CI, Pages deployment, live smoke, and desktop/mobile manual
+  verification on 2026-08-02. No V1.1 tag or GitHub Release exists;
 - **V1.2.0 Human Morphology** — reserved for the later shared GHSL overlay only
   after Plans 1–7 and owner gates complete.
 
@@ -153,8 +156,9 @@ Verified terminal evidence at the 2026-08-01 checkpoint:
   frozen and blocked unless separately reopened and approved.
 
 The concise terminal evidence and preserved output paths are recorded in
-`docs/GHSL_EXECUTION_HANDOFF.md`. Continue V1.1.0 Parchment Atlas convergence;
-do not treat local GHSL plans as current execution instructions.
+`docs/GHSL_EXECUTION_HANDOFF.md`. V1.1.0 convergence is complete; do not repeat
+its publication steps or treat local GHSL plans as current execution
+instructions.
 
 ## 6. Required Execution Workflow
 
@@ -247,10 +251,9 @@ A new agent must:
 2. Read `docs/GHSL_EXECUTION_HANDOFF.md` as terminal evidence and status only.
 3. Preserve the stopped Build A/B outputs without resuming, reusing, copying,
    deleting, or presenting them as complete formal builds.
-4. Read the approved ignored local execution aid read-only from
-   `/Users/bytedance/Desktop/Zen/Mundus/docs/superpowers/plans/2026-08-01-mundus-v1.1-parchment-atlas-convergence.md`,
-   then continue V1.1.0 Parchment Atlas convergence in Draft PR #5. Do not copy
-   or add the local plan; tracked handoffs and the PR remain durable.
+4. Treat the ignored V1.1 convergence plan and merged PR #5/#6 as historical
+   evidence. Do not repeat their merge, deployment, tag, or Release steps, and
+   do not copy the ignored plan into Git.
 5. Keep GHSL Plans 2 through 7 frozen unless the project is separately reopened
    and approved.
 

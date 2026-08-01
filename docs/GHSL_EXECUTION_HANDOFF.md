@@ -20,11 +20,12 @@ to restart the 48-hour attempt, resume a build, or begin a later GHSL plan.
 - source handoff SHA-256 at the terminal commit:
   `934739a31a31957799ba7464abf837395ab01e4ee4740e3c6e3b46bcebae094e`.
 
-The public product remains V1.0.0 at
-`a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`. V1.1.0 Parchment Atlas is the
-current unpublished candidate. Human Morphology remains a shared overlay and
-reserves V1.2.0 only if the project is reopened and Plans 1 through 7 plus their
-approval gates complete.
+V1.1.0 Parchment Atlas is the current public Pages product. The `v1.0.0` tag
+and existing GitHub Release remain at
+`a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`; no V1.1 tag or Release exists.
+Human Morphology is not a public capability. It remains a stopped shared-overlay
+proposal and reserves V1.2.0 only if the project is separately reopened and
+Plans 1 through 7 plus their approval gates complete.
 
 ## Verified Evidence
 
