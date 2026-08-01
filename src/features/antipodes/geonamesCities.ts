@@ -4,6 +4,7 @@ import type { GeoPoint } from '../globe/geo';
 export interface GeoNamesCity {
   id: number;
   name: Record<Locale, string>;
+  readonly nameZhFallback: boolean;
   country: Record<Locale, string>;
   admin1: Record<Locale, string> | null;
   countryCode: string;
@@ -39,7 +40,7 @@ export function decodeGeoNamesCityIndex(
 ): readonly GeoNamesCity[] {
   if (
     !isObject(value) ||
-    value.formatVersion !== 1 ||
+    value.formatVersion !== 2 ||
     !Array.isArray(value.strings) ||
     !Array.isArray(value.rows)
   ) {
@@ -59,7 +60,7 @@ export function decodeGeoNamesCityIndex(
     return result;
   };
   return value.rows.map((raw) => {
-    if (!Array.isArray(raw) || raw.length !== 13)
+    if (!Array.isArray(raw) || raw.length !== 14)
       throw new Error('Invalid GeoNames city row');
     const [
       id,
@@ -75,6 +76,7 @@ export function decodeGeoNamesCityIndex(
       adminEn,
       adminZh,
       aliases,
+      flags,
     ] = raw;
     if (!Number.isSafeInteger(id) || seen.has(id as number))
       throw new Error(`Invalid or duplicate GeoNames city ID: ${String(id)}`);
@@ -95,6 +97,12 @@ export function decodeGeoNamesCityIndex(
     ) {
       throw new Error(`Invalid GeoNames city values: ${String(id)}`);
     }
+    if (
+      !Number.isInteger(flags) ||
+      (flags as number) < 0 ||
+      (flags as number) > 1
+    )
+      throw new Error(`Invalid GeoNames city flags: ${String(flags)}`);
     const stringAt = (index: unknown, nullable = false) => {
       if (nullable && index === null) return null;
       if (
@@ -129,6 +137,7 @@ export function decodeGeoNamesCityIndex(
       featureCode: rank === 0 ? 'PPLC' : rank === 1 ? 'PPLA' : 'PPL',
       countryCode: stringAt(countryCode)!,
       name,
+      nameZhFallback: ((flags as number) & 1) !== 0,
       country,
       admin1,
       aliases: aliasValues,

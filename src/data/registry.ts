@@ -28,7 +28,7 @@ const trackedAssetIdentitySchema = z.object({
   rawBytes: z.number().int().positive(),
 });
 
-export const dataManifestSchema = z.object({
+const dataManifestObjectSchema = z.object({
   id: z.string().min(1),
   sourceName: z.string().min(1),
   sourceUrl: z.url(),
@@ -55,7 +55,9 @@ export const dataManifestSchema = z.object({
   immutableBuildInput: trackedAssetIdentitySchema
     .extend({ schemaVersion: z.literal(2) })
     .optional(),
-  derivedAsset: trackedAssetIdentitySchema.optional(),
+  derivedAsset: trackedAssetIdentitySchema
+    .extend({ formatVersion: z.number().int().optional() })
+    .optional(),
   attribution: z.string().min(1),
   redistribution: z.enum(['allowed', 'restricted', 'unknown']),
   transformations: z.array(z.string().min(1)).min(1),
@@ -129,6 +131,21 @@ export const dataManifestSchema = z.object({
     )
     .optional(),
 });
+
+export const dataManifestSchema = dataManifestObjectSchema.superRefine(
+  (manifest, context) => {
+    if (
+      manifest.id === 'geonames-major-cities' &&
+      manifest.derivedAsset?.formatVersion !== 2
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['derivedAsset', 'formatVersion'],
+        message: 'GeoNames derived asset requires runtime format version 2',
+      });
+    }
+  },
+);
 
 export type DataManifest = z.infer<typeof dataManifestSchema>;
 

@@ -14,6 +14,7 @@ function city(
   return {
     id,
     name: { en: name, zh: name },
+    nameZhFallback: false,
     country: { en: `${name} country`, zh: `${name} country` },
     admin1: null,
     countryCode: 'ZZ',

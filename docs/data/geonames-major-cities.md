@@ -18,17 +18,20 @@ OpenCC traditional Chinese to Simplified Chinese with `opencc-js` 1.4.1 using
 every distinct simplified derivative remains searchable. Only additional
 non-display English aliases are capped at two. No non-Chinese name is
 translated. Missing Chinese names remain explicit canonical fallbacks.
-That visible non-Chinese fallback remains a known P2 for final release evidence;
-this correction does not expand UI or claim translated coverage.
+Runtime format 2 stores that provenance explicitly in row flag bit 0; reserved
+bits are rejected. Chinese search results mark canonical fallbacks as
+`GeoNames 原名（暂无中文名）`, while real Chinese labels and English results do not.
 
 The compact index has 6,953 ID-sorted rows, E5 coordinates, a lexical string
-table, complete accepted Chinese aliases, and bounded additional English
-aliases. The committed asset is 780,004 raw bytes and 275,263 gzip bytes. Its
-static decoded estimate is 3,120,016 bytes. Including decoder-precomputed,
+table, complete accepted Chinese aliases, bounded additional English aliases,
+and one integer flag bitset per row. Of those rows, 3,862 have real Chinese
+labels and 3,091 use canonical fallbacks. The committed asset is 793,910 raw
+bytes and 277,460 gzip bytes. Its static decoded estimate is 3,175,640 bytes.
+Including decoder-precomputed,
 deduplicated normalized display/country/admin/alias fields, per-city search
-objects, and alias references, the conservative runtime total is 4,764,314
+objects, and alias references, the conservative runtime total is 4,819,938
 bytes, below the 8 MiB gate. Its SHA-256 is
-`b48d0d5c34229b2337a979f8362bef3c7075bf67644819fe32ebe691a5d440f4`.
+`68d971df7d66f16eb23a1921623f4608176ed36ec8bb4ac00d1ba57d7493dfab`.
 
 The redistributed CC BY 4.0 immutable build input uses schema 2 and is 2,814,375
 bytes with SHA-256

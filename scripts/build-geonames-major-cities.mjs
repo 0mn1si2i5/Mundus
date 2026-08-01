@@ -364,9 +364,10 @@ export function buildFeasibilityIndex({
     record.adminNames ? at(record.adminNames.en) : null,
     record.adminNames ? at(record.adminNames.zh) : null,
     record.aliases.map(at),
+    Number(record.cityNames.zhFallback),
   ]);
   return {
-    asset: { formatVersion: 1, strings, rows },
+    asset: { formatVersion: 2, strings, rows },
     rows,
     records,
     coverage: {
@@ -489,7 +490,7 @@ export function buildCompactIndex({
   const index = (value) => stringIndex.get(value);
   const rank = (code) => (code === 'PPLC' ? 0 : code === 'PPLA' ? 1 : 2);
   return {
-    formatVersion: 1,
+    formatVersion: 2,
     strings,
     rows: records.map(
       ({ city, cityNames, countryNames, adminNames, aliases }) => [
@@ -506,6 +507,7 @@ export function buildCompactIndex({
         adminNames ? index(adminNames.en) : null,
         adminNames ? index(adminNames.zh) : null,
         aliases.sort((a, b) => a.localeCompare(b, 'und')).map(index),
+        Number(cityNames.zhFallback),
       ],
     ),
     coverage,
@@ -644,15 +646,25 @@ export async function runOfflineBuild({
     coverage: compact.coverage,
   };
   assertGeoNamesBudgets(report);
-  if (
-    manifest.derivedAsset.sha256 !== '0'.repeat(64) &&
-    manifest.derivedAsset.sha256 !== report.derivedAssetSha256
-  ) {
-    throw new Error(
-      `Derived asset checksum mismatch: expected ${manifest.derivedAsset.sha256}, received ${report.derivedAssetSha256}`,
-    );
-  }
-  await writeGeneratedAssetAtomically(outputPath, bytes);
+  const nextManifest = structuredClone(manifest);
+  nextManifest.derivedAsset = {
+    ...nextManifest.derivedAsset,
+    formatVersion: compact.asset.formatVersion,
+    sha256: report.derivedAssetSha256,
+    rawBytes: report.rawBytes,
+  };
+  nextManifest.recordCount = report.records;
+  nextManifest.rawBytes = report.rawBytes;
+  nextManifest.gzipBytes = report.gzipBytes;
+  nextManifest.staticDecodedBytesEstimate = report.staticDecodedBytesEstimate;
+  nextManifest.runtimeDecodedBytesEstimate = report.runtimeDecodedBytesEstimate;
+  await publishAssetSet([
+    { path: outputPath, bytes },
+    {
+      path: manifestPath,
+      bytes: Buffer.from(`${JSON.stringify(nextManifest, null, 2)}\n`),
+    },
+  ]);
   console.log(JSON.stringify(report, null, 2));
   return report;
 }
@@ -894,6 +906,19 @@ export function prepareCapturePublication({
   compact,
   retrievedAt,
 }) {
+  let runtime;
+  try {
+    runtime = JSON.parse(outputBytes.toString('utf8'));
+  } catch {
+    throw new Error('GeoNames capture requires runtime format version 2');
+  }
+  if (
+    compact?.asset?.formatVersion !== 2 ||
+    runtime?.formatVersion !== 2 ||
+    runtime.formatVersion !== compact.asset.formatVersion
+  ) {
+    throw new Error('GeoNames capture requires runtime format version 2');
+  }
   const next = structuredClone(manifest);
   next.version = `GeoNames capture ${retrievedAt}`;
   next.retrievedAt = retrievedAt.slice(0, 10);
@@ -917,6 +942,7 @@ export function prepareCapturePublication({
   };
   next.derivedAsset = {
     path: 'src/data/generated/geonames-major-cities.json',
+    formatVersion: 2,
     sha256: createHash('sha256').update(outputBytes).digest('hex'),
     rawBytes: outputBytes.byteLength,
   };

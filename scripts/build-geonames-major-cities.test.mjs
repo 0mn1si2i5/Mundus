@@ -70,6 +70,48 @@ test('builds the runtime asset deterministically from normalized immutable input
   assert.equal(first.asset.rows[0][0], 1816670);
 });
 
+test('encodes real Chinese and canonical Chinese fallback provenance in v2 row flags', () => {
+  const realChinese = parseCityRow(cityRow({ id: '1' }));
+  const canonicalFallback = parseCityRow(
+    cityRow({ id: '2', name: 'Fallback City', admin1Code: '23' }),
+  );
+  const index = buildFeasibilityIndex({
+    cities: [canonicalFallback, realChinese],
+    countries: new Map([['CN', { code: 'CN', name: 'China', geoNameId: 10 }]]),
+    admin1: new Map([
+      ['CN.22', { key: 'CN.22', name: 'Beijing', geoNameId: 11 }],
+      ['CN.23', { key: 'CN.23', name: 'Fallback', geoNameId: 12 }],
+    ]),
+    alternateNames: new Map([
+      [1, [{ id: 1, language: 'zh', name: '北京', preferred: true }]],
+    ]),
+  });
+
+  assert.equal(index.asset.formatVersion, 2);
+  assert.deepEqual(
+    index.rows.map((row) => [row[0], row.length, row[13]]),
+    [
+      [1, 14, 0],
+      [2, 14, 1],
+    ],
+  );
+  assert.deepEqual(index.rows[0].slice(0, 13), [
+    1,
+    3990750,
+    11639723,
+    11716620,
+    0,
+    index.rows[0][5],
+    index.rows[0][6],
+    index.rows[0][7],
+    index.rows[0][8],
+    index.rows[0][9],
+    index.rows[0][10],
+    index.rows[0][11],
+    index.rows[0][12],
+  ]);
+});
+
 test('immutable input retains only fields and name languages used by the runtime transform', () => {
   const city = parseCityRow(cityRow());
   const input = geoNamesBuilder.createImmutableBuildInput({
@@ -152,14 +194,25 @@ test('over-budget capture preparation fails before changing tracked generation',
     paths.map((path, index) => writeFile(path, `old-${index}`)),
   );
 
+  const oversizedRuntime = Buffer.from(
+    JSON.stringify({
+      formatVersion: 2,
+      strings: [],
+      rows: [],
+      padding: 'x'.repeat(1.5 * 1024 * 1024),
+    }),
+  );
   assert.throws(
     () =>
       geoNamesBuilder.prepareCapturePublication({
         manifest: {},
         capture: { sources: [] },
-        inputBytes: Buffer.from('{}'),
-        outputBytes: Buffer.alloc(1.5 * 1024 * 1024 + 1),
-        compact: { rows: [], asset: { strings: [], rows: [] } },
+        inputBytes: Buffer.from('{"schemaVersion":2}\n'),
+        outputBytes: oversizedRuntime,
+        compact: {
+          rows: [],
+          asset: { formatVersion: 2, strings: [], rows: [] },
+        },
         retrievedAt: '2026-08-01T10:11:12.345Z',
       }),
     /rawBytes/,
@@ -169,6 +222,32 @@ test('over-budget capture preparation fails before changing tracked generation',
     ['old-0', 'old-1', 'old-2'],
   );
 });
+
+for (const [label, compactFormat, outputFormat] of [
+  ['missing compact format identity', undefined, 2],
+  ['v1 compact format identity', 1, 1],
+  ['compact/runtime format mismatch', 2, 1],
+]) {
+  test(`capture preparation rejects ${label}`, () => {
+    const compactAsset = { strings: [], rows: [] };
+    if (compactFormat !== undefined) compactAsset.formatVersion = compactFormat;
+
+    assert.throws(
+      () =>
+        geoNamesBuilder.prepareCapturePublication({
+          manifest: {},
+          capture: { sources: [] },
+          inputBytes: Buffer.from('{"schemaVersion":2}\n'),
+          outputBytes: Buffer.from(
+            `${JSON.stringify({ formatVersion: outputFormat, strings: [], rows: [] })}\n`,
+          ),
+          compact: { rows: [], asset: compactAsset },
+          retrievedAt: '2026-08-01T10:11:12.345Z',
+        }),
+      /runtime format version 2/i,
+    );
+  });
+}
 
 test('concurrent captures keep each unique source generation immutable through publication', async (context) => {
   const releases = new Map();
@@ -254,9 +333,12 @@ test('a new capture replaces an existing timestamp with the current retrieval ti
       upstreamCapture: { retrievedAt: '2026-07-21T00:00:00.000Z' },
     },
     capture: { sources: [] },
-    inputBytes: Buffer.from('{"schemaVersion":1}\n'),
-    outputBytes: Buffer.from('{"formatVersion":1,"strings":[],"rows":[]}\n'),
-    compact: { rows: [], asset: { strings: [], rows: [] } },
+    inputBytes: Buffer.from('{"schemaVersion":2}\n'),
+    outputBytes: Buffer.from('{"formatVersion":2,"strings":[],"rows":[]}\n'),
+    compact: {
+      rows: [],
+      asset: { formatVersion: 2, strings: [], rows: [] },
+    },
     retrievedAt: '2026-08-01T10:11:12.345Z',
   });
 
@@ -272,9 +354,12 @@ test('an explicit existing-capture rebuild may retain its captured timestamp', (
   const prepared = geoNamesBuilder.prepareCapturePublication({
     manifest: { upstreamCapture: { retrievedAt } },
     capture: { sources: [] },
-    inputBytes: Buffer.from('{"schemaVersion":1}\n'),
-    outputBytes: Buffer.from('{"formatVersion":1,"strings":[],"rows":[]}\n'),
-    compact: { rows: [], asset: { strings: [], rows: [] } },
+    inputBytes: Buffer.from('{"schemaVersion":2}\n'),
+    outputBytes: Buffer.from('{"formatVersion":2,"strings":[],"rows":[]}\n'),
+    compact: {
+      rows: [],
+      asset: { formatVersion: 2, strings: [], rows: [] },
+    },
     retrievedAt,
   });
 
@@ -358,12 +443,18 @@ test('ordinary command path rebuilds exact output without raw sources or network
   await writeFile(
     join(manifests, 'manifest.json'),
     JSON.stringify({
+      upstreamCapture: {
+        retrievedAt: 'fixed',
+        sources: [{ sha256: 'source' }],
+      },
       immutableBuildInput: {
         path: 'src/data/generated/input.json',
         sha256: createHash('sha256').update(inputBytes).digest('hex'),
       },
       derivedAsset: {
-        sha256: createHash('sha256').update(expected).digest('hex'),
+        path: 'src/data/generated/runtime.json',
+        formatVersion: 1,
+        sha256: '0'.repeat(64),
       },
     }),
   );
@@ -385,6 +476,24 @@ test('ordinary command path rebuilds exact output without raw sources or network
     await readFile(join(generated, 'runtime.json'), 'utf8'),
     expected,
   );
+  const publishedManifest = JSON.parse(
+    await readFile(join(manifests, 'manifest.json'), 'utf8'),
+  );
+  assert.deepEqual(publishedManifest.upstreamCapture, {
+    retrievedAt: 'fixed',
+    sources: [{ sha256: 'source' }],
+  });
+  assert.equal(
+    publishedManifest.immutableBuildInput.sha256,
+    createHash('sha256').update(inputBytes).digest('hex'),
+  );
+  assert.equal(publishedManifest.derivedAsset.formatVersion, 2);
+  assert.equal(
+    publishedManifest.derivedAsset.sha256,
+    createHash('sha256').update(expected).digest('hex'),
+  );
+  assert.equal(publishedManifest.rawBytes, Buffer.byteLength(expected));
+  assert.equal(publishedManifest.recordCount, 1);
   await assert.rejects(readFile(join(root, 'tmp/geonames')), /ENOENT/);
 });
 

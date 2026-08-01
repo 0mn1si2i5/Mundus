@@ -14,7 +14,7 @@ import {
 import type { GeoNamesCity } from './geonamesCities';
 
 const compact = {
-  formatVersion: 1,
+  formatVersion: 2,
   strings: [
     'BR',
     'Brazil',
@@ -41,10 +41,70 @@ const compact = {
     'Sao Paulo',
   ],
   rows: [
-    [1816670, 3990750, 11639723, 11716620, 0, 3, 12, 13, 4, 5, null, null, []],
-    [1796236, 3112300, 12145806, 22315474, 1, 3, 14, 15, 4, 5, null, null, []],
-    [1850147, 3568950, 13969171, 8336599, 0, 6, 16, 17, 7, 8, null, null, []],
-    [5128581, 4071427, -7400597, 8804190, 2, 9, 18, 19, 10, 11, null, null, []],
+    [
+      1816670,
+      3990750,
+      11639723,
+      11716620,
+      0,
+      3,
+      12,
+      13,
+      4,
+      5,
+      null,
+      null,
+      [],
+      0,
+    ],
+    [
+      1796236,
+      3112300,
+      12145806,
+      22315474,
+      1,
+      3,
+      14,
+      15,
+      4,
+      5,
+      null,
+      null,
+      [],
+      0,
+    ],
+    [
+      1850147,
+      3568950,
+      13969171,
+      8336599,
+      0,
+      6,
+      16,
+      17,
+      7,
+      8,
+      null,
+      null,
+      [],
+      0,
+    ],
+    [
+      5128581,
+      4071427,
+      -7400597,
+      8804190,
+      2,
+      9,
+      18,
+      19,
+      10,
+      11,
+      null,
+      null,
+      [],
+      0,
+    ],
     [
       3448439,
       -2354760,
@@ -59,6 +119,7 @@ const compact = {
       null,
       null,
       [22],
+      0,
     ],
   ],
 };
@@ -68,18 +129,21 @@ describe('GeoNames city index', () => {
     resetGeoNamesCityIndex();
   });
 
-  it('rejects malformed schemas, bad string references, coordinates, and duplicate IDs', () => {
+  it('rejects v1, malformed schemas, bad string references, coordinates, and duplicate IDs', () => {
+    expect(() =>
+      decodeGeoNamesCityIndex({ ...compact, formatVersion: 1 }),
+    ).toThrow(/schema/i);
     expect(() => decodeGeoNamesCityIndex({ formatVersion: 2 })).toThrow();
     expect(() =>
       decodeGeoNamesCityIndex({
         ...compact,
-        rows: [[1, 0, 0, 1, 0, 99, 0, 0, 0, 0, null, null, []]],
+        rows: [[1, 0, 0, 1, 0, 99, 0, 0, 0, 0, null, null, [], 0]],
       }),
     ).toThrow(/string table/i);
     expect(() =>
       decodeGeoNamesCityIndex({
         ...compact,
-        rows: [[1, 9100000, 0, 1, 0, 0, 1, 1, 1, 1, null, null, []]],
+        rows: [[1, 9100000, 0, 1, 0, 0, 1, 1, 1, 1, null, null, [], 0]],
       }),
     ).toThrow(/coordinate/i);
     expect(() =>
@@ -90,6 +154,42 @@ describe('GeoNames city index', () => {
     ).toThrow(/duplicate/i);
   });
 
+  it('strictly validates the v2 row flags and row shape', () => {
+    expect(() =>
+      decodeGeoNamesCityIndex({
+        ...compact,
+        rows: [compact.rows[0]!.slice(0, 13)],
+      }),
+    ).toThrow(/row/i);
+    for (const flags of [0.5, '1', 2, -1]) {
+      expect(() =>
+        decodeGeoNamesCityIndex({
+          ...compact,
+          rows: [[...compact.rows[0]!.slice(0, 13), flags]],
+        }),
+      ).toThrow(/flags/i);
+    }
+  });
+
+  it('decodes explicit Chinese fallback provenance without inferring from name equality', () => {
+    const strings = ['CC', 'Same', 'Country'];
+    const base = [1, 0, 0, 1, 2, 0, 1, 1, 2, 2, null, null, []];
+    const real = decodeGeoNamesCityIndex({
+      formatVersion: 2,
+      strings,
+      rows: [[...base, 0]],
+    })[0]!;
+    const fallback = decodeGeoNamesCityIndex({
+      formatVersion: 2,
+      strings,
+      rows: [[...base, 1]],
+    })[0]!;
+
+    expect(real.name.en).toBe(real.name.zh);
+    expect(real.nameZhFallback).toBe(false);
+    expect(fallback.nameZhFallback).toBe(true);
+  });
+
   it('decodes E5 coordinates and searchable bilingual records', () => {
     const cities = decodeGeoNamesCityIndex(compact);
     expect(cities[0]).toMatchObject({
@@ -98,6 +198,7 @@ describe('GeoNames city index', () => {
       country: { en: 'China', zh: '中国' },
       point: { latitude: 39.9075, longitude: 116.39723 },
       featureCode: 'PPLC',
+      nameZhFallback: false,
     });
     expect(cities[0]?.search).toEqual({
       nameEn: 'beijing',
@@ -271,7 +372,7 @@ describe('GeoNames city index', () => {
 
   it('uses the documented estimator formula for fixed vectors', () => {
     const city = decodeGeoNamesCityIndex({
-      formatVersion: 1,
+      formatVersion: 2,
       strings: [
         'CC',
         'City',
@@ -282,7 +383,7 @@ describe('GeoNames city index', () => {
         '行政',
         'Alias',
       ],
-      rows: [[1, 0, 0, 1, 2, 0, 1, 2, 3, 4, 5, 6, [7]]],
+      rows: [[1, 0, 0, 1, 2, 0, 1, 2, 3, 4, 5, 6, [7], 0]],
     });
     const normalizedValues = [
       'city',

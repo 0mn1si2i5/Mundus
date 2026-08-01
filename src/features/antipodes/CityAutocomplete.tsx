@@ -23,6 +23,7 @@ const COPY = {
       `${count} matching ${count === 1 ? 'city' : 'cities'}.`,
     error: 'City index is unavailable.',
     retry: 'Retry city index',
+    zhFallback: '',
   },
   zh: {
     label: '搜索全球主要城市',
@@ -33,6 +34,7 @@ const COPY = {
     count: (count: number) => `${count} 个匹配城市。`,
     error: '城市索引暂时不可用。',
     retry: '重试城市索引',
+    zhFallback: 'GeoNames 原名（暂无中文名）',
   },
 } as const;
 
@@ -217,6 +219,9 @@ export function CityAutocomplete({
               {locale === 'zh' && city.name.en !== city.name.zh ? (
                 <small>{city.name.en}</small>
               ) : null}
+              {locale === 'zh' && city.nameZhFallback ? (
+                <small>{copy.zhFallback}</small>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -263,6 +268,7 @@ function optionLabel(city: GeoNamesCity, locale: Locale, ambiguous: boolean) {
     city.country[locale],
   ].filter(Boolean);
   if (ambiguous) values.push(coordinateLabel(city, locale));
+  if (locale === 'zh' && city.nameZhFallback) values.push(COPY.zh.zhFallback);
   if (locale === 'zh' && city.name.en !== city.name.zh) {
     values.push(`英文名 ${city.name.en}`);
   }

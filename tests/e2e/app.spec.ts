@@ -2893,8 +2893,16 @@ test('loads GeoNames only for Other Side and reuses one lazy asset', async ({
 
   await page.getByRole('button', { name: /日照线/ }).click();
   await page.getByRole('button', { name: /地球另一端/ }).click();
-  await page.getByRole('combobox', { name: '搜索全球主要城市' }).fill('北京');
+  const citySearch = page.getByRole('combobox', { name: '搜索全球主要城市' });
+  await citySearch.fill('北京');
   await expect(localizedCityOption(page, '北京')).toBeVisible();
+  await expect(localizedCityOption(page, '北京')).not.toContainText(
+    '暂无中文名',
+  );
+  await citySearch.fill('Qarchak');
+  await expect(localizedCityOption(page, 'Qarchak')).toContainText(
+    'GeoNames 原名（暂无中文名）',
+  );
   expect(
     requests.filter((url) => url.includes('geonames-major-cities')),
   ).toHaveLength(1);

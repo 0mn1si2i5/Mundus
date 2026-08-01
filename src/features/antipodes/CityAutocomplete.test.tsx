@@ -7,6 +7,7 @@ import type { GeoNamesCity } from './geonamesCities';
 const beijing: GeoNamesCity = {
   id: 1816670,
   name: { en: 'Beijing', zh: '北京' },
+  nameZhFallback: false,
   country: { en: 'China', zh: '中国' },
   admin1: { en: 'Beijing', zh: '北京' },
   countryCode: 'CN',
@@ -30,6 +31,7 @@ const cities: readonly GeoNamesCity[] = [
   {
     id: 5128581,
     name: { en: 'New York City', zh: '纽约市' },
+    nameZhFallback: false,
     country: { en: 'United States', zh: '美国' },
     admin1: { en: 'New York', zh: '纽约州' },
     countryCode: 'US',
@@ -48,6 +50,21 @@ const cities: readonly GeoNamesCity[] = [
     },
   },
 ];
+
+const fallbackCity: GeoNamesCity = {
+  ...beijing,
+  id: 300,
+  name: { en: 'Fallback City', zh: 'Fallback City' },
+  nameZhFallback: true,
+  admin1: { en: 'Fallback Region', zh: 'Fallback Region' },
+  search: {
+    ...beijing.search,
+    nameEn: 'fallback city',
+    nameZh: 'fallback city',
+    adminEn: 'fallback region',
+    adminZh: 'fallback region',
+  },
+};
 
 const ambiguousCities: readonly GeoNamesCity[] = [
   ...cities,
@@ -124,6 +141,41 @@ describe('CityAutocomplete', () => {
     expect(screen.getByRole('option', { name: /纽约市/ })).toBeInTheDocument();
     fireEvent.change(input, { target: { value: '紐約' } });
     expect(screen.getByRole('option', { name: /纽约市/ })).toBeInTheDocument();
+  });
+
+  it('marks only canonical Chinese fallbacks visibly and accessibly in Chinese', () => {
+    const { rerender } = render(
+      <CityAutocomplete
+        locale="zh"
+        loadState={{ status: 'ready', data: [...cities, fallbackCity] }}
+        onSelect={vi.fn()}
+      />,
+    );
+    const input = screen.getByRole('combobox');
+    fireEvent.change(input, { target: { value: 'Fallback' } });
+    const fallback = screen.getByRole('option');
+    expect(fallback).toHaveTextContent('GeoNames 原名（暂无中文名）');
+    expect(fallback).toHaveAccessibleName(
+      'Fallback City；Fallback Region；中国；GeoNames 原名（暂无中文名）',
+    );
+
+    fireEvent.change(input, { target: { value: '北京' } });
+    expect(screen.getByRole('option')).not.toHaveTextContent('暂无中文名');
+
+    rerender(
+      <CityAutocomplete
+        locale="en"
+        loadState={{ status: 'ready', data: [...cities, fallbackCity] }}
+        onSelect={vi.fn()}
+      />,
+    );
+    fireEvent.change(screen.getByRole('combobox'), {
+      target: { value: 'Fallback' },
+    });
+    expect(screen.getByRole('option')).not.toHaveTextContent('暂无中文名');
+    expect(screen.getByRole('option')).toHaveAccessibleName(
+      'Fallback City; Fallback Region; China',
+    );
   });
 
   it.each([

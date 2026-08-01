@@ -64,6 +64,27 @@ describe('data registry', () => {
     }
   });
 
+  it('requires exactly runtime format v2 for the GeoNames derived asset only', () => {
+    const geoNames = DATA_MANIFESTS.find(
+      (candidate) => candidate.id === 'geonames-major-cities',
+    )!;
+    const withoutFormat = structuredClone(geoNames);
+    delete withoutFormat.derivedAsset?.formatVersion;
+    const versionOne = structuredClone(geoNames);
+    versionOne.derivedAsset!.formatVersion = 1;
+
+    expect(dataManifestSchema.safeParse(withoutFormat).success).toBe(false);
+    expect(dataManifestSchema.safeParse(versionOne).success).toBe(false);
+    expect(dataManifestSchema.safeParse(geoNames).success).toBe(true);
+    expect(
+      dataManifestSchema.safeParse(
+        DATA_MANIFESTS.find(
+          (candidate) => candidate.id === 'undp-hdr-2025-development',
+        ),
+      ).success,
+    ).toBe(true);
+  });
+
   it('pins the licensed GeoNames major-city snapshot and derived budgets', () => {
     const manifest = DATA_MANIFESTS.find(
       (candidate) => candidate.id === 'geonames-major-cities',
@@ -91,16 +112,17 @@ describe('data registry', () => {
       },
       derivedAsset: {
         path: 'src/data/generated/geonames-major-cities.json',
+        formatVersion: 2,
         sha256:
-          'b48d0d5c34229b2337a979f8362bef3c7075bf67644819fe32ebe691a5d440f4',
-        rawBytes: 780004,
+          '68d971df7d66f16eb23a1921623f4608176ed36ec8bb4ac00d1ba57d7493dfab',
+        rawBytes: 793910,
       },
       attribution: 'Contains GeoNames data, licensed under CC BY 4.0',
       recordCount: 6953,
-      rawBytes: 780004,
-      gzipBytes: 275263,
-      staticDecodedBytesEstimate: 3120016,
-      runtimeDecodedBytesEstimate: 4764314,
+      rawBytes: 793910,
+      gzipBytes: 277460,
+      staticDecodedBytesEstimate: 3175640,
+      runtimeDecodedBytesEstimate: 4819938,
     });
     expect(manifest).not.toHaveProperty('distributionUrl');
     expect(manifest).not.toHaveProperty('sha256');
