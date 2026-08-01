@@ -66,16 +66,28 @@ export function createVectorGlobeResources(
   const descriptors = new Map(
     decoded.descriptors.map((descriptor) => [descriptor.name, descriptor]),
   );
-  const surface = createGeometry(decoded, descriptors, 'surface');
-  const coastline = createGeometry(decoded, descriptors, 'coast');
-  const borders = createGeometry(decoded, descriptors, 'border');
-  const palette = new DataTexture(
-    new Uint8Array(PALETTE_WIDTH * 4),
-    PALETTE_WIDTH,
-    1,
-    RGBAFormat,
-    UnsignedByteType,
-  );
+  let surface: BufferGeometry | undefined;
+  let coastline: BufferGeometry | undefined;
+  let borders: BufferGeometry | undefined;
+  let palette: DataTexture | undefined;
+  try {
+    surface = createGeometry(decoded, descriptors, 'surface');
+    coastline = createGeometry(decoded, descriptors, 'coast');
+    borders = createGeometry(decoded, descriptors, 'border');
+    palette = new DataTexture(
+      new Uint8Array(PALETTE_WIDTH * 4),
+      PALETTE_WIDTH,
+      1,
+      RGBAFormat,
+      UnsignedByteType,
+    );
+  } catch (error) {
+    surface?.dispose();
+    coastline?.dispose();
+    borders?.dispose();
+    palette?.dispose();
+    throw error;
+  }
   palette.minFilter = NearestFilter;
   palette.magFilter = NearestFilter;
   palette.generateMipmaps = false;

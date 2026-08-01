@@ -1,8 +1,31 @@
-import { describe, expect, it } from 'vitest';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   decodeVectorGlobe,
+  loadVectorGlobe,
   MAX_VECTOR_DECODE_BYTES,
 } from './vectorGlobeLoader';
+
+const generatedAssetPaths = {
+  '110m': resolve('src/data/generated/natural-earth-vector-globe-110m.mvg'),
+  '50m': resolve('src/data/generated/natural-earth-vector-globe-50m.mvg'),
+} as const;
+
+async function generatedAsset(detail: keyof typeof generatedAssetPaths) {
+  return new Uint8Array(await readFile(generatedAssetPaths[detail]));
+}
+
+function respondWith(bytes: Uint8Array) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(
+      new Response(bytes.slice().buffer, {
+        status: 200,
+      }),
+    ),
+  );
+}
 
 function asset(metadata: unknown, payload = new Uint8Array()) {
   const json = new TextEncoder().encode(JSON.stringify(metadata));
@@ -15,6 +38,32 @@ function asset(metadata: unknown, payload = new Uint8Array()) {
 }
 
 describe('vector globe loader', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('rejects a valid vector asset swapped into the requested resolution', async () => {
+    respondWith(await generatedAsset('50m'));
+    await expect(loadVectorGlobe('110m')).rejects.toThrow(
+      'Vector globe asset identity mismatch',
+    );
+  });
+
+  it('rejects a truncated requested vector asset by manifest identity', async () => {
+    const bytes = await generatedAsset('110m');
+    respondWith(bytes.subarray(0, bytes.byteLength - 1));
+    await expect(loadVectorGlobe('110m')).rejects.toThrow(
+      'Vector globe asset identity mismatch',
+    );
+  });
+
+  it('rejects post-build byte alteration by manifest digest', async () => {
+    const bytes = await generatedAsset('50m');
+    bytes[bytes.byteLength - 1]! ^= 1;
+    respondWith(bytes);
+    await expect(loadVectorGlobe('50m')).rejects.toThrow(
+      'Vector globe asset identity mismatch',
+    );
+  });
+
   it('rejects malformed or unsupported assets without constructing geometry', async () => {
     await expect(
       decodeVectorGlobe(new TextEncoder().encode('bad!').buffer),

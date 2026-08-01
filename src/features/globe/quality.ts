@@ -11,13 +11,17 @@ export interface QualityProfile {
 
 interface DeviceSignals {
   viewportWidth: number;
+  viewportHeight: number;
   devicePixelRatio: number;
   hardwareConcurrency: number;
 }
 
 export function chooseQualityProfile(signals: DeviceSignals): QualityProfile {
   const constrained =
-    signals.viewportWidth <= 760 || signals.hardwareConcurrency <= 4;
+    signals.viewportWidth <= 760 ||
+    // A phone-class short edge stays within the low GPU and transfer ceiling.
+    Math.min(signals.viewportWidth, signals.viewportHeight) <= 480 ||
+    signals.hardwareConcurrency <= 4;
   const highDensityDesktop =
     !constrained &&
     signals.viewportWidth >= 1280 &&
@@ -58,6 +62,7 @@ export function chooseQualityProfile(signals: DeviceSignals): QualityProfile {
 export function detectQualityProfile(): QualityProfile {
   return chooseQualityProfile({
     viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
     devicePixelRatio: window.devicePixelRatio || 1,
     hardwareConcurrency: navigator.hardwareConcurrency || 4,
   });

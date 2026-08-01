@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
+import {
+  copyFile,
+  mkdtemp,
+  mkdir,
+  readFile,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
@@ -8,9 +14,14 @@ import test from 'node:test';
 
 const execFileAsync = promisify(execFile);
 const verifier = resolve('scripts/verify-pages-artifact.mjs');
+const generatedAssets = {
+  '110m': resolve('src/data/generated/natural-earth-vector-globe-110m.mvg'),
+  '50m': resolve('src/data/generated/natural-earth-vector-globe-50m.mvg'),
+};
 
 async function createArtifact({
-  javascript = '',
+  javascript = 'new URL("natural-earth-vector-globe-110m-test.mvg",import.meta.url);' +
+    'new URL("natural-earth-vector-globe-50m-test.mvg",import.meta.url);',
   stylesheet = '',
   notices = '## react@19\n\nMIT license text\n',
 } = {}) {
@@ -30,13 +41,13 @@ async function createArtifact({
     writeFile(join(root, 'THIRD_PARTY_NOTICES.md'), notices),
     writeFile(join(root, 'assets/app.js'), javascript),
     writeFile(join(root, 'assets/app.css'), stylesheet),
-    writeFile(
+    copyFile(
+      generatedAssets['110m'],
       join(root, 'assets/natural-earth-vector-globe-110m-test.mvg'),
-      '110m',
     ),
-    writeFile(
+    copyFile(
+      generatedAssets['50m'],
       join(root, 'assets/natural-earth-vector-globe-50m-test.mvg'),
-      '50m',
     ),
   ]);
   return root;
@@ -50,7 +61,12 @@ async function verifyFailure(root, expectedMessage) {
 }
 
 test('rejects root-relative references in JavaScript', async () => {
-  const root = await createArtifact({ javascript: "fetch('/data.json')" });
+  const root = await createArtifact({
+    javascript:
+      "fetch('/data.json');" +
+      'new URL("natural-earth-vector-globe-110m-test.mvg",import.meta.url);' +
+      'new URL("natural-earth-vector-globe-50m-test.mvg",import.meta.url);',
+  });
   await verifyFailure(root, 'Root-relative asset breaks project Pages');
 });
 
@@ -71,7 +87,54 @@ test('rejects a missing vector globe resolution', async () => {
   await import('node:fs/promises').then(({ rm }) =>
     rm(join(root, 'assets/natural-earth-vector-globe-50m-test.mvg')),
   );
-  await verifyFailure(root, 'Missing 50m vector globe asset');
+  await verifyFailure(root, 'Broken asset reference in assets/app.js');
+});
+
+test('rejects a missing referenced vector file despite an unreferenced valid copy', async () => {
+  const root = await createArtifact({
+    javascript:
+      'new URL("natural-earth-vector-globe-110m-missing.mvg",import.meta.url);' +
+      'new URL("natural-earth-vector-globe-50m-test.mvg",import.meta.url);',
+  });
+  await verifyFailure(root, 'Broken asset reference in assets/app.js');
+});
+
+test('rejects ambiguous vector references for one resolution', async () => {
+  const root = await createArtifact({
+    javascript:
+      'new URL("natural-earth-vector-globe-110m-test.mvg",import.meta.url);' +
+      'new URL("natural-earth-vector-globe-110m-copy.mvg",import.meta.url);' +
+      'new URL("natural-earth-vector-globe-50m-test.mvg",import.meta.url);',
+  });
+  await copyFile(
+    generatedAssets['110m'],
+    join(root, 'assets/natural-earth-vector-globe-110m-copy.mvg'),
+  );
+  await verifyFailure(root, 'Expected exactly one 110m vector globe reference');
+});
+
+test('rejects valid vector globe files swapped between emitted resolution names', async () => {
+  const root = await createArtifact();
+  await Promise.all([
+    copyFile(
+      generatedAssets['50m'],
+      join(root, 'assets/natural-earth-vector-globe-110m-test.mvg'),
+    ),
+    copyFile(
+      generatedAssets['110m'],
+      join(root, 'assets/natural-earth-vector-globe-50m-test.mvg'),
+    ),
+  ]);
+  await verifyFailure(root, '110m vector globe identity mismatch');
+});
+
+test('rejects a one-byte alteration to an emitted vector globe file', async () => {
+  const root = await createArtifact();
+  const path = join(root, 'assets/natural-earth-vector-globe-50m-test.mvg');
+  const bytes = await readFile(path);
+  bytes[bytes.byteLength - 1] ^= 1;
+  await writeFile(path, bytes);
+  await verifyFailure(root, '50m vector globe identity mismatch');
 });
 
 test('Pages workflow serializes the complete production deployment', async () => {

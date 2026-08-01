@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { BufferGeometry } from 'three';
+import { describe, expect, it, vi } from 'vitest';
 import {
   createVectorGlobeResources,
   effectiveLayerAlpha,
@@ -120,6 +121,24 @@ describe('vector globe runtime resources', () => {
       'surface index',
     );
   });
+
+  it.each([
+    ['coast', 'coastIndex', 1],
+    ['border', 'borderIndex', 2],
+  ] as const)(
+    'disposes earlier geometries when %s geometry construction fails',
+    (_label, streamName, expectedDisposals) => {
+      const invalid = decodedFixture();
+      new Uint16Array(invalid.streams[streamName]!.buffer)[0] = 2;
+      const dispose = vi.spyOn(BufferGeometry.prototype, 'dispose');
+
+      expect(() => createVectorGlobeResources(invalid)).toThrow(
+        `Invalid vector ${streamName.replace('Index', '')} index`,
+      );
+      expect(dispose).toHaveBeenCalledTimes(expectedDisposals);
+      dispose.mockRestore();
+    },
+  );
 
   it('updates base, Development, hover, and selection colors without rebuilding geometry', () => {
     const resources = createVectorGlobeResources(decodedFixture());

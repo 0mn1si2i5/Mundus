@@ -1,4 +1,5 @@
 import { MeshoptDecoder } from 'meshoptimizer/decoder';
+import vectorGlobeManifest from '../../data/manifests/natural-earth-vector-globe.json';
 import type { DecodedVectorGlobe, VectorStreamDescriptor } from './vectorGlobe';
 
 const assetUrls = {
@@ -39,6 +40,7 @@ export function loadVectorGlobe(detail: '110m' | '50m') {
         }
         return response.arrayBuffer();
       })
+      .then((buffer) => verifyAssetIdentity(buffer, detail))
       .then(decodeVectorGlobe)
       .catch((error: unknown) => {
         cache.delete(detail);
@@ -47,6 +49,24 @@ export function loadVectorGlobe(detail: '110m' | '50m') {
     cache.set(detail, promise);
   }
   return promise;
+}
+
+async function verifyAssetIdentity(
+  buffer: ArrayBuffer,
+  detail: '110m' | '50m',
+) {
+  const expected = vectorGlobeManifest.derivedAssets[detail];
+  if (buffer.byteLength !== expected.rawBytes) {
+    throw new Error(`Vector globe asset identity mismatch: ${detail}`);
+  }
+  const digest = await crypto.subtle.digest('SHA-256', buffer);
+  const sha256 = [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+  if (sha256 !== expected.sha256) {
+    throw new Error(`Vector globe asset identity mismatch: ${detail}`);
+  }
+  return buffer;
 }
 
 export async function decodeVectorGlobe(

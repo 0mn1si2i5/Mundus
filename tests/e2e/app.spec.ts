@@ -203,6 +203,36 @@ test('keeps the raster globe when the selected vector asset fails', async ({
   await expect(globe).toHaveAttribute('data-globe-pick-revision', /[1-9]\d*/);
 });
 
+test('keeps the raster globe when a vector response has same-length corruption', async ({
+  page,
+}) => {
+  await useHighConcurrencyProfile(page);
+  await page.route('**/natural-earth-vector-globe-*.mvg', async (route) => {
+    const response = await route.fetch();
+    const bytes = await response.body();
+    bytes[bytes.byteLength - 1]! ^= 1;
+    await route.fulfill({ response, body: bytes });
+  });
+  await page.goto('./');
+  const globe = globeRegion(page);
+  await expect(globe).toHaveAttribute('data-vector-state', 'error');
+  await expect(globe).toHaveAttribute(
+    'data-vector-raster-fallback-visible',
+    'true',
+  );
+});
+
+test('uses low 110m quality on a landscape Pixel 7-class viewport', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 915, height: 412 });
+  await useHighConcurrencyProfile(page);
+  await page.goto('./');
+  const globe = globeRegion(page);
+  await expect(globe).toHaveAttribute('data-quality', 'low');
+  await expectVectorReady(page, '110m');
+});
+
 async function dispatchGlobePointer(
   page: Page,
   type: string,
