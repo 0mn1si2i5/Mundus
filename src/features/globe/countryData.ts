@@ -58,6 +58,8 @@ export const COUNTRY_TEXTURE_STYLE = {
   borderColor: 'rgba(67, 66, 58, 0.82)',
 } as const;
 
+export const COUNTRY_VECTOR_BORDER_COLOR = '#43423a';
+
 const EXCEPTION_COUNTRY_IDS: Readonly<Record<string, string>> = {
   'N. Cyprus': 'ne-x-northern-cyprus',
   Somaliland: 'ne-x-somaliland',

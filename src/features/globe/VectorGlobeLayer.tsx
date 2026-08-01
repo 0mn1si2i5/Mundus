@@ -7,7 +7,11 @@ import type {
   WebGLRenderer,
 } from 'three';
 import { Color, FrontSide } from 'three';
-import { ANTIPODE_DRAG_RENDERING, GLOBE_RENDERING } from './rendering';
+import {
+  ANTIPODE_DRAG_RENDERING,
+  GLOBE_RENDERING,
+  getVectorLineMaterialProps,
+} from './rendering';
 import type { QualityProfile } from './quality';
 import {
   createVectorGlobeResources,
@@ -108,6 +112,7 @@ export function VectorGlobeLayer({
   const sampleScheduled = useRef(false);
   const dragOpacity = ANTIPODE_DRAG_RENDERING.outerShell.dragOpacity;
   const dragLandOpacity = landLayerAlphaForTarget(dragOpacity, dragOpacity);
+  const vectorLineMaterials = getVectorLineMaterialProps(dragActive);
   const selectedCountryIndex =
     resources?.countries.find(
       (country) => country.countryId === selectedCountryId,
@@ -299,12 +304,7 @@ export function VectorGlobeLayer({
         raycast={ignoreRaycast}
         onBeforeRender={countVectorDraw}
       >
-        <lineBasicMaterial
-          color={COUNTRY_TEXTURE_STYLE.borderColor}
-          transparent={dragActive}
-          opacity={dragActive ? 0.38 : 1}
-          depthWrite={!dragActive}
-        />
+        <lineBasicMaterial {...vectorLineMaterials.coastline} />
       </lineSegments>
       {sunlineActive && selectedCountryIndex >= 0 ? (
         <mesh
@@ -335,12 +335,7 @@ export function VectorGlobeLayer({
         raycast={ignoreRaycast}
         onBeforeRender={countVectorDraw}
       >
-        <lineBasicMaterial
-          color={COUNTRY_TEXTURE_STYLE.borderColor}
-          transparent={dragActive}
-          opacity={dragActive ? 0.3 : 1}
-          depthWrite={!dragActive}
-        />
+        <lineBasicMaterial {...vectorLineMaterials.borders} />
       </lineSegments>
     </>
   );

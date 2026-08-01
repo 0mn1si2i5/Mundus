@@ -1,4 +1,5 @@
 import { BackSide, FrontSide } from 'three';
+import { COUNTRY_VECTOR_BORDER_COLOR } from './countryData';
 
 export const GLOBE_RENDERING = {
   material: { roughness: 0.96, metalness: 0 },
@@ -8,6 +9,23 @@ export const GLOBE_RENDERING = {
   atmosphere: { opacity: 0 },
   graticule: { color: '#746f63', opacity: 0.34 },
 } as const;
+
+export function getVectorLineMaterialProps(dragActive: boolean) {
+  return {
+    coastline: {
+      color: COUNTRY_VECTOR_BORDER_COLOR,
+      transparent: dragActive,
+      opacity: dragActive ? 0.38 : 1,
+      depthWrite: !dragActive,
+    },
+    borders: {
+      color: COUNTRY_VECTOR_BORDER_COLOR,
+      transparent: dragActive,
+      opacity: dragActive ? 0.3 : 1,
+      depthWrite: !dragActive,
+    },
+  };
+}
 
 export const ANTIPODE_DRAG_RENDERING = {
   outerShell: {

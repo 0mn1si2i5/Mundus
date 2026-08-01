@@ -5,12 +5,35 @@ import {
   GLOBE_RENDERING,
   SUNLINE_RENDERING,
   contrastRatio,
+  getVectorLineMaterialProps,
   sunlineOverlayAtAltitude,
 } from './rendering';
 import { BackSide, FrontSide } from 'three';
 import { COUNTRY_TEXTURE_STYLE } from './countryData';
 
 describe('matte parchment globe rendering contract', () => {
+  it('gives both vector line materials opaque colors instead of the raster alpha style', () => {
+    const materials = getVectorLineMaterialProps(false);
+    expect(materials).toEqual({
+      coastline: {
+        color: '#43423a',
+        transparent: false,
+        opacity: 1,
+        depthWrite: true,
+      },
+      borders: {
+        color: '#43423a',
+        transparent: false,
+        opacity: 1,
+        depthWrite: true,
+      },
+    });
+    expect(materials.coastline.color).not.toBe(
+      COUNTRY_TEXTURE_STYLE.borderColor,
+    );
+    expect(materials.borders.color).not.toBe(COUNTRY_TEXTURE_STYLE.borderColor);
+  });
+
   it('uses a matte non-metallic surface and a warm readable light floor', () => {
     expect(GLOBE_RENDERING.material.roughness).toBeGreaterThanOrEqual(0.92);
     expect(GLOBE_RENDERING.material.metalness).toBeLessThanOrEqual(0.01);
