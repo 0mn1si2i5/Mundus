@@ -68,6 +68,13 @@ function globeRegion(page: Page) {
   });
 }
 
+function localizedCityOption(page: Page, cityName: string) {
+  const escapedCityName = cityName.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+  return page.getByRole('option', {
+    name: new RegExp(`^${escapedCityName}；`, 'u'),
+  });
+}
+
 async function useHighConcurrencyProfile(page: Page) {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'hardwareConcurrency', { value: 8 });
@@ -346,7 +353,7 @@ test('uses real desktop mouse input for threshold activation and preserves picki
   await page.goto('./');
   const globe = globeRegion(page);
   await page.getByLabel('搜索全球主要城市').fill('Tokyo');
-  await page.getByRole('option', { name: /^东京 / }).click();
+  await localizedCityOption(page, '东京').click();
   await expectCameraCenter(page, 35.6895, 139.69171);
   const center = await globeCenter(page);
 
@@ -992,7 +999,7 @@ test('clears marker diagnostics by mode and refreshes them for point focus', asy
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
   await page.getByLabel('搜索全球主要城市').fill('Tokyo');
-  await page.getByRole('option', { name: /^东京 / }).click();
+  await localizedCityOption(page, '东京').click();
 
   await expect(globe).toHaveAttribute(
     'data-marker-origin-target',
@@ -1320,7 +1327,7 @@ test('selects reviewed night-side land through the Sunline mask with a real poin
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
   await page.getByLabel('搜索全球主要城市').fill('Tokyo');
-  await page.getByRole('option', { name: /^东京 / }).click();
+  await localizedCityOption(page, '东京').click();
   await expectCameraCenter(page, 35.6895, 139.69171);
   await page.getByRole('button', { name: /日照线/ }).click();
 
@@ -2386,7 +2393,7 @@ test('resets bilateral focus for new points and mode round trips', async ({
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
   await citySearch.fill('Tokyo');
-  await page.getByRole('option', { name: /^东京 / }).click();
+  await localizedCityOption(page, '东京').click();
   await expect(page.getByRole('button', { name: '翻到对跖点' })).toBeVisible();
 
   await page.getByRole('button', { name: '翻到对跖点' }).click();
@@ -2509,7 +2516,7 @@ test('selects a major city and validates coordinate input', async ({
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
   await page.getByLabel('搜索全球主要城市').fill('Tokyo');
-  const tokyo = page.getByRole('option', { name: /^东京 / });
+  const tokyo = localizedCityOption(page, '东京');
   expect((await tokyo.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   await tokyo.click();
   await expect(page.getByText('Japan', { exact: true })).toBeVisible();
@@ -2887,7 +2894,7 @@ test('loads GeoNames only for Other Side and reuses one lazy asset', async ({
   await page.getByRole('button', { name: /日照线/ }).click();
   await page.getByRole('button', { name: /地球另一端/ }).click();
   await page.getByRole('combobox', { name: '搜索全球主要城市' }).fill('北京');
-  await expect(page.getByRole('option', { name: /^北京 / })).toBeVisible();
+  await expect(localizedCityOption(page, '北京')).toBeVisible();
   expect(
     requests.filter((url) => url.includes('geonames-major-cities')),
   ).toHaveLength(1);
@@ -2904,7 +2911,7 @@ test('reopens mobile place controls before city search after a mode round trip',
   const search = page.getByRole('combobox', { name: '搜索全球主要城市' });
   await expect(search).toBeVisible();
   await search.fill('北京');
-  await expect(page.getByRole('option', { name: /^北京 / })).toBeVisible();
+  await expect(localizedCityOption(page, '北京')).toBeVisible();
 });
 
 test('searches bilingual source aliases by keyboard without mutating URL before selection', async ({
@@ -3013,7 +3020,7 @@ test('announces a GeoNames load failure and retries the same lazy asset', async 
   await retry.click();
   const input = page.getByRole('combobox', { name: '搜索全球主要城市' });
   await input.fill('北京');
-  await expect(page.getByRole('option', { name: /^北京 / })).toBeVisible();
+  await expect(localizedCityOption(page, '北京')).toBeVisible();
 });
 
 test('explains Development evidence consistently in English', async ({
