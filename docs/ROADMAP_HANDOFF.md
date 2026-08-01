@@ -42,10 +42,10 @@ explicitly changes that policy. Detailed migration and convergence plans there
 are local execution aids; durable decisions and final evidence belong in
 tracked documentation and PR #5.
 
-The approved ignored V1.1 execution aid is in the primary checkout at
+The completed V1.1 execution aid remains ignored in the primary checkout at
 `/Users/bytedance/Desktop/Zen/Mundus/docs/superpowers/plans/2026-08-01-mundus-v1.1-parchment-atlas-convergence.md`.
-Agents in linked worktrees read it there as read-only and must not copy or add
-it. Tracked handoffs and Draft PR #5 remain the durable authority and evidence.
+It and merged PR #5/#6 are historical evidence only. Agents must not copy or
+add the ignored plan, or execute its convergence and publication steps again.
 
 ## 2. Authority Order
 
@@ -65,12 +65,11 @@ Use this order when documents disagree:
 Current evidence overrides stale status snapshots, but implementation evidence
 must never silently change an accepted scientific or product contract.
 
-For current V1.1 convergence, the tracked terminal documents, Draft PR #5, and
-the approved ignored convergence plan named above govern; absent ignored GHSL
-source plans are not a blocker. If GHSL is explicitly reopened, stop until the
-accepted design, master plan, and a newly approved detailed plan are available.
-Never reconstruct scientific rules, budgets, or implementation tasks from older
-roadmap prose.
+V1.1 convergence is complete. The tracked terminal documents and merged PR
+#5/#6 preserve its evidence; the ignored convergence plan is not current
+authority. If GHSL is explicitly reopened, stop until the accepted design,
+master plan, and a newly approved detailed plan are available. Never reconstruct
+scientific rules, budgets, or implementation tasks from older roadmap prose.
 
 ## 3. Accepted GHSL Direction
 
