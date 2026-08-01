@@ -1,22 +1,23 @@
 # Mundus execution-agent startup guide
 
-## Current authority — V1.0.0 live; V1.1.0 candidate unpublished
+## Current authority — V1.1.0 Parchment Atlas live on Pages
 
-Mundus V1.0.0 is released. Public `main`, Pages, tag `v1.0.0`, and the GitHub
-Release target `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`. The verified site is
-<https://0mn1si2i5.github.io/Mundus/>.
+Mundus **V1.1.0 Parchment Atlas** is deployed at
+<https://0mn1si2i5.github.io/Mundus/>. PR #5 and its stacked PR #6 are merged;
+the product implementation entered protected `main` at
+`1a9c44700e2154186708772a7773fd8972a7aaf2` and passed same-SHA CI, Pages
+deployment, live smoke, and desktop/mobile manual verification on 2026-08-02.
+The public product includes the parchment presentation, draggable cross-section,
+bilingual GeoNames search, bilateral city relations, and Natural Earth vector
+globe.
 
-The current authorized work is convergence of the unpublished **V1.1.0
-Parchment Atlas** candidate on branch `codex/v1.1-parchment-convergence` in
-Draft PR #5: parchment presentation, drag cross-section, bilingual GeoNames
-search, bilateral city relations, and the Natural Earth vector globe. Local
-checks do not make those changes live. Do not merge, deploy, tag, or create a
-Release without explicit owner authorization for the exact candidate.
+Release metadata has a narrower boundary: tag `v1.0.0` and the GitHub Release
+still target `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`. No `v1.1.0` tag or GitHub
+Release exists. Do not create or retarget one without separate authorization.
 
-The approved ignored local execution aid is in the primary checkout at
-`/Users/bytedance/Desktop/Zen/Mundus/docs/superpowers/plans/2026-08-01-mundus-v1.1-parchment-atlas-convergence.md`.
-Agents in linked worktrees read it there as read-only and must not copy or add
-it. Tracked handoffs and Draft PR #5 remain the durable authority and evidence.
+The ignored V1.1 convergence plan and the tracked candidate/publication
+documents are historical execution evidence. Do not execute their pre-merge
+steps again or copy the ignored plan into Git.
 
 GHSL Human Morphology is a shared overlay, not a fourth mode. Reserve product
 identity **V1.2.0** for it only if Plans 1–7 and their approval gates complete.
@@ -34,10 +35,9 @@ state.
 
 Sections 1–13 below preserve the completed V1.0.0 execution contract and must
 not be executed as current release instructions. Current work starts from
-`docs/ROADMAP_HANDOFF.md`, the tracked terminal GHSL handoff, and the approved
-local V1.1 convergence plan named above. Draft PR #5 remains the durable review
-record. In particular, do not repeat V1 visibility, deployment, tag, or Release
-actions.
+`docs/ROADMAP_HANDOFF.md` and the tracked terminal GHSL handoff. PR #5 remains
+the durable V1.1 review record. In particular, do not repeat V1 visibility,
+deployment, tag, or Release actions.
 
 ## 1. Your assignment
 
@@ -622,16 +622,15 @@ release is incomplete and identify the exact blocker.
 
 ## 15. Deferred roadmap
 
-The current unpublished product candidate is V1.1.0 Parchment Atlas. Human
-Morphology reserves V1.2.0 only after GHSL Plans 1–7 and their budget/release
-gates complete. The current sequence is in `docs/ROADMAP_HANDOFF.md`.
+V1.1.0 Parchment Atlas is the current public Pages product. Human Morphology
+reserves V1.2.0 only after GHSL Plans 1–7 and their budget/release gates
+complete. The current sequence is in `docs/ROADMAP_HANDOFF.md`.
 
 GHSL Plan 1 is terminal at `6e396d90ef215085a3d5bc8dbf602b6e4f239051`.
 Do not restart it or begin Plans 2–7 unless GHSL is separately reopened and
-approved. Continue V1.1 convergence on `codex/v1.1-parchment-convergence` in
-Draft PR #5. Also defer Pleiades/Wikidata cultural exploration, plugin
-marketplaces, street-level GIS, weather, time-zone layers, offline/PWA work,
-accounts, and backend services.
+approved. Do not restart the completed V1.1 convergence procedure. Also defer
+Pleiades/Wikidata cultural exploration, plugin marketplaces, street-level GIS,
+weather, time-zone layers, offline/PWA work, accounts, and backend services.
 
 ## 16. Historical kickoff prompt
 

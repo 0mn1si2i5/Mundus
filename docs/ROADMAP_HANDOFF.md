@@ -117,10 +117,14 @@ approved; measured Plan 1 evidence must inform any such decision.
 Release identity is canonical:
 
 - **V1.0.0** — verified public baseline at
-  `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`;
-- **V1.1.0 Parchment Atlas** — current unpublished local candidate: parchment
+  `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`; tag `v1.0.0` and the existing
+  GitHub Release still target this commit;
+- **V1.1.0 Parchment Atlas** — current public Pages product: parchment
   presentation, drag cross-section, bilingual GeoNames search, bilateral city
-  relations, and Natural Earth vector globe;
+  relations, and Natural Earth vector globe. The implementation entered
+  protected `main` at `1a9c44700e2154186708772a7773fd8972a7aaf2` and passed
+  same-SHA CI, Pages deployment, live smoke, and desktop/mobile manual
+  verification on 2026-08-02. No V1.1 tag or GitHub Release exists;
 - **V1.2.0 Human Morphology** — reserved for the later shared GHSL overlay only
   after Plans 1–7 and owner gates complete.
 
@@ -153,8 +157,9 @@ Verified terminal evidence at the 2026-08-01 checkpoint:
   frozen and blocked unless separately reopened and approved.
 
 The concise terminal evidence and preserved output paths are recorded in
-`docs/GHSL_EXECUTION_HANDOFF.md`. Continue V1.1.0 Parchment Atlas convergence;
-do not treat local GHSL plans as current execution instructions.
+`docs/GHSL_EXECUTION_HANDOFF.md`. V1.1.0 convergence is complete; do not repeat
+its publication steps or treat local GHSL plans as current execution
+instructions.
 
 ## 6. Required Execution Workflow
 
@@ -247,10 +252,9 @@ A new agent must:
 2. Read `docs/GHSL_EXECUTION_HANDOFF.md` as terminal evidence and status only.
 3. Preserve the stopped Build A/B outputs without resuming, reusing, copying,
    deleting, or presenting them as complete formal builds.
-4. Read the approved ignored local execution aid read-only from
-   `/Users/bytedance/Desktop/Zen/Mundus/docs/superpowers/plans/2026-08-01-mundus-v1.1-parchment-atlas-convergence.md`,
-   then continue V1.1.0 Parchment Atlas convergence in Draft PR #5. Do not copy
-   or add the local plan; tracked handoffs and the PR remain durable.
+4. Treat the ignored V1.1 convergence plan and merged PR #5/#6 as historical
+   evidence. Do not repeat their merge, deployment, tag, or Release steps, and
+   do not copy the ignored plan into Git.
 5. Keep GHSL Plans 2 through 7 frozen unless the project is separately reopened
    and approved.
 

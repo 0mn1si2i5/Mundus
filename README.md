@@ -2,13 +2,13 @@
 
 [简体中文](README.zh-CN.md)
 
-Mundus is an interactive three-dimensional globe for looking at one planet
-through three different scientific lenses. It is designed as a small digital
-museum exhibit: direct enough to explore, explicit about its methods, and
-careful about the limits of its data.
+Mundus is a long-lived personal digital globe for looking at one planet through
+different scientific lenses. It is designed as a small digital museum exhibit:
+direct enough to explore, explicit about its methods, and careful about the
+limits of its data.
 
-The product remains intentionally limited to three modes. This checkout is the
-unpublished **V1.1.0 Parchment Atlas** candidate:
+The current public product begins with three modes. **V1.1.0 Parchment Atlas**
+ships:
 
 - **Other Side** calculates exact antipodal endpoints and shows the nearest
   eligible major city to each endpoint in the bundled GeoNames snapshot. These
@@ -20,12 +20,17 @@ unpublished **V1.1.0 Parchment Atlas** candidate:
 - **Sunline** visualizes the day-night boundary and estimates solar position,
   sunrise, and sunset in UTC for educational use.
 
-The verified public **V1.0.0** site is
-<https://0mn1si2i5.github.io/Mundus/> at commit
-`a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`. It predates this checkout's
-parchment presentation, GeoNames bilateral city relations, and Natural Earth
-vector globe. Those candidate capabilities are not public until a separately
-authorized deployment passes desktop/mobile live verification.
+The verified public site is <https://0mn1si2i5.github.io/Mundus/>. The V1.1
+product implementation entered protected `main` at
+`1a9c44700e2154186708772a7773fd8972a7aaf2` and passed CI, Pages deployment,
+live smoke, and desktop/mobile manual verification on 2026-08-02. It uses a
+parchment exhibition presentation, a draggable Other Side cross-section,
+bilingual city search, bilateral city relations, and a Natural Earth vector
+globe.
+
+Tag `v1.0.0` and the existing GitHub Release remain at
+`a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`; no V1.1 tag or GitHub Release has
+been created.
 
 ## Run locally
 
@@ -47,10 +52,10 @@ pnpm test:e2e
 tests, and the production build. Production source maps are deliberately
 disabled for the V1 public artifact.
 
-The local candidate uses reproducibly generated Natural Earth vector spheres: low quality
-loads 110m, while medium/high quality loads 50m. Country colors are supplied by
-a small palette texture, and the existing raster globe remains the loading and
-failure fallback.
+The product uses reproducibly generated Natural Earth vector spheres: low
+quality loads 110m, while medium/high quality loads 50m. Country colors are
+supplied by a small palette texture, and the existing raster globe remains the
+loading and failure fallback.
 
 ## Data and licensing
 

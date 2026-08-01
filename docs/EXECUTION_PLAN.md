@@ -13,10 +13,13 @@ review gates, and evidence without replacing the stable product decisions in
 ## Goal boundary
 
 V1.0.0 was delivered at `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`.
-The current unpublished product candidate is **V1.1.0 Parchment Atlas**. The
-population-density fourth-mode direction later in this file is superseded.
-Human Morphology is a shared overlay and reserves **V1.2.0** only after GHSL
-Plans 1–7 complete.
+**V1.1.0 Parchment Atlas** is the current public Pages product; its product
+implementation entered protected `main` at
+`1a9c44700e2154186708772a7773fd8972a7aaf2` and was live-verified on
+2026-08-02. The population-density fourth-mode direction later in this file is
+superseded. Human Morphology is not a public capability and may reserve
+**V1.2.0** only after the stopped project is separately reopened and Plans 1–7
+complete.
 Pleiades/Wikidata cultural work remains a later goal.
 
 The goal is complete only when the release is public, deployed, documented,

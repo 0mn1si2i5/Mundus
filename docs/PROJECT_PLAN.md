@@ -1,8 +1,8 @@
 # Mundus：交互式三维地球实验室 V1 项目计划
 
-- 状态：稳定的 V1 历史产品契约；V1.0.0 已上线，V1.1.0 Parchment Atlas 是当前尚未发布的收敛候选版本
+- 状态：稳定的 V1 产品契约；V1.1.0 Parchment Atlas 已于 2026-08-02 上线
 - 当前执行入口：`docs/ROADMAP_HANDOFF.md`
-- 更新日期：2026-08-01
+- 更新日期：2026-08-02
 - 内部项目名：Mundus
 
 ## 1. 项目定位
@@ -60,7 +60,11 @@ Mundus 是一个“数字博物馆展品 × 科学仪器 × 互动图鉴”式�
 - PWA、离线包和实时自然事件数据。
 - 幸福指数数据；在取得明确开放再分发许可前不打包 World Happiness Report/Gallup 数据。
 
-V1.1.0 是当前尚未发布的 Parchment Atlas 产品候选；基于 GHSL 的 Human Morphology 是后续共享观察叠层，预留 V1.2.0 身份且必须先完成 Plans 1–7 与预算门。后续文化方向优先采用 Wikidata、Pleiades 等许可清晰的数据源。
+V1.1.0 Parchment Atlas 是当前公开产品。基于 GHSL 的 Human Morphology
+尚未通过全球验证，不属于公开功能；其终止结论为
+`STOP_GLOBAL_MORPHOLOGY`，Plans 2–7 保持冻结。只有项目另行重开并通过
+数据、方法、性能与发布门禁后，才可重新讨论该共享观察叠层。后续文化方向也必须
+先完成独立设计与许可验证，不是当前承诺。
 
 ## 3. 体验与视觉设计
 
