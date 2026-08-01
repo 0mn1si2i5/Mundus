@@ -68,6 +68,12 @@ function globeRegion(page: Page) {
   });
 }
 
+async function useHighConcurrencyProfile(page: Page) {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'hardwareConcurrency', { value: 8 });
+  });
+}
+
 async function expectVectorReady(page: Page, detail: '110m' | '50m') {
   const globe = globeRegion(page);
   await expect(globe).toHaveAttribute('data-vector-state', 'ready');
@@ -95,6 +101,7 @@ test('loads only the quality-selected vector resolution and hides raster after r
   page,
 }, testInfo) => {
   const vectorRequests: string[] = [];
+  await useHighConcurrencyProfile(page);
   page.on('request', (request) => {
     if (request.url().includes('natural-earth-vector-globe')) {
       vectorRequests.push(request.url());
@@ -110,6 +117,7 @@ test('loads only the quality-selected vector resolution and hides raster after r
 test('Development palette updates preserve vector geometry identity', async ({
   page,
 }) => {
+  await useHighConcurrencyProfile(page);
   await page.goto('./?mode=development&indicator=hdi&year=2023&v=1');
   await expectVectorReady(
     page,
@@ -144,6 +152,7 @@ test('Development palette updates preserve vector geometry identity', async ({
 test('vector drag shell becomes transparent while the hit sphere remains active', async ({
   page,
 }, testInfo) => {
+  await useHighConcurrencyProfile(page);
   await page.goto('./');
   await expectVectorReady(
     page,
@@ -2050,12 +2059,6 @@ test('keeps every expanded compact drawer and navigation reachable', async ({
         panelLayout.bodyClientHeight,
         `${scenario.panel} body client height at ${viewport.width}x${viewport.height}`,
       ).toBeGreaterThanOrEqual(96);
-      if (viewport.width === 320 && viewport.height === 568) {
-        expect(
-          panelLayout.bodyScrollHeight,
-          `${scenario.panel} body scroll height at ${viewport.width}x${viewport.height}`,
-        ).toBeGreaterThan(panelLayout.bodyClientHeight);
-      }
 
       const scrolled = await panelBody.evaluate((element) => {
         element.scrollTop = element.scrollHeight;
@@ -2122,6 +2125,31 @@ test('keeps every expanded compact drawer and navigation reachable', async ({
       expect(
         primaryRectangle!.y + primaryRectangle!.height,
       ).toBeLessThanOrEqual(panelRectangle!.y + panelRectangle!.height);
+
+      if (viewport.width === 320 && viewport.height === 568) {
+        const finalControl = panelBody
+          .locator(
+            'button:visible, input:visible, summary:visible, a[href]:visible',
+          )
+          .last();
+        await finalControl.scrollIntoViewIfNeeded();
+        await expect(finalControl).toBeVisible();
+        const finalControlRectangle = await finalControl.boundingBox();
+        const visibleBodyRectangle = await panelBody.boundingBox();
+        expect(finalControlRectangle).not.toBeNull();
+        expect(visibleBodyRectangle).not.toBeNull();
+        expect(finalControlRectangle!.y).toBeGreaterThanOrEqual(
+          visibleBodyRectangle!.y,
+        );
+        expect(
+          finalControlRectangle!.y + finalControlRectangle!.height,
+        ).toBeLessThanOrEqual(
+          visibleBodyRectangle!.y + visibleBodyRectangle!.height + 0.5,
+        );
+        expect(
+          finalControlRectangle!.y + finalControlRectangle!.height,
+        ).toBeLessThanOrEqual(navigationRectangle!.y);
+      }
     }
   }
 });
