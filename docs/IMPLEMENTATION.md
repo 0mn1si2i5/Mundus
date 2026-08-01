@@ -8,6 +8,8 @@
 **V1.1.0 Parchment Atlas** 候选。实现与本地门通过不等于已部署。
 
 当前执行目标、批次门槛和审阅循环见 [EXECUTION_PLAN.md](EXECUTION_PLAN.md)。
+V1.1 候选的验收、测试、审阅与发布边界见
+[2026-08-01 候选证据](2026-08-01-v1.1-parchment-atlas-candidate.md)。
 
 ## Natural Earth 完整矢量球面
 
