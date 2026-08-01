@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
+  type RefObject,
 } from 'react';
 import { createPortal } from 'react-dom';
 import type { Locale } from '../../i18n/messages';
@@ -82,6 +83,7 @@ const COPY = {
     attribution:
       '来源：UNDP《2025 人类发展报告》；由 Mundus 转换并标注派生指标。',
     scope: '195 个国家和地区 · 1990–2023',
+    continueToContrast: '继续查看算法结构对照',
     expand: '展开发展控件',
     collapse: '收起发展控件',
     indicators: {
@@ -145,6 +147,7 @@ const COPY = {
     attribution:
       'Source: UNDP Human Development Report 2025; transformed by Mundus with derived indicators identified.',
     scope: '195 countries and territories · 1990–2023',
+    continueToContrast: 'Continue to algorithmic structural contrast',
     expand: 'Expand development controls',
     collapse: 'Collapse development controls',
     indicators: {
@@ -175,6 +178,7 @@ export function DevelopmentControls({
   const selectYear = useAppStore((state) => state.selectDevelopmentYear);
   const [tableOpen, setTableOpen] = useState(false);
   const tableButton = useRef<HTMLButtonElement>(null);
+  const panelBody = useRef<HTMLDivElement>(null);
   const copy = COPY[locale];
   const selectedCountryId = selectedCountry?.countryId ?? null;
   const evidence = useMemo(() => {
@@ -210,6 +214,8 @@ export function DevelopmentControls({
       <ModePanel
         id="development-controls"
         className={styles.developmentPanel}
+        bodyClassName={styles.panelBody}
+        bodyRef={panelBody}
         title={copy.title}
         subtitle={copy.scope}
         expandLabel={copy.expand}
@@ -281,6 +287,7 @@ export function DevelopmentControls({
                 medianDifference={medianDifference}
                 history={history}
                 contrast={contrast}
+                scrollBodyRef={panelBody}
               />
 
               <div className={styles.legend} aria-label={copy.legend}>
@@ -289,6 +296,8 @@ export function DevelopmentControls({
                   {LEGEND_VALUES.map((value) => (
                     <i
                       key={value}
+                      role="img"
+                      aria-label={developmentBinLabel(locale, value)}
                       style={{ backgroundColor: developmentColor(value) }}
                     />
                   ))}
@@ -352,6 +361,24 @@ export function DevelopmentControls({
   );
 }
 
+function developmentBinLabel(locale: Locale, value: number) {
+  const upperBound =
+    value < 0.4
+      ? 0.4
+      : value < 0.55
+        ? 0.55
+        : value < 0.7
+          ? 0.7
+          : value < 0.8
+            ? 0.8
+            : value < 0.9
+              ? 0.9
+              : 1;
+  return locale === 'zh'
+    ? `指数区间，上限 ${upperBound.toFixed(2)}`
+    : `Index bin, upper bound ${upperBound.toFixed(2)}`;
+}
+
 function DevelopmentEvidenceView({
   locale,
   country,
@@ -362,6 +389,7 @@ function DevelopmentEvidenceView({
   medianDifference,
   history,
   contrast,
+  scrollBodyRef,
 }: {
   locale: Locale;
   country: DevelopmentCountry | null;
@@ -372,8 +400,13 @@ function DevelopmentEvidenceView({
   medianDifference: number | null;
   history: HistoricalIndicatorChange | null;
   contrast: StructuralContrast | null;
+  scrollBodyRef: RefObject<HTMLDivElement | null>;
 }) {
   const copy = COPY[locale];
+  const contrastElement = useRef<HTMLElement>(null);
+  const contrastHeading = useRef<HTMLHeadingElement>(null);
+  const continuationVisibleRef = useRef(false);
+  const [continuationVisible, setContinuationVisible] = useState(false);
   const liveSummary = country
     ? [
         country.name,
@@ -388,6 +421,40 @@ function DevelopmentEvidenceView({
           : historyUnavailableText(locale, history),
       ].join(' · ')
     : '';
+
+  useEffect(() => {
+    const body = scrollBodyRef.current;
+    if (!body) return;
+    let frame = 0;
+
+    const updateContinuation = () => {
+      frame = 0;
+      const target = contrastElement.current;
+      const bodyRect = body.getBoundingClientRect();
+      const targetRect = target?.getBoundingClientRect();
+      const nextVisible = Boolean(
+        targetRect && targetRect.top >= bodyRect.bottom - 1,
+      );
+      if (nextVisible === continuationVisibleRef.current) return;
+      continuationVisibleRef.current = nextVisible;
+      setContinuationVisible(nextVisible);
+    };
+    const scheduleUpdate = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(updateContinuation);
+    };
+    const resizeObserver = new ResizeObserver(scheduleUpdate);
+    resizeObserver.observe(body);
+    for (const child of body.children) resizeObserver.observe(child);
+    body.addEventListener('scroll', scheduleUpdate, { passive: true });
+    scheduleUpdate();
+
+    return () => {
+      body.removeEventListener('scroll', scheduleUpdate);
+      resizeObserver.disconnect();
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [contrast, scrollBodyRef]);
 
   return (
     <section className={styles.evidence} aria-label={copy.evidence}>
@@ -434,9 +501,26 @@ function DevelopmentEvidenceView({
         </div>
       </div>
 
+      <button
+        className={styles.continuation}
+        type="button"
+        data-visible={continuationVisible}
+        aria-hidden={!continuationVisible}
+        tabIndex={continuationVisible ? 0 : -1}
+        onClick={() => {
+          contrastHeading.current?.focus({ preventScroll: true });
+          contrastElement.current?.scrollIntoView({ block: 'start' });
+        }}
+      >
+        {copy.continueToContrast}
+        <span aria-hidden="true">↓</span>
+      </button>
+
       {country && contrast ? (
-        <article className={styles.contrast}>
-          <h3>{copy.contrast}</h3>
+        <article ref={contrastElement} className={styles.contrast}>
+          <h3 ref={contrastHeading} tabIndex={-1}>
+            {copy.contrast}
+          </h3>
           {contrast.status === 'available' ? (
             <>
               <strong>{contrast.country.name}</strong>

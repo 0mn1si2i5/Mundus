@@ -20,21 +20,82 @@ The pinned distribution SHA-256 is recorded in
 `src/data/manifests/natural-earth-110m.json`. Boundaries are a cartographic view
 and are not a legal authority on territorial status.
 
-## Natural Earth populated places, 1:50m
+## Natural Earth vector globe, 1:110m and 1:50m
 
-- Source: [Natural Earth Populated Places](https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-populated-places/)
-- Version: Natural Earth 5.1.2
-- Terms: [public domain](https://www.naturalearthdata.com/about/terms-of-use/); redistribution allowed
-- Use: nearest represented place in Other Side
-- Transformation: retain the Natural Earth identifier, ASCII place and
-  admin-0 names, coordinates, and `pop_max`; sort by identifier; encode as
-  compact tuples; load only while Other Side is active
+- Source: the same Natural Earth 4.1.0 Admin 0 countries distributed by
+  `world-atlas` 2.0.2
+- Terms: public domain; redistribution allowed
+- Quality policy: low quality lazily requests 110m; medium and high quality
+  lazily request 50m; the existing raster sphere remains visible while loading
+  or after a vector failure
+- Transformation: classify rings by projected area and containment, triangulate
+  each Polygon/MultiPolygon part and holes in a local gnomonic projection,
+  subdivide edges on the sphere, reject
+  degenerate/outside slivers, merge every country into one surface buffer, and
+  derive one coastline plus one internal shared-boundary buffer from TopoJSON
+  topology
+- Encoding: signed-normalized 16-bit positions, stable `countryIndex`, and
+  `meshoptimizer` 1.1.1 transport; runtime country picking remains CPU-based
 - Attribution shown in the product: **Made with Natural Earth**
 
-The source and derived-asset SHA-256 values are recorded in
-`src/data/manifests/natural-earth-populated-places-50m.json`. “Nearest” means
-nearest within this selected 1:50m dataset, not within a complete city or
-settlement gazetteer.
+The exact 110m/50m source hashes, generated `.mvg` hashes, raw/gzip/GPU sizes,
+geometry counts, and edge limits are recorded in
+`src/data/manifests/natural-earth-vector-globe.json`. The 50m asset is 2,055,260
+bytes raw and 1,346,186 bytes at the verifier's gzip level; its measured runtime
+GPU buffer and palette allocation is 8,950,732 bytes. Four interior samples per
+triangle plus adaptive boundary subdivision limit dropped candidate area to
+0.00417% at 110m and 0.000149% at 50m, with hard global and representative-country
+gates. Development indicator/year changes update a
+small RGBA palette only. Missing values retain the explicit unknown color and
+are never converted to zero.
+
+Coverage is also checked independently against `d3.geoArea` on source country
+features, not against converter candidate triangles. For this snapshot the 50m
+country-feature sum and TopoJSON land union both equal `3.612531650 sr` within
+floating-point precision; they are recorded separately because other datasets
+may contain overlaps or disputes. The emitted 50m surface is `3.612526269 sr`,
+an absolute relative difference of `0.000149%`. The converter classifies projected
+rings by area and containment rather than trusting source ring order; this is
+required for the polar Antarctica part whose seam ring precedes its coastline.
+Before this correction, the 50m emitted surface was only `3.315518543 sr` and
+Antarctica emitted `0.004730775 sr` versus its `0.301957940 sr` source area.
+The decoded 110m source contains four self-intersecting country rings (Fiji,
+Sudan, Russia, and Antarctica); these are explicitly reported and use a narrow
+0.25% repair ceiling, while valid material countries retain a 0.1% ceiling.
+
+## GeoNames major cities
+
+- Source: [GeoNames geographical database](https://www.geonames.org/)
+- Snapshot: `cities15000`, `alternateNamesV2`, `countryInfo`,
+  `admin1CodesASCII`, and upstream readme captured together at
+  `2026-08-01T09:39:05.688Z` (`2026-08-01 17:39:05.688` Asia/Shanghai)
+- Terms: [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/)
+- Use: offline bilingual major-city autocomplete and bilateral nearest
+  represented major-city results in Other Side
+- Scope: active `P` records with codes `PPL`, `PPLA`, `PPLA2`, `PPLA3`,
+  `PPLA4`, `PPLC`, or `PPLG`; all `PPLC` and `PPLA`, otherwise population at
+  least 100,000; a non-empty admin-1 code and exact country and admin-1 joins
+  are required
+- Transformation: select current English and `zh-CN`/`zh-Hans`/`zh` names;
+  convert only those existing Chinese source names from OpenCC traditional to
+  Simplified Chinese using `opencc-js` 1.4.1 `t` to `cn` dictionaries; retain
+  every distinct accepted original Chinese form and distinct simplified
+  derivative as aliases; retain canonical/ASCII names and at most two
+  additional non-display English aliases; sort by GeoNames ID and encode
+  coordinates at 1e-5 degree precision
+- Attribution shown in the product: **Contains GeoNames data, licensed under CC
+  BY 4.0**, with a no-warranty statement
+
+The final index contains 6,953 records. Its exact five captured source hashes,
+HTTP `ETag`/`Last-Modified` identities, immutable build-input hash, derived
+hash, size measurements, fallback policy, and transformation are recorded in
+`src/data/manifests/geonames-major-cities.json`. Missing Chinese source names
+remain explicit canonical fallbacks; non-Chinese names are never translated.
+GeoNames is a filtered search index, not a complete gazetteer or territorial
+authority. Each relation distance is measured independently from an exact
+endpoint to the nearest eligible entry in this same immutable index, with
+deterministic distance, population, and GeoNames-ID ties. Results do not mean
+nearest settlement, administrative boundary, or built area.
 
 ## UNDP Human Development Report 2025
 
@@ -76,15 +137,67 @@ functionality.
 
 ## Reproducibility
 
-The two generated snapshots are produced by scripts in `scripts/`. Each build
-script pins the source URL and expected SHA-256 before transforming data. Run:
+The generated snapshots are produced by scripts in `scripts/`. Each build
+script pins the source URL and expected SHA-256 before transforming data. To
+rebuild the GeoNames index from a clean checkout, run:
+
+```bash
+pnpm data:cities
+```
+
+The command reads only the tracked, immutable, normalized CC BY 4.0 build input
+at `src/data/generated/geonames-major-cities-input.json`, verifies its SHA-256,
+and atomically regenerates the runtime index. It performs no network access and
+does not require a raw cache. The compact input contains only eligible city
+fields, exact joined country/admin records, and relevant current English and
+Chinese alternate-name rows needed to reproduce name selection, OpenCC
+conversion, aliases, deterministic ordering, and every runtime field.
+The current schema 2 input omits empty alternate-name groups and the redundant
+nested GeoNames ID from each alternate row.
+
+A reviewed upstream refresh is a separate operation:
+
+```bash
+pnpm data:cities:capture
+```
+
+That command captures all five official rolling files into a unique ignored
+directory under `tmp/geonames/`, records the actual bytes' hashes and HTTP
+identities, and keeps that directory immutable through verification, extraction,
+generation, and tracked publication. A concurrent capture cannot replace the
+source path being parsed by another process. Overlapping generated destination
+sets are serialized by bounded filesystem locks containing owner PID, process
+identity, and acquisition time. Any existing lock waits for a bounded period and
+then fails closed; locks are never reclaimed automatically, even when old,
+malformed, or associated with a dead PID. An operator must inspect and manually
+recover any interrupted lock. Publication replaces the input and runtime before
+publishing the manifest last; a forward failure restores the prior complete
+generation. If restoration itself fails, all restores are still attempted, the
+publication and rollback errors are aggregated, and a durable owner-independent
+`recovery-required` sentinel remains in every held lock. Each lock begins with a
+`publication-active` sentinel; after a forward error, the recovery sentinel is
+atomically created in every lock before rollback starts. If sentinel creation is
+interrupted or fails, rollback does not start and the active sentinel remains a
+permanent automatic-recovery barrier. A fully successful rollback removes the
+recovery sentinel and permits normal owner-only lock release. Otherwise an
+operator must inspect the recorded staging/backup paths and perform manual
+recovery; there is intentionally no destructive automatic recovery command.
+Metadata may add diagnostic recovery paths, but reclamation safety does not
+depend on metadata. A mutable URL is provenance, not sufficient rebuild
+identity. Raw sources are never committed. Then run:
 
 ```bash
 pnpm data:verify
 ```
 
-to verify the two committed generated snapshots and the installed, pinned
-`world-atlas` runtime asset by SHA-256. `pnpm test` separately exercises the
+to verify the committed generated snapshots and the installed, pinned
+`world-atlas` runtime assets by SHA-256. Rebuild both vector assets with:
+
+```bash
+pnpm data:vector-globe
+```
+
+`pnpm test` separately exercises the
 data registry schemas, record-level expectations, and calculation invariants;
 the generator scripts validate their input and output while building a new
 snapshot.

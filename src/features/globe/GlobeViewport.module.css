@@ -32,7 +32,8 @@
   padding: 1rem;
   border: 1px solid var(--color-line);
   color: var(--color-text);
-  background: rgb(8 11 15 / 92%);
+  background: var(--color-panel);
+  box-shadow: var(--shadow-paper);
   font-size: 0.8rem;
   text-align: center;
   transform: translate(-50%, -50%);
@@ -47,9 +48,9 @@
   gap: 0.25rem;
   min-width: 17rem;
   padding: 0.7rem 0.9rem;
-  border: 1px solid rgb(184 207 185 / 35%);
+  border: 1px solid var(--color-line);
   color: var(--color-accent);
-  background: rgb(8 11 15 / 88%);
+  background: var(--color-panel);
   font-family: var(--font-mono);
   font-size: 0.66rem;
   transform: translateX(-50%);
@@ -77,14 +78,8 @@
   aspect-ratio: 1;
   border: 1px solid var(--color-line);
   border-radius: 50%;
-  background:
-    repeating-radial-gradient(
-      circle,
-      transparent 0 14%,
-      rgb(150 184 178 / 7%) 14.2% 14.5%
-    ),
-    radial-gradient(circle at 34% 28%, #2a4143, #101a1e 64%, #080b0f);
-  box-shadow: 0 0 8rem rgb(86 126 122 / 13%);
+  background: var(--fallback-globe-background);
+  box-shadow: var(--fallback-globe-shadow);
 }
 
 .unavailable p {

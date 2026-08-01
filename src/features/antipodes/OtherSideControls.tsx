@@ -1,10 +1,12 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { z } from 'zod';
 import type { Locale } from '../../i18n/messages';
 import { useAppStore } from '../../state/appStore';
 import { ModePanel, type ModePanelHandle } from '../controls/ModePanel';
-import { antipodeOf } from '../globe/geo';
-import { FEATURED_CITIES, searchCities, type CityEntry } from './cities';
+import { FEATURED_CITIES } from './cities';
+import type { GeoPoint } from '../globe/geo';
+import { CityAutocomplete } from './CityAutocomplete';
+import type { GeoNamesCityLoadState } from './useGeoNamesCityIndex';
 import styles from './OtherSideControls.module.css';
 
 const requiredCoordinate = (minimum: number, maximum: number) =>
@@ -22,8 +24,6 @@ const coordinateSchema = z.object({
 const COPY = {
   zh: {
     title: '选择一个起点',
-    search: '搜索本地城市',
-    searchPlaceholder: '城市或国家',
     coordinates: '坐标',
     latitude: '纬度',
     longitude: '经度',
@@ -32,21 +32,23 @@ const COPY = {
     locating: '正在定位…',
     locationError: '无法读取位置，请检查浏览器权限。',
     invalid: '纬度需在 ±90°、经度需在 ±180° 内。',
-    flip: '翻到另一端',
+    viewAntipode: '翻到对跖点',
+    returnOrigin: '返回起点',
     examples: '精选起点',
     method: '数据与方法',
     methodText:
-      '对跖点通过纬度取反并将经度旋转 180° 计算。国家或海洋判断使用 Natural Earth 110m；最近聚居地使用 Natural Earth 50m 精选点，并非完整城市名录。边界是制图表达，不是领土法律权威。',
+      '对跖点通过纬度取反并将经度旋转 180° 计算。端点附近的实线贴合地表，虚线表示穿过不透明地球内部的剖面，并不表示地球透明。双侧最近主要城市与搜索共用 GeoNames 固定快照；城市结果仅限符合条件的收录项，并非最近聚居地、行政边界或建成区。国家或海洋判断使用 Natural Earth 110m；边界是制图表达，不是领土法律权威。',
     attribution: 'Made with Natural Earth · 公共领域数据',
     source: 'Natural Earth 来源',
     terms: '使用条款',
+    geoNamesAttribution: '包含 GeoNames 数据 · CC BY 4.0 · 不提供任何保证',
+    geoNamesSource: 'GeoNames 来源',
+    geoNamesLicense: 'GeoNames CC BY 4.0 许可',
     show: '展开地点控件',
     hide: '收起地点控件',
   },
   en: {
     title: 'Choose a starting point',
-    search: 'Search local cities',
-    searchPlaceholder: 'City or country',
     coordinates: 'Coordinates',
     latitude: 'Latitude',
     longitude: 'Longitude',
@@ -55,36 +57,41 @@ const COPY = {
     locating: 'Locating…',
     locationError: 'Location is unavailable. Check browser permission.',
     invalid: 'Latitude must be within ±90° and longitude within ±180°.',
-    flip: 'See the other side',
+    viewAntipode: 'View antipode',
+    returnOrigin: 'Return to origin',
     examples: 'Featured starts',
     method: 'Data and method',
     methodText:
-      'The antipode negates latitude and rotates longitude by 180°. Country or ocean lookup uses Natural Earth 110m; the nearest populated place uses the selected Natural Earth 50m index, not a complete gazetteer. Boundaries are a cartographic view, not a legal authority on territorial status.',
+      'The antipode negates latitude and rotates longitude by 180°. Solid endpoint pieces hug the surface; the dashed line denotes a section through the opaque Earth, not a transparent globe. Bilateral nearest-major-city results and search share one fixed GeoNames snapshot; city results are limited to eligible indexed entries, not nearest settlements, administrative boundaries, or built areas. Country or ocean lookup uses Natural Earth 110m; boundaries are a cartographic view, not a legal authority on territorial status.',
     attribution: 'Made with Natural Earth · public domain data',
     source: 'Natural Earth source',
     terms: 'Terms of use',
+    geoNamesAttribution: 'Contains GeoNames data · CC BY 4.0 · no warranty',
+    geoNamesSource: 'GeoNames source',
+    geoNamesLicense: 'GeoNames CC BY 4.0 license',
     show: 'Expand place controls',
     hide: 'Collapse place controls',
   },
 } as const;
 
-const EXAMPLE_IDS = new Set(['shanghai', 'madrid', 'honolulu']);
-
-export function OtherSideControls({ locale }: { locale: Locale }) {
+export function OtherSideControls({
+  locale,
+  cityIndex,
+}: {
+  locale: Locale;
+  cityIndex: GeoNamesCityLoadState;
+}) {
   const point = useAppStore((state) => state.point);
   const selectPoint = useAppStore((state) => state.selectPoint);
-  const requestCameraFocus = useAppStore((state) => state.requestCameraFocus);
-  const [query, setQuery] = useState('');
+  const cameraSide = useAppStore((state) => state.cameraFocusIntent.side);
+  const toggleAntipodeFocus = useAppStore((state) => state.toggleAntipodeFocus);
   const [error, setError] = useState('');
   const [locating, setLocating] = useState(false);
   const panel = useRef<ModePanelHandle>(null);
   const copy = COPY[locale];
-  const results = useMemo(() => searchCities(query, locale), [locale, query]);
-  const examples = FEATURED_CITIES.filter((city) => EXAMPLE_IDS.has(city.id));
 
-  function chooseCity(city: CityEntry) {
-    selectPoint(city.point);
-    setQuery('');
+  function choosePoint(selectedPoint: GeoPoint) {
+    selectPoint(selectedPoint);
     setError('');
     panel.current?.collapseIfMobile();
   }
@@ -136,35 +143,19 @@ export function OtherSideControls({ locale }: { locale: Locale }) {
         <button
           type="button"
           className={styles.flip}
-          onClick={() => requestCameraFocus(antipodeOf(point))}
+          onClick={toggleAntipodeFocus}
         >
-          {copy.flip} <span aria-hidden="true">↗</span>
+          {cameraSide === 'antipode' ? copy.returnOrigin : copy.viewAntipode}{' '}
+          <span aria-hidden="true">↗</span>
         </button>
       }
     >
       <>
-        <label className={styles.search}>
-          <span>{copy.search}</span>
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={copy.searchPlaceholder}
-            autoComplete="off"
-          />
-        </label>
-        {results.length > 0 ? (
-          <ul className={styles.results} aria-label={copy.search}>
-            {results.map((city) => (
-              <li key={city.id}>
-                <button type="button" onClick={() => chooseCity(city)}>
-                  <strong>{city.name[locale]}</strong>
-                  <span>{city.country[locale]}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        <CityAutocomplete
+          locale={locale}
+          loadState={cityIndex}
+          onSelect={(city) => choosePoint(city.point)}
+        />
 
         <form
           key={`${point.latitude},${point.longitude}`}
@@ -197,11 +188,11 @@ export function OtherSideControls({ locale }: { locale: Locale }) {
           </button>
           <div className={styles.examples} aria-label={copy.examples}>
             <span>{copy.examples}</span>
-            {examples.map((city) => (
+            {FEATURED_CITIES.map((city) => (
               <button
                 key={city.id}
                 type="button"
-                onClick={() => chooseCity(city)}
+                onClick={() => choosePoint(city.point)}
               >
                 {city.name[locale]}
               </button>
@@ -217,12 +208,25 @@ export function OtherSideControls({ locale }: { locale: Locale }) {
           <summary>{copy.method}</summary>
           <p>{copy.methodText}</p>
           <p>{copy.attribution}</p>
+          <p>{copy.geoNamesAttribution}</p>
           <a
             href="https://www.naturalearthdata.com/"
             target="_blank"
             rel="noreferrer"
           >
             {copy.source} ↗
+          </a>
+          {' · '}
+          <a href="https://www.geonames.org/" target="_blank" rel="noreferrer">
+            {copy.geoNamesSource} ↗
+          </a>
+          {' · '}
+          <a
+            href="https://creativecommons.org/licenses/by/4.0/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {copy.geoNamesLicense} ↗
           </a>
           {' · '}
           <a

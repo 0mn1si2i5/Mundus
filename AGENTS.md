@@ -1,8 +1,43 @@
 # Mundus execution-agent startup guide
 
+## Current authority — V1.0.0 live; V1.1.0 candidate unpublished
+
+Mundus V1.0.0 is released. Public `main`, Pages, tag `v1.0.0`, and the GitHub
+Release target `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`. The verified site is
+<https://0mn1si2i5.github.io/Mundus/>.
+
+The current authorized work is convergence of the unpublished **V1.1.0
+Parchment Atlas** candidate on branch `codex/v1.1-parchment-convergence` in
+Draft PR #5: parchment presentation, drag cross-section, bilingual GeoNames
+search, bilateral city relations, and the Natural Earth vector globe. Local
+checks do not make those changes live. Do not merge, deploy, tag, or create a
+Release without explicit owner authorization for the exact candidate.
+
+The approved ignored local execution aid is in the primary checkout at
+`/Users/bytedance/Desktop/Zen/Mundus/docs/superpowers/plans/2026-08-01-mundus-v1.1-parchment-atlas-convergence.md`.
+Agents in linked worktrees read it there as read-only and must not copy or add
+it. Tracked handoffs and Draft PR #5 remain the durable authority and evidence.
+
+GHSL Human Morphology is a shared overlay, not a fourth mode. Reserve product
+identity **V1.2.0** for it only if Plans 1–7 and their approval gates complete.
+GHSL Plan 1 terminated with `STOP_GLOBAL_MORPHOLOGY` at
+`6e396d90ef215085a3d5bc8dbf602b6e4f239051`; Plans 2–7 are frozen. Its detailed
+recovery plan is historical evidence and does not authorize a restart. The
+active roadmap authority is `docs/ROADMAP_HANDOFF.md`; older V1 release text
+below is durable history unless current Git and remote evidence agree with it.
+
 This file is the required starting point for an agent entering this repository
 with no previous context. Read it completely before changing files or remote
 state.
+
+## Frozen V1 release history below
+
+Sections 1–13 below preserve the completed V1.0.0 execution contract and must
+not be executed as current release instructions. Current work starts from
+`docs/ROADMAP_HANDOFF.md`, the tracked terminal GHSL handoff, and the approved
+local V1.1 convergence plan named above. Draft PR #5 remains the durable review
+record. In particular, do not repeat V1 visibility, deployment, tag, or Release
+actions.
 
 ## 1. Your assignment
 
@@ -79,7 +114,8 @@ become stale. Run the refresh commands in Section 5 before acting.
 - `main` branch protection: enabled with strict `quality`, `browser-smoke`, and
   `pages-artifact` checks plus resolved review conversations
 - Private vulnerability reporting: enabled
-- Tags/releases: no `v1.0.0` release was found
+- Tags/releases at this historical snapshot: no `v1.0.0` release was found;
+  the current-authority section above records its later completion
 
 ### Pull requests
 
@@ -119,22 +155,24 @@ Do not begin by scanning random implementation files. Read the following in
 order so product intent and release boundaries remain intact:
 
 1. `AGENTS.md` — this startup and execution contract.
-2. `docs/MVP_RELEASE_PLAN.md` — release packets, P0/P1/P2 rules, and final
+2. `docs/ROADMAP_HANDOFF.md` — planning layers, GHSL phase gates, current
+   handoff entry point, and post-GHSL direction.
+3. `docs/MVP_RELEASE_PLAN.md` — release packets, P0/P1/P2 rules, and final
    acceptance checklist.
-3. `docs/RELEASE_RUNBOOK.md` — exact Pages artifact, deploy, live-smoke, and
+4. `docs/RELEASE_RUNBOOK.md` — exact Pages artifact, deploy, live-smoke, and
    rollback behavior.
-4. `README.md` and `README.zh-CN.md` — public product promise and operator
+5. `README.md` and `README.zh-CN.md` — public product promise and operator
    commands.
-5. `docs/IMPLEMENTATION.md` — completed product slices and evidence history.
-6. `docs/EXECUTION_PLAN.md` — V1-to-V1.1 sequencing. Do not start Milestones 3
+6. `docs/IMPLEMENTATION.md` — completed product slices and evidence history.
+7. `docs/EXECUTION_PLAN.md` — V1-to-V1.1 sequencing. Do not start Milestones 3
    or 4 during this assignment.
-7. `docs/PROJECT_PLAN.md` — stable product scope, experience principles,
+8. `docs/PROJECT_PLAN.md` — stable product scope, experience principles,
    architecture boundaries, data policy, and release acceptance.
-8. `SECURITY.md`, `DATA_SOURCES.md`, and `THIRD_PARTY_LICENSES.md` — public
+9. `SECURITY.md`, `DATA_SOURCES.md`, and `THIRD_PARTY_LICENSES.md` — public
    security and licensing contract.
-9. `.github/workflows/ci.yml` and `.github/workflows/pages.yml` — remote gates
-   and deployment permissions.
-10. `package.json`, `vite.config.ts`, `playwright.config.ts`, and
+10. `.github/workflows/ci.yml` and `.github/workflows/pages.yml` — remote gates
+    and deployment permissions.
+11. `package.json`, `vite.config.ts`, `playwright.config.ts`, and
     `playwright.live.config.ts` — local gate, artifact policy, and browser
     projects.
 
@@ -204,10 +242,12 @@ layers:
 - Select a point by globe interaction, coordinates, local city search, curated
   example, or permission-based geolocation.
 - Calculate the antipode locally.
-- Show origin and antipode countries/oceans, coordinates, center-line distance,
-  half-circumference surface distance, and the nearest place represented in the
-  bundled Natural Earth selection.
-- “Nearest place” is scoped to that dataset; never imply a complete gazetteer.
+- Show exact origin and antipode countries/oceans, coordinates, center-line and
+  half-circumference distances, plus the nearest eligible major city to each
+  endpoint in the bundled GeoNames snapshot.
+- The bilateral city results are represented major-city entries, not nearest
+  settlements, administrative boundaries, built areas, or a complete
+  gazetteer.
 - Sharing exact coordinates must retain the precise/approximate privacy choice.
 
 ### Development, Unpacked (`development`)
@@ -404,7 +444,8 @@ Do not repeat this work unless a regression or current diff invalidates it:
 - V1 product loop and all three modes;
 - first-interaction hint and keyboard-complete Mode Atlas;
 - Development median/history/structural-contrast narrative;
-- visible Natural Earth attribution in Other Side;
+- visible Natural Earth country-boundary and GeoNames major-city attribution in
+  Other Side;
 - English canonical README and Chinese README;
 - security policy;
 - data-source and third-party-license documentation;
@@ -448,7 +489,8 @@ Manual product smoke in both a desktop and mobile viewport:
 
 1. Open the root URL directly and with a hard refresh.
 2. Confirm the default Other Side view loads without a fatal console error.
-3. Select a point, verify origin/antipode result and Natural Earth attribution.
+3. Select a point, verify exact origin/antipode results, both nearest eligible
+   GeoNames major cities, scope caveat, and Natural Earth/GeoNames attribution.
 4. Use a precise share URL and an approximate share URL; reload each and verify
    the intended state and privacy precision.
 5. Open/close Mode Atlas by pointer and keyboard; verify focus restoration.
@@ -566,8 +608,8 @@ release is incomplete and identify the exact blocker.
 6. **Overbuilding open-source governance.** Contribution walkthroughs,
    marketplace contracts, Dependabot, and CodeQL are not MVP blockers unless a
    concrete review promotes them to P0/P1.
-7. **Adding a fourth mode.** GHSL Human Terrain is V1.1 and begins only after V1
-   release completion.
+7. **Adding a fourth mode.** Human Morphology is a shared overlay, not a mode;
+   V1.2.0 remains gated by GHSL Plans 1–7 and owner approval.
 8. **Breaking project Pages paths.** Root-relative assets can work locally and
    fail under `/Mundus/`; keep artifact verification intact.
 9. **Publishing source maps.** V1 intentionally prohibits them.
@@ -580,18 +622,21 @@ release is incomplete and identify the exact blocker.
 
 ## 15. Deferred roadmap
 
-After V1 is genuinely complete, the next accepted product direction is V1.1
-Human Terrain using a licensed GHSL global 2020 population-density slice. That
-future work has explicit asset/GPU budgets and data-license gates in
-`docs/EXECUTION_PLAN.md`.
+The current unpublished product candidate is V1.1.0 Parchment Atlas. Human
+Morphology reserves V1.2.0 only after GHSL Plans 1–7 and their budget/release
+gates complete. The current sequence is in `docs/ROADMAP_HANDOFF.md`.
 
-Do not begin it during this release assignment. Also defer Pleiades/Wikidata
-cultural exploration, plugin marketplaces, street-level GIS, weather, time-zone
-layers, offline/PWA work, accounts, and backend services.
+GHSL Plan 1 is terminal at `6e396d90ef215085a3d5bc8dbf602b6e4f239051`.
+Do not restart it or begin Plans 2–7 unless GHSL is separately reopened and
+approved. Continue V1.1 convergence on `codex/v1.1-parchment-convergence` in
+Draft PR #5. Also defer Pleiades/Wikidata cultural exploration, plugin
+marketplaces, street-level GIS, weather, time-zone layers, offline/PWA work,
+accounts, and backend services.
 
-## 16. Copy-paste kickoff prompt
+## 16. Historical kickoff prompt
 
-If a controller needs to start a fresh execution thread, use:
+The prompt below is retained only as V1.0.0 history. Do not use it for a current
+execution thread; use the active roadmap and V1.1 convergence authority above.
 
 > Work in `/Users/bytedance/Desktop/Zen/Mundus`. Read `AGENTS.md` completely,
 > then read the referenced release and product documents in its prescribed

@@ -4,6 +4,7 @@ import {
   useEffect,
   useImperativeHandle,
   useRef,
+  type Ref,
   type ReactNode,
 } from 'react';
 import { useResponsivePanel } from './useResponsivePanel';
@@ -21,6 +22,8 @@ interface ModePanelProps {
   collapseLabel: string;
   headerActions?: ReactNode;
   className?: string;
+  bodyClassName?: string;
+  bodyRef?: Ref<HTMLDivElement>;
   onCollapse?: () => void;
   children: ReactNode;
 }
@@ -35,6 +38,8 @@ export const ModePanel = forwardRef<ModePanelHandle, ModePanelProps>(
       collapseLabel,
       headerActions,
       className,
+      bodyClassName,
+      bodyRef,
       onCollapse,
       children,
     },
@@ -105,7 +110,11 @@ export const ModePanel = forwardRef<ModePanelHandle, ModePanelProps>(
         </div>
 
         {expanded ? (
-          <div id={bodyId} className={styles.body}>
+          <div
+            ref={bodyRef}
+            id={bodyId}
+            className={[styles.body, bodyClassName].filter(Boolean).join(' ')}
+          >
             {children}
           </div>
         ) : null}

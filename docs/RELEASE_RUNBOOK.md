@@ -1,5 +1,9 @@
 # V1 release runbook
 
+Status: V1.0.0 historical runbook. The procedure remains a rollback/reference
+baseline, but current release identity and authorization gates are recorded in
+`ROADMAP_HANDOFF.md`.
+
 This runbook covers the reproducible GitHub Pages path for the V1 static site.
 It does not authorize changing repository visibility; that remains a separate
 product-owner gate in `MVP_RELEASE_PLAN.md`.

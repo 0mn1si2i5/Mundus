@@ -1,0 +1,79 @@
+.root {
+  position: relative;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.root > label {
+  color: var(--color-muted);
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.root input {
+  width: 100%;
+  min-block-size: 2.75rem;
+  padding: 0 0.7rem;
+}
+
+.results {
+  position: absolute;
+  z-index: 3;
+  top: 100%;
+  right: 0;
+  left: 0;
+  max-block-size: 16.5rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid var(--color-line);
+  background: var(--color-panel);
+  box-shadow: 0 0.75rem 1.8rem rgb(30 24 17 / 14%);
+  list-style: none;
+}
+
+.results li {
+  display: grid;
+  min-block-size: 2.75rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  gap: 0.1rem 0.75rem;
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid var(--color-line);
+  cursor: pointer;
+}
+
+.results li[aria-selected='true'] {
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-panel));
+}
+
+.results strong {
+  font-weight: 500;
+}
+.results span,
+.results small {
+  color: var(--color-muted);
+  font-size: 0.68rem;
+}
+.results small {
+  grid-column: 1 / -1;
+}
+.status {
+  min-block-size: 1em;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.62rem;
+}
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--color-vermilion);
+  font-size: 0.68rem;
+}
+.error button {
+  min-block-size: 2.75rem;
+  padding: 0.35rem 0.65rem;
+}

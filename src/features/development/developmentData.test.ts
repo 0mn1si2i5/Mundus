@@ -69,9 +69,27 @@ describe('UNDP development dataset', () => {
     expect(largestError).toBeLessThan(0.001);
   });
 
-  it('uses an explicit missing color and ordered development bins', () => {
-    expect(developmentColor(null)).toBe('#182126');
-    expect(developmentColor(0.3)).not.toBe(developmentColor(0.95));
+  it('maps exact printable palette endpoints and missing observations', () => {
+    expect(developmentColor(null)).toBe('#b8b1a3');
+    expect(developmentColor(0)).toBe('#a64b32');
+    expect(developmentColor(0.4)).toBe('#bd6b35');
+    expect(developmentColor(0.55)).toBe('#c5943f');
+    expect(developmentColor(0.7)).toBe('#87945b');
+    expect(developmentColor(0.8)).toBe('#4f8b82');
+    expect(developmentColor(0.9)).toBe('#286c73');
+    expect(developmentColor(1)).toBe('#286c73');
+  });
+
+  it('keeps adjacent printed bins perceptually distinct without implying rank by grayscale', () => {
+    const bins = [0.3, 0.475, 0.625, 0.75, 0.85, 0.95].map(developmentColor);
+    for (let index = 1; index < bins.length; index += 1) {
+      expect(
+        rgbDistance(bins[index - 1]!, bins[index]!),
+      ).toBeGreaterThanOrEqual(35);
+    }
+    expect(
+      rgbDistance(developmentColor(null), bins[0]!),
+    ).toBeGreaterThanOrEqual(80);
   });
 
   it('computes null-safe equal-weight medians', () => {
@@ -248,6 +266,16 @@ describe('UNDP development dataset', () => {
     });
   });
 });
+
+function rgbDistance(first: string, second: string) {
+  const channels = (color: string) =>
+    [1, 3, 5].map((offset) =>
+      Number.parseInt(color.slice(offset, offset + 2), 16),
+    );
+  const left = channels(first);
+  const right = channels(second);
+  return Math.hypot(...left.map((value, index) => value - right[index]!));
+}
 
 function makeCountry(
   iso3: string,

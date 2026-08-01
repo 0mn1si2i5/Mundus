@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { useAppStore } from '../../state/appStore';
-import { antipodeOf, type GeoPoint } from '../globe/geo';
+import type { GeoPoint } from '../globe/geo';
 import type { CountryRef } from '../globe/countryData';
 import {
-  useNearestPopulatedPlace,
-  type PopulatedPlaceLoadState,
-} from '../antipodes/populatedPlaces';
+  createAntipodeRelation,
+  type AntipodeRelation,
+} from '../antipodes/relation';
 import {
   developmentColor,
   valuesByCountryId,
@@ -16,22 +16,29 @@ import {
 } from '../development/useDevelopmentDataset';
 import { observeSun, solarEventsUtc, solarPosition } from '../sunline/solar';
 import type { SunlineRenderState } from '../globe/GlobeViewport';
+import {
+  useGeoNamesCityIndex,
+  type GeoNamesCityLoadState,
+} from '../antipodes/useGeoNamesCityIndex';
 
 interface GlobePresentation {
   countryFills: ReadonlyMap<string, string> | null;
   showAntipodes: boolean;
   sunline: SunlineRenderState | null;
+  antipodeRelation: AntipodeRelation | null;
 }
+
+export type AntipodeRelationLoadState = 'idle' | 'loading' | 'error' | 'ready';
 
 export type ModePresentation =
   | {
       id: 'antipodes';
       globe: GlobePresentation;
-      point: GeoPoint;
-      antipode: GeoPoint;
       selectedCountry: CountryRef | null;
       antipodeCountry: CountryRef | null;
-      nearestPlace: PopulatedPlaceLoadState;
+      relation: AntipodeRelation;
+      relationStatus: AntipodeRelationLoadState;
+      cityIndex: GeoNamesCityLoadState;
     }
   | {
       id: 'development';
@@ -59,12 +66,16 @@ export function useModePresentation(): ModePresentation {
   const indicator = useAppStore((state) => state.developmentIndicator);
   const year = useAppStore((state) => state.developmentYear);
   const sunlineTimeMs = useAppStore((state) => state.sunlineTimeMs);
-  const antipode = antipodeOf(point);
-  const nearestPlace = useNearestPopulatedPlace(
-    antipode,
-    activeMode === 'antipodes',
-  );
   const developmentData = useDevelopmentDataset(activeMode === 'development');
+  const cityIndex = useGeoNamesCityIndex(activeMode === 'antipodes');
+  const relation = useMemo(
+    () =>
+      createAntipodeRelation(
+        point,
+        cityIndex.status === 'ready' ? cityIndex.data : undefined,
+      ),
+    [cityIndex, point],
+  );
   const developmentFills = useMemo(() => {
     if (developmentData.status !== 'ready') return null;
     return new Map(
@@ -86,12 +97,17 @@ export function useModePresentation(): ModePresentation {
     case 'antipodes':
       return {
         id: activeMode,
-        globe: { countryFills: null, showAntipodes: true, sunline: null },
-        point,
-        antipode,
+        globe: {
+          countryFills: null,
+          showAntipodes: true,
+          sunline: null,
+          antipodeRelation: relation,
+        },
         selectedCountry,
         antipodeCountry,
-        nearestPlace,
+        relation,
+        relationStatus: cityIndex.status,
+        cityIndex,
       };
     case 'development':
       return {
@@ -100,6 +116,7 @@ export function useModePresentation(): ModePresentation {
           countryFills: developmentFills,
           showAntipodes: false,
           sunline: null,
+          antipodeRelation: null,
         },
         selectedCountry,
         developmentData,
@@ -111,6 +128,7 @@ export function useModePresentation(): ModePresentation {
           countryFills: null,
           showAntipodes: false,
           sunline: { subsolarPoint: sun.position.subsolarPoint },
+          antipodeRelation: null,
         },
         point,
         selectedCountry,

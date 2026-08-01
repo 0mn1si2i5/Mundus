@@ -5,8 +5,8 @@
   display: grid;
   place-items: center;
   padding: 1rem;
-  background: rgb(3 5 7 / 72%);
-  backdrop-filter: blur(10px);
+  background: rgb(73 62 48 / 28%);
+  overscroll-behavior: contain;
 }
 
 .dialog {
@@ -15,6 +15,10 @@
   padding: 1.5rem;
   border: 1px solid var(--color-line);
   background: var(--color-panel);
+  box-shadow: var(--shadow-paper);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .dialog > p:first-of-type {
@@ -44,6 +48,7 @@
   padding: 0.8rem;
   border: 1px solid var(--color-line);
   color: var(--color-muted);
+  background: var(--color-control);
   font-size: 0.65rem;
 }
 
@@ -51,8 +56,8 @@
   position: absolute;
   top: 0.8rem;
   right: 0.8rem;
-  width: 2rem;
-  height: 2rem;
+  width: 2.75rem;
+  min-block-size: 2.75rem;
   border: 1px solid var(--color-line);
   border-radius: 50%;
   color: var(--color-text);
@@ -68,7 +73,7 @@
 }
 
 .actions button {
-  min-height: 2.7rem;
+  min-block-size: 2.75rem;
   padding: 0.6rem;
   border: 1px solid var(--color-line);
   color: var(--color-text);

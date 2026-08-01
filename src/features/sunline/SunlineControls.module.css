@@ -8,6 +8,7 @@
 }
 
 .panel button {
+  min-block-size: 2.75rem;
   padding: 0.45rem 0.65rem;
 }
 
@@ -25,9 +26,9 @@
 }
 
 .primaryControls input {
-  min-height: 2rem;
+  min-block-size: 2.75rem;
   padding: 0 0.5rem;
-  color-scheme: dark;
+  color-scheme: light;
   font-family: var(--font-mono);
   font-size: 0.7rem;
 }
@@ -51,7 +52,7 @@
 .timeline input {
   grid-column: 1 / -1;
   width: 100%;
-  accent-color: #d3b66f;
+  accent-color: var(--color-brass);
 }
 
 .method {

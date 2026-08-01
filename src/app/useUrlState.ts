@@ -47,7 +47,7 @@ export function useUrlState() {
       useAppStore.setState({
         ...parseUrlState(window.location.search),
         hoveredCountry: null,
-        cameraTarget: null,
+        cameraFocusIntent: { side: 'origin', target: null },
         sunlinePlaying: false,
       });
       applyingHistory = false;

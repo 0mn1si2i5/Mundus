@@ -16,6 +16,7 @@ export interface ModeDefinition {
   status: 'curated' | 'experimental';
   category: 'spatial' | 'human' | 'temporal';
   title: LocalizedText;
+  titlePhrases: { zh: readonly string[] };
   question: LocalizedText;
   summary: LocalizedText;
   cameraPolicy: 'preserve';
@@ -30,6 +31,7 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
     status: 'curated',
     category: 'spatial',
     title: { zh: '地球另一端', en: 'Other Side' },
+    titlePhrases: { zh: ['地球', '另一端'] },
     question: {
       zh: '如果从这里穿过地心，你会在哪里重新看见天空？',
       en: 'If you passed through Earth from here, where would you see the sky again?',
@@ -53,9 +55,10 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
     status: 'experimental',
     category: 'human',
     title: { zh: '发展的不同侧面', en: 'Development, Unpacked' },
+    titlePhrases: { zh: ['发展的', '不同侧面'] },
     question: {
       zh: '相近的发展水平，由哪些不同的结构组成？',
-      en: 'What different structures can produce similar levels of development?',
+      en: 'What different structures can underlie similar levels of development?',
     },
     summary: {
       zh: '拆开健康、教育与收入，观察相近结果背后的不同结构。',
@@ -74,6 +77,7 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
     status: 'experimental',
     category: 'temporal',
     title: { zh: '日照线', en: 'Sunline' },
+    titlePhrases: { zh: ['日照线'] },
     question: {
       zh: '此刻，白昼正在从地球的哪些地方离开？',
       en: 'Where is daylight leaving Earth at this moment?',

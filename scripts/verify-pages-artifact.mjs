@@ -1,8 +1,11 @@
 import { lstat, readFile, readdir } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { relative, resolve, sep } from 'node:path';
+import vectorGlobeManifest from '../src/data/manifests/natural-earth-vector-globe.json' with { type: 'json' };
 
 const root = resolve(process.argv[2] ?? 'dist');
 const files = new Set();
+const vectorReferences = { '110m': [], '50m': [] };
 
 async function walk(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -70,7 +73,7 @@ for (const sourcePath of [...files].filter((path) =>
   }
   const rootRelativeReferences = [
     ...source.matchAll(
-      /["'(]((?:\/(?!\/))[^"'()`?#\s]+\.(?:js|css|svg|json|png|jpe?g|webp|avif|gif|ico|woff2?|ttf|otf|wasm))(?:[?#][^"'()`\s]*)?["')]/gi,
+      /["'(]((?:\/(?!\/))[^"'()`?#\s]+\.(?:js|css|svg|json|png|jpe?g|webp|avif|gif|ico|woff2?|ttf|otf|wasm|mvg))(?:[?#][^"'()`\s]*)?["')]/gi,
     ),
   ].map((match) => match[1]);
   if (rootRelativeReferences.length > 0) {
@@ -80,7 +83,7 @@ for (const sourcePath of [...files].filter((path) =>
   }
   const relativeReferences = [
     ...source.matchAll(
-      /(\.\.?\/[A-Za-z0-9_./-]+\.(?:js|css|svg|json|png|jpe?g|webp|avif|gif|ico|woff2?|ttf|otf|wasm))\b/gi,
+      /(\.\.?\/[A-Za-z0-9_./-]+\.(?:js|css|svg|json|png|jpe?g|webp|avif|gif|ico|woff2?|ttf|otf|wasm|mvg))\b/gi,
     ),
   ].map((match) => match[1]);
   const sourceDirectory = resolve(root, sourcePath, '..');
@@ -93,6 +96,33 @@ for (const sourcePath of [...files].filter((path) =>
       throw new Error(`Broken asset reference in ${sourcePath}: ${reference}`);
     }
   }
+
+  if (sourcePath.endsWith('.js')) {
+    const emittedVectorUrls = [
+      ...source.matchAll(
+        /new URL\(["']([^"']+\.mvg)["'],\s*import\.meta\.url\)/g,
+      ),
+    ].map((match) => match[1]);
+    for (const reference of emittedVectorUrls) {
+      const target = relative(root, resolve(sourceDirectory, reference))
+        .split(sep)
+        .join('/');
+      if (!/^assets\/[^/]+\.mvg$/.test(target) || !files.has(target)) {
+        throw new Error(
+          `Broken asset reference in ${sourcePath}: ${reference}`,
+        );
+      }
+      for (const detail of ['110m', '50m']) {
+        if (
+          new RegExp(
+            `^assets/natural-earth-vector-globe-${detail}-.+\\.mvg$`,
+          ).test(target)
+        ) {
+          vectorReferences[detail].push(target);
+        }
+      }
+    }
+  }
 }
 
 if (![...files].some((path) => /^assets\/.+\.js$/.test(path))) {
@@ -100,6 +130,26 @@ if (![...files].some((path) => /^assets\/.+\.js$/.test(path))) {
 }
 if (![...files].some((path) => /^assets\/.+\.css$/.test(path))) {
   throw new Error('Pages artifact contains no stylesheet bundle.');
+}
+
+for (const detail of ['110m', '50m']) {
+  const references = vectorReferences[detail];
+  if (references.length !== 1) {
+    throw new Error(`Expected exactly one ${detail} vector globe reference`);
+  }
+  const bytes = await readFile(resolve(root, references[0]));
+  const expected = vectorGlobeManifest.derivedAssets[detail];
+  const sha256 = createHash('sha256').update(bytes).digest('hex');
+  if (bytes.byteLength !== expected.rawBytes || sha256 !== expected.sha256) {
+    throw new Error(`${detail} vector globe identity mismatch`);
+  }
+  if (detail === '50m') {
+    const { gzipSync } = await import('node:zlib');
+    const gzipBytes = gzipSync(bytes, { level: 9, mtime: 0 }).byteLength;
+    if (gzipBytes > 1.5 * 1024 * 1024) {
+      throw new Error(`50m vector globe gzip budget exceeded: ${gzipBytes}`);
+    }
+  }
 }
 
 const notices = await readFile(resolve(root, 'THIRD_PARTY_NOTICES.md'), 'utf8');

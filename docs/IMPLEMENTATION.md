@@ -2,9 +2,35 @@
 
 本文只记录当前实施切片；稳定的产品与架构决策仍以 [PROJECT_PLAN.md](PROJECT_PLAN.md) 为准。
 
-当前执行目标、批次门槛和审阅循环见 [EXECUTION_PLAN.md](EXECUTION_PLAN.md)。
+部署状态必须与实施状态分开理解：公开 V1.0.0 固定在
+`a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`；本文顶部的 Natural Earth
+矢量球、GeoNames 双语搜索、双侧城市关系、拖拽剖面和羊皮纸视觉属于尚未发布的
+**V1.1.0 Parchment Atlas** 候选。实现与本地门通过不等于已部署。
 
-## V1 MVP 发布：首次 Pages 部署已验证，最终发布证据待合并
+当前执行目标、批次门槛和审阅循环见 [EXECUTION_PLAN.md](EXECUTION_PLAN.md)。
+V1.1 候选的验收、测试、审阅与发布边界见
+[2026-08-01 候选证据](2026-08-01-v1.1-parchment-atlas-candidate.md)。
+
+## Natural Earth 完整矢量球面
+
+- [x] 110m/50m 固定源文件、SHA-256、许可与可复现离线转换
+- [x] 单一合并国家表面、单一海岸线、单一内部共享边界与稳定国家调色板索引
+- [x] low 懒加载 110m，medium/high 懒加载 50m；加载/失败保留原栅格球面
+- [x] Development 指标/年份只更新 RGBA 调色板，不重建几何
+- [x] CPU 国家拾取、Other Side 拖拽剖面、Sunline 遮罩、标记、弧线、经纬网与 context restore 保持原路径
+- [x] 50m 产物 1,346,186 bytes gzip，实测上传属性与固定 905×4 调色板 GPU 8,950,732 bytes；低档 110m 为 793,168 bytes
+- [x] 四点面内采样、传输量化回读与边界自适应细分将全局丢弃候选面积限制为 110m 0.00417%、50m 0.000149%
+- [x] 独立源面积门槛识别并修复 50m 南极环顺序问题：南极由 0.00473 sr 恢复到约 0.30196 sr；50m 总源/输出面积差由 8.22% 降为 0.000149%
+- [x] 拖拽时海洋壳提供统一 0.76 有效透明度，陆地填色不再叠加 alpha；海岸线/国界降透明度保留定位线索
+- [x] Sunline 使用同一合并表面增加夜幕之上的所选国家高亮 pass；常态矢量层实测 4 draw，Sunline 所选国家时 5 draw
+- [x] 解码前严格校验版本、完整 stream schema、国家/调色板索引、文件与解码预算；生成集通过同目录 staging/backup 与 manifest-last 回滚发布
+
+正式转换契约、正确性夹具和资源预算见 [DATA_SOURCES.md](../DATA_SOURCES.md)、
+`scripts/build-natural-earth-vector-globe.test.mjs` 与对应 manifest。无头帧间隔不代表
+实体设备性能；本次没有可用实体硬件，medium/high 50m 的实体手机/桌面采样仍是
+后续发布验证项。
+
+## V1.0.0 发布：完成并线上验证
 
 - [x] 阶段 1–4 私有基线完成三方审阅、纠错复验与远端 CI 同步
 - [x] 一次性首次操作提示与 Mode Atlas
@@ -17,7 +43,7 @@
 - [x] PR #3 通过发布审阅并合并到 `main`
 - [x] 仓库已公开，Pages、`main` 保护和私密漏洞报告已启用
 - [x] 首次 Pages 部署和桌面/移动自动线上冒烟通过
-- [ ] 合并最终证据 PR，再次部署验证并创建 `v1.0.0` 与 GitHub Release
+- [x] 最终证据 PR #4 合并；最终 `main`、Pages、`v1.0.0` 标签和 GitHub Release 均指向 `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`
 
 2026-07-20 合并前历史检查点：私有 `main` 位于 `fc0ce78`；当前分支
 `codex/v1-pages-release` 位于 `5c8fb25`。PR #3 可合并，远端 `quality`、
@@ -33,11 +59,11 @@
 [Pages](https://github.com/0mn1si2i5/Mundus/actions/runs/29722665114) 均通过；
 `pages-artifact`、`deploy-pages` 和桌面/移动 `live-smoke` 完整成功。线上地址
 为 <https://0mn1si2i5.github.io/Mundus/>，HTTPS 请求返回 200 和预期文档
-标题。最终标签必须等待本证据变更合并后的同 SHA 部署再次通过。
+标题。该首次部署随后由最终证据提交的同 SHA 部署、标签与 Release 闭环取代。
 
-零上下文执行线程必须先阅读仓库根目录的 [AGENTS.md](../AGENTS.md)，然后按
-[MVP_RELEASE_PLAN.md](MVP_RELEASE_PLAN.md) 与
-[RELEASE_RUNBOOK.md](RELEASE_RUNBOOK.md) 完成剩余发布闭环。
+零上下文执行线程必须先阅读仓库根目录的 [AGENTS.md](../AGENTS.md) 和
+[ROADMAP_HANDOFF.md](ROADMAP_HANDOFF.md)。V1 发布计划与 runbook 是已完成历史，
+不得据此重复创建 V1.0.0。
 
 基线检查点为私有 `main` 的 `1d627e6`：本地 57 个单元测试、31 个浏览器测试通过（1 个桌面专属生命周期用例在移动项目按设计跳过），远端 quality 与 browser-smoke 均通过。公开发布仍以执行计划中的产品、安全、许可和部署门槛为准。
 
@@ -63,11 +89,12 @@
 ## 阶段 2 · Other Side：完成
 
 - [x] 版本化模式契约和编译期注册
-- [x] 地球点击、坐标输入、本地城市搜索、精选示例与主动定位
+- [x] 地球点击、坐标输入、GeoNames 双语主要城市搜索、精选示例与主动定位
+- [x] GeoNames 2026-08-01 固定快照、CC BY 4.0 署名、可离线重建的不可变归一化输入、OpenCC 构建期繁转简与懒加载索引
 - [x] 对跖计算、地心连线、镜头翻转、地心/表面距离
 - [x] 起点和对跖点国家/海洋结果
 - [x] 分享 URL 与精确/约略坐标选择
-- [x] Natural Earth 50m populated places 可复现索引与最近收录聚居点
+- [x] GeoNames 双侧最近符合条件主要城市关系、端点距离、短测地线与形状标记；旧 Natural Earth populated-places 管线已完整移除
 - [x] 键盘地球旋转/缩放/选择、对话框焦点管理和移动端抽屉语义
 - [x] 阶段 2 性能回归与桌面/移动发布级视觉验收
 

@@ -113,11 +113,11 @@ export function valuesByCountryId(
 }
 
 export function developmentColor(value: number | null): string {
-  if (value === null) return '#182126';
-  if (value < 0.4) return '#75433f';
-  if (value < 0.55) return '#96644c';
-  if (value < 0.7) return '#ad8e61';
-  if (value < 0.8) return '#99a77f';
-  if (value < 0.9) return '#70a094';
-  return '#4c897f';
+  if (value === null) return '#b8b1a3';
+  if (value < 0.4) return '#a64b32';
+  if (value < 0.55) return '#bd6b35';
+  if (value < 0.7) return '#c5943f';
+  if (value < 0.8) return '#87945b';
+  if (value < 0.9) return '#4f8b82';
+  return '#286c73';
 }

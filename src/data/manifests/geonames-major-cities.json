@@ -1,0 +1,88 @@
+{
+  "id": "geonames-major-cities",
+  "sourceName": "GeoNames geographical database",
+  "sourceUrl": "https://www.geonames.org/",
+  "licenseName": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "version": "GeoNames capture 2026-08-01T09:39:05.688Z",
+  "retrievedAt": "2026-08-01",
+  "attribution": "Contains GeoNames data, licensed under CC BY 4.0",
+  "redistribution": "allowed",
+  "transformations": [
+    "Keep active PPL, PPLA, PPLA2, PPLA3, PPLA4, PPLC, and PPLG records; include every PPLC/PPLA and otherwise require population of at least 100000",
+    "Require a non-empty admin1 code and join countries and admin-1 regions by exact source identifiers; exclude records without either exact join",
+    "Select current English and zh-CN, zh-Hans, or zh names without machine translation",
+    "Convert only existing zh-CN, zh-Hans, and zh source names from OpenCC traditional Chinese to Simplified Chinese with opencc-js 1.4.1 t-to-cn dictionaries; retain each distinct original form as a search alias",
+    "Retain every distinct accepted Chinese source form and its distinct Simplified Chinese derivative; retain distinct canonical and ASCII names plus at most two additional non-display English aliases after normalized deduplication",
+    "Sort records by GeoNames ID and encode coordinates as signed 1e-5 degree integers in a lexical string table"
+  ],
+  "missingValuePolicy": "Records without valid coordinates, a non-empty admin1 code, an exact ISO2 country join, or an exact country.admin1 join are excluded. Missing Chinese labels use and count the canonical source label; non-Chinese values are never translated or imputed.",
+  "boundaryPolicy": "This is a filtered major-city search index, not a complete gazetteer or territorial authority.",
+  "recordCount": 6953,
+  "rawBytes": 793910,
+  "gzipBytes": 277460,
+  "staticDecodedBytesEstimate": 3175640,
+  "runtimeDecodedBytesEstimate": 4819938,
+  "upstreamCapture": {
+    "retrievedAt": "2026-08-01T09:39:05.688Z",
+    "sources": [
+      {
+        "sourceName": "GeoNames cities15000",
+        "distributionUrl": "https://download.geonames.org/export/dump/cities15000.zip",
+        "fileName": "cities15000.zip",
+        "sha256": "9ba4c24f8b514081139a813be393f2f01e98a7a059e5f3ac8c96c786bf532481",
+        "rawBytes": 3303822,
+        "etag": "\"32698e-657f24c2a9f7a\"",
+        "lastModified": "Sat, 01 Aug 2026 01:33:51 GMT"
+      },
+      {
+        "sourceName": "GeoNames alternate names V2",
+        "distributionUrl": "https://download.geonames.org/export/dump/alternateNamesV2.zip",
+        "fileName": "alternateNamesV2.zip",
+        "sha256": "d46fc26c590c29e663792dd9bc5dc07322ee99567681ee45ee0df9f935c04204",
+        "rawBytes": 202504032,
+        "etag": "\"c11f760-657f25ebda854\"",
+        "lastModified": "Sat, 01 Aug 2026 01:39:03 GMT"
+      },
+      {
+        "sourceName": "GeoNames country info",
+        "distributionUrl": "https://download.geonames.org/export/dump/countryInfo.txt",
+        "fileName": "countryInfo.txt",
+        "sha256": "93bafc525813f22e4711ff9ed6d626343094ce48c26388dc7c49189b3d7d5512",
+        "rawBytes": 31678,
+        "etag": "\"7bbe-657f25fe0bf71\"",
+        "lastModified": "Sat, 01 Aug 2026 01:39:22 GMT"
+      },
+      {
+        "sourceName": "GeoNames admin-1 codes",
+        "distributionUrl": "https://download.geonames.org/export/dump/admin1CodesASCII.txt",
+        "fileName": "admin1CodesASCII.txt",
+        "sha256": "34784457b76b988a669dff7c3e4b104e4902c0875643cff019281ac79dfa2992",
+        "rawBytes": 151572,
+        "etag": "\"25014-657f24c2a9f7a\"",
+        "lastModified": "Sat, 01 Aug 2026 01:33:51 GMT"
+      },
+      {
+        "sourceName": "GeoNames dump readme",
+        "distributionUrl": "https://download.geonames.org/export/dump/readme.txt",
+        "fileName": "readme.txt",
+        "sha256": "b1957379b6c1242c700c98ac9a8aa0a09f56c3c0a50ee72175527005f48ef2c5",
+        "rawBytes": 8843,
+        "etag": "\"228b-657f22bdf5f1c\"",
+        "lastModified": "Sat, 01 Aug 2026 01:24:50 GMT"
+      }
+    ]
+  },
+  "immutableBuildInput": {
+    "path": "src/data/generated/geonames-major-cities-input.json",
+    "schemaVersion": 2,
+    "sha256": "49b3f2114d1e71277572b2773cb1e5b8242f3eb22a9e89598eb95b79408c5621",
+    "rawBytes": 2814375
+  },
+  "derivedAsset": {
+    "path": "src/data/generated/geonames-major-cities.json",
+    "sha256": "68d971df7d66f16eb23a1921623f4608176ed36ec8bb4ac00d1ba57d7493dfab",
+    "rawBytes": 793910,
+    "formatVersion": 2
+  }
+}
