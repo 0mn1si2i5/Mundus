@@ -3277,6 +3277,38 @@ test('drives fixed, playing, and live Sunline time in UTC', async ({
     .toBe(preview);
 });
 
+test('labels and defines civil twilight consistently in both languages', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./?mode=sunline&point=0%2C0&time=2024-03-20T06%3A00Z&v=1');
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开日照线控件' }).click();
+  }
+
+  const result = page.getByRole('complementary', { name: '太阳位置结果' });
+  await expect(result.getByText('-2.0°', { exact: true })).toBeVisible();
+  await expect(result.getByText('曙暮光', { exact: true })).toBeVisible();
+  await page.getByText('计算说明', { exact: true }).click();
+  await expect(page.locator('details')).toContainText(
+    '“曙暮光”表示太阳高度低于 0° 至 -6°（含 -6°）的民用曙暮光范围。',
+  );
+
+  await page.getByRole('button', { name: '切换为英文' }).click();
+  const englishResult = page.getByRole('complementary', {
+    name: 'Solar position result',
+  });
+  await expect(
+    englishResult.getByText('Twilight', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    englishResult.getByText('Civil twilight', { exact: true }),
+  ).toHaveCount(0);
+  await expect(page.locator('details')).toContainText(
+    '“Twilight” denotes the civil-twilight range from below 0° through -6° (inclusive).',
+  );
+  await expect(page.getByText('06:00 UTC', { exact: true })).toBeVisible();
+});
+
 test('keeps mode lifecycle stable across repeated switching', async ({
   page,
 }, testInfo) => {

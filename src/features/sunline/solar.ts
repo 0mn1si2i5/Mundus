@@ -28,6 +28,19 @@ export interface SolarObservation {
   daylight: DaylightState;
 }
 
+export function daylightStateAtAltitude(
+  altitudeDegrees: number,
+): DaylightState {
+  if (!Number.isFinite(altitudeDegrees)) {
+    throw new RangeError('Solar altitude must be finite');
+  }
+  return altitudeDegrees >= 0
+    ? 'day'
+    : altitudeDegrees >= -6
+      ? 'civil-twilight'
+      : 'night';
+}
+
 export function roundToUtcMinute(timestampMs: number): number {
   return Math.floor(timestampMs / 60_000) * 60_000;
 }
@@ -102,12 +115,7 @@ export function observeSun(
 
   return {
     altitudeDegrees,
-    daylight:
-      altitudeDegrees >= 0
-        ? 'day'
-        : altitudeDegrees >= -6
-          ? 'civil-twilight'
-          : 'night',
+    daylight: daylightStateAtAltitude(altitudeDegrees),
   };
 }
 
