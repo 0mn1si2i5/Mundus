@@ -1574,7 +1574,7 @@ test('keeps the hint for incidental pointing and accepts wheel use', async ({
 
 test('opens the mode atlas and restores keyboard focus', async ({ page }) => {
   await page.goto('./?point=30.25%2C120.75&v=1');
-  const opener = page.getByRole('button', { name: '模式图鉴' });
+  const opener = page.getByRole('button', { name: '模式图鉴', exact: true });
   expect((await opener.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   await opener.focus();
   await opener.click();
@@ -1601,7 +1601,7 @@ test('selects a mode from the atlas without moving the selected place', async ({
   page,
 }) => {
   await page.goto('./?point=30.25%2C120.75&v=1');
-  await page.getByRole('button', { name: '模式图鉴' }).click();
+  await page.getByRole('button', { name: '模式图鉴', exact: true }).click();
   const developmentEntry = page
     .getByRole('listitem')
     .filter({ hasText: '发展的不同侧面' });
@@ -1633,7 +1633,7 @@ test('keeps the English mode atlas usable at 320px', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('button', { name: '切换为英文' }).click();
 
-  const opener = page.getByRole('button', { name: 'Mode atlas' });
+  const opener = page.getByRole('button', { name: 'Mode atlas', exact: true });
   expect((await opener.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   expect(
     await page.evaluate(
@@ -2722,7 +2722,7 @@ test('keeps controls reachable after crossing the mobile breakpoint', async ({
   await expect(page.getByLabel('UTC 日期')).toBeVisible();
   await expect(page.getByRole('slider', { name: /UTC 时间/ })).toBeVisible();
 
-  await page.getByRole('button', { name: '模式图鉴' }).click();
+  await page.getByRole('button', { name: '模式图鉴', exact: true }).click();
   const developmentEntry = page
     .getByRole('listitem')
     .filter({ hasText: '发展的不同侧面' });
@@ -3258,7 +3258,7 @@ test('drives fixed, playing, and live Sunline time in UTC', async ({
   await expect(page).not.toHaveURL(/time=/);
   await expect(page.getByText(/实时 · 1440×/)).toBeVisible();
 
-  await page.getByRole('button', { name: '分享' }).click();
+  await page.getByRole('button', { name: '分享', exact: true }).click();
   const dialog = page.getByRole('dialog');
   const field = dialog.getByRole('textbox', { name: '分享链接' });
   const preview = await field.inputValue();
@@ -3350,7 +3350,7 @@ test('isolates Share, traps focus, closes cleanly, and preserves URL state', asy
   });
   await page.goto('./?point=30.25%2C120.75&v=1');
   const initialUrl = page.url();
-  const opener = page.getByRole('button', { name: '分享' });
+  const opener = page.getByRole('button', { name: '分享', exact: true });
   await opener.click();
   const dialog = page.getByRole('dialog', { name: '分享这一视角' });
   await expect(dialog).toBeVisible();
@@ -3389,20 +3389,24 @@ test('isolates Share, traps focus, closes cleanly, and preserves URL state', asy
     page.getByRole('complementary', { name: '位置结果' }),
   ).toContainText('30.2500°, 120.7500°');
 
-  await page.getByRole('button', { name: '分享' }).click();
+  await page.getByRole('button', { name: '分享', exact: true }).click();
   const reopenedDialog = page.getByRole('dialog', { name: '分享这一视角' });
   await reopenedDialog.locator('..').click({ position: { x: 2, y: 2 } });
   await expect(reopenedDialog).toBeHidden();
   await expect(page.locator('#root')).not.toHaveAttribute('inert', '');
-  await expect(page.getByRole('button', { name: '分享' })).toBeFocused();
+  await expect(
+    page.getByRole('button', { name: '分享', exact: true }),
+  ).toBeFocused();
   await expect(page).toHaveURL(preview);
 
-  await page.getByRole('button', { name: '分享' }).click();
+  await page.getByRole('button', { name: '分享', exact: true }).click();
   await expect(reopenedDialog).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(reopenedDialog).toBeHidden();
   await expect(page.locator('#root')).not.toHaveAttribute('inert', '');
-  await expect(page.getByRole('button', { name: '分享' })).toBeFocused();
+  await expect(
+    page.getByRole('button', { name: '分享', exact: true }),
+  ).toBeFocused();
   await expect(page).toHaveURL(preview);
 });
 
@@ -3455,7 +3459,7 @@ test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
     44,
   );
 
-  await page.getByRole('button', { name: '分享' }).click();
+  await page.getByRole('button', { name: '分享', exact: true }).click();
   const share = page.getByRole('dialog', { name: '分享这一视角' });
   await expectMinimumHeight(
     share.getByRole('textbox', { name: '分享链接' }),
@@ -3471,7 +3475,7 @@ test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
     page.getByRole('button', { name: '收起日照线控件' }),
     44,
   );
-  await page.getByRole('button', { name: '分享' }).click();
+  await page.getByRole('button', { name: '分享', exact: true }).click();
   const compactShare = page.getByRole('dialog', { name: '分享这一视角' });
   await expectMinimumHeight(
     compactShare.getByRole('textbox', { name: '分享链接' }),
@@ -3565,7 +3569,7 @@ test('uses the accent focus ring for keyboard form and disclosure controls only'
   await page.keyboard.press('Tab');
   await expectAccentFocusRing(summary);
 
-  const shareButton = page.getByRole('button', { name: '分享' });
+  const shareButton = page.getByRole('button', { name: '分享', exact: true });
   await shareButton.click();
   await page.keyboard.press('Escape');
   await page.mouse.click(4, 4);
@@ -3655,11 +3659,11 @@ test('uses the bright parchment atlas contract across modal surfaces', async ({
   page,
 }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: '分享' }).click();
+  await page.getByRole('button', { name: '分享', exact: true }).click();
   const share = page.getByRole('dialog', { name: '分享这一视角' });
   await expectPaperModal(share);
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: '模式图鉴' }).click();
+  await page.getByRole('button', { name: '模式图鉴', exact: true }).click();
   await expectPaperModal(
     page.getByRole('dialog', { name: '三种观察地球的方式' }),
   );

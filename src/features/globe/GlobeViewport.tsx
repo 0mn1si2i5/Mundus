@@ -170,6 +170,13 @@ export function GlobeViewport({
     },
     [],
   );
+  const handleVectorDragEvidence = useCallback(
+    (alphaEvidence: string, orderEvidence: string) => {
+      setVectorDragEvidence(alphaEvidence);
+      setVectorDragOrderEvidence(orderEvidence);
+    },
+    [],
+  );
   if (dragModeActive !== showAntipodes) {
     pointerStarts.clear();
     setAntipodeDragActive(false);
@@ -689,10 +696,7 @@ export function GlobeViewport({
           onVectorPaletteUpdate={setVectorPaletteVersion}
           onVectorDragMaterialChange={setVectorDragTransparent}
           onVectorSunlineHighlightChange={setVectorSunlineHighlight}
-          onVectorDragEvidence={(alphaEvidence, orderEvidence) => {
-            setVectorDragEvidence(alphaEvidence);
-            setVectorDragOrderEvidence(orderEvidence);
-          }}
+          onVectorDragEvidence={handleVectorDragEvidence}
           onVectorRenderEvidence={(vectorDraws, rendererCalls) =>
             setVectorRenderEvidence((current) => ({
               vectorDraws,
