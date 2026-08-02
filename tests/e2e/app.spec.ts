@@ -60,6 +60,13 @@ async function expectCameraDiagnosticCleared(page: Page) {
   await expect(globe).not.toHaveAttribute('data-camera-center-latitude', /.+/);
   await expect(globe).not.toHaveAttribute('data-camera-center-longitude', /.+/);
   await expect(globe).not.toHaveAttribute('data-camera-focus-motion', /.+/);
+  await expect(globe).toHaveAttribute('data-camera-focus-state', 'idle');
+  await expect(globe).not.toHaveAttribute('data-camera-focus-started-at', /.+/);
+  await expect(globe).not.toHaveAttribute('data-camera-focus-elapsed-ms', /.+/);
+  await expect(globe).not.toHaveAttribute(
+    'data-camera-focus-completed-revision',
+    /.+/,
+  );
 }
 
 function globeRegion(page: Page) {
@@ -102,6 +109,30 @@ async function expectAntipodeRelationReady(page: Page) {
   await expect(globe).toHaveAttribute('data-antipode-relation-state', 'ready');
   await expect(page.getByTestId('antipode-relation-status')).toBeHidden();
   await expect(globe).toHaveAttribute('data-antipode-relation-arc-count', '2');
+}
+
+async function pinchGlobe(page: Page, scale: 'in' | 'out') {
+  const center = await globeCenter(page);
+  const session = await page.context().newCDPSession(page);
+  const startGap = scale === 'in' ? 36 : 92;
+  const endGap = scale === 'in' ? 92 : 36;
+  const touchPoints = (gap: number) => [
+    { x: center.x - gap, y: center.y, id: 0 },
+    { x: center.x + gap, y: center.y, id: 1 },
+  ];
+  await session.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: touchPoints(startGap),
+  });
+  await session.send('Input.dispatchTouchEvent', {
+    type: 'touchMove',
+    touchPoints: touchPoints(endGap),
+  });
+  await session.send('Input.dispatchTouchEvent', {
+    type: 'touchEnd',
+    touchPoints: [],
+  });
+  await session.detach();
 }
 
 test('loads only the quality-selected vector resolution and hides raster after readiness', async ({
@@ -797,7 +828,8 @@ test('explains the opaque through-Earth cross-section in both languages', async 
 
 test('keeps exact marker roles and center dots legible across the zoom range', async ({
   page,
-}) => {
+}, testInfo) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('./');
   const globe = page.getByRole('region', { name: '交互式三维地球' });
   await expect(globe).toHaveAttribute('data-marker-role-count', '4');
@@ -933,8 +965,26 @@ test('keeps exact marker roles and center dots legible across the zoom range', a
     }
   }
 
-  await zoomUntil('=', '2.15', 16);
-  await expect(globe).toHaveAttribute('data-camera-distance', '2.15');
+  const initialDistance = Number(
+    await globe.getAttribute('data-camera-distance'),
+  );
+  if (testInfo.project.name === 'mobile') {
+    await pinchGlobe(page, 'in');
+  } else {
+    const center = await globeCenter(page);
+    await page.mouse.move(center.x, center.y);
+    await page.mouse.wheel(0, -600);
+  }
+  await expect
+    .poll(async () => Number(await globe.getAttribute('data-camera-distance')))
+    .toBeLessThan(initialDistance);
+
+  await globe.focus();
+
+  await zoomUntil('=', '1.55', 16);
+  await expect(globe).toHaveAttribute('data-camera-distance', '1.55');
+  await page.keyboard.press('=');
+  await expect(globe).toHaveAttribute('data-camera-distance', '1.55');
   await expect(globe).not.toHaveAttribute(
     'data-marker-diagnostic-revision',
     idleRevision!,
@@ -946,9 +996,46 @@ test('keeps exact marker roles and center dots legible across the zoom range', a
     relationRevisionAfterResize,
   );
   await expectProjectedMarkerSize();
+  const originCity = page.getByRole('button', { name: /黄浦 查看城市/ });
+  await originCity.click();
+  await expect(globe).toHaveAttribute(
+    'data-camera-focus-motion',
+    /instant|animated/,
+    { timeout: 10_000 },
+  );
+  await expect(globe).toHaveAttribute('data-camera-distance', '1.55');
+  await expect(globe).toHaveAttribute(
+    'data-antipode-relation-focus-evidence',
+    /markerFrontFacing:true,markerInViewport:true,arcPoints:\d+,arcAllInViewport:true,arcDepthTest:true/,
+  );
+  const result = page.getByRole('complementary', { name: '位置结果' });
+  const focusControl = page.getByRole('button', { name: '翻到对跖点' });
+  await expect(result).toBeVisible();
+  await expect(focusControl).toBeVisible();
+  for (const locator of [result, focusControl]) {
+    const box = await locator.boundingBox();
+    const viewport = page.viewportSize();
+    expect(box).not.toBeNull();
+    expect(viewport).not.toBeNull();
+    expect(box!.x + box!.width).toBeGreaterThan(0);
+    expect(box!.x).toBeLessThan(viewport!.width);
+    expect(box!.y + box!.height).toBeGreaterThan(0);
+    expect(box!.y).toBeLessThan(viewport!.height);
+  }
 
+  await globe.focus();
   await zoomUntil('-', '5', 24);
   await expect(globe).toHaveAttribute('data-camera-distance', '5');
+  const revisionBeforeMaximumClamp = Number(
+    await globe.getAttribute('data-marker-diagnostic-revision'),
+  );
+  await page.keyboard.press('-');
+  await expect(globe).toHaveAttribute('data-camera-distance', '5');
+  await expect
+    .poll(async () =>
+      Number(await globe.getAttribute('data-marker-diagnostic-revision')),
+    )
+    .toBeGreaterThan(revisionBeforeMaximumClamp);
   expect(
     Number(
       await globe.getAttribute('data-antipode-relation-diagnostic-revision'),
@@ -2429,8 +2516,53 @@ test('focuses a represented major city without changing the exact relation or UR
   await page.keyboard.press('Enter');
 
   await expectCameraCenter(page, -31.39195, -58.01706);
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-antipode-relation-focus-evidence',
+    /markerTarget:-31\.39195,-58\.01706,markerRadius:1\.021,markerFrontFacing:true,markerInViewport:true/,
+  );
   await expect(page).toHaveURL(urlBefore);
   await expect(result).toHaveText(relationBefore ?? '');
+});
+
+test('restarts the same represented-city animation after manual cancellation', async ({
+  page,
+}) => {
+  await page.goto('./');
+  await expectAntipodeRelationReady(page);
+  const globe = globeRegion(page);
+  const city = page.getByRole('button', { name: /康科迪亚 查看城市/ });
+
+  await city.click();
+  await expect(globe).toHaveAttribute(
+    'data-camera-focus-request-revision',
+    '1',
+  );
+  const firstStartedAt = Number(
+    await globe.getAttribute('data-camera-focus-started-at'),
+  );
+  await globe.focus();
+  await page.keyboard.press('ArrowRight');
+  await expectCameraDiagnosticCleared(page);
+
+  await city.click();
+  await expect(globe).toHaveAttribute(
+    'data-camera-focus-request-revision',
+    '2',
+  );
+  await expectCameraCenter(page, -31.39195, -58.01706);
+  await expect(globe).toHaveAttribute('data-camera-focus-state', 'complete');
+  await expect(globe).toHaveAttribute(
+    'data-camera-focus-completed-revision',
+    '2',
+  );
+  expect(
+    Number(await globe.getAttribute('data-camera-focus-started-at')),
+  ).toBeGreaterThan(firstStartedAt);
+  await expect
+    .poll(async () =>
+      Number(await globe.getAttribute('data-camera-focus-elapsed-ms')),
+    )
+    .toBeGreaterThan(0);
 });
 
 test('uses exact bilateral labels in English', async ({ page }, testInfo) => {

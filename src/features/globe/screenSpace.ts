@@ -20,3 +20,21 @@ export function cssPixelsToWorldUnits(
     2 * distance * Math.tan((verticalFovDegrees * Math.PI) / 360);
   return (visibleHeight * cssPixels) / viewportHeightCssPixels;
 }
+
+export function allPointsInClip(
+  points: ReadonlyArray<{ x: number; y: number; z: number }>,
+): boolean {
+  return (
+    points.length > 0 &&
+    points.every(
+      ({ x, y, z }) =>
+        Number.isFinite(x) &&
+        Number.isFinite(y) &&
+        Number.isFinite(z) &&
+        Math.abs(x) <= 1 &&
+        Math.abs(y) <= 1 &&
+        z >= -1 &&
+        z <= 1,
+    )
+  );
+}
