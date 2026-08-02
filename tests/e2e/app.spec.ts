@@ -2499,6 +2499,37 @@ test('restores shareable state and browser history', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
 });
 
+test('accepts legacy whole-degree share URLs without warning or mutation', async ({
+  page,
+}) => {
+  const scenarios = [
+    {
+      path: './?point=31%2C121&v=1',
+      heading: '地球另一端',
+    },
+    {
+      path: './?mode=development&point=31%2C121&indicator=income&year=2010&v=1',
+      heading: '发展的不同侧面',
+    },
+    {
+      path: './?mode=sunline&point=31%2C121&time=2024-03-20T12%3A00Z&v=1',
+      heading: '日照线',
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    const expectedUrl = new URL(scenario.path, 'http://127.0.0.1:4173');
+    await page.goto(scenario.path);
+    await expect(
+      page.getByRole('heading', { name: scenario.heading }),
+    ).toBeVisible();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    const loadedUrl = new URL(page.url());
+    expect(loadedUrl.pathname).toBe(expectedUrl.pathname);
+    expect(loadedUrl.search).toBe(expectedUrl.search);
+  }
+});
+
 test('replaces continuous timeline changes instead of flooding history', async ({
   page,
 }, testInfo) => {
@@ -3059,6 +3090,19 @@ test('explains Development evidence consistently in English', async ({
 test('drives fixed, playing, and live Sunline time in UTC', async ({
   page,
 }, testInfo) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText(value: string) {
+          (
+            window as typeof window & { copiedShareUrl?: string }
+          ).copiedShareUrl = value;
+          return Promise.resolve();
+        },
+      },
+    });
+  });
   await page.goto('./?mode=sunline&point=0%2C0&time=2024-03-20T12%3A00Z&v=1');
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开日照线控件' }).click();
@@ -3083,7 +3127,22 @@ test('drives fixed, playing, and live Sunline time in UTC', async ({
   await expect(page.getByText(/实时 · 1440×/)).toBeVisible();
 
   await page.getByRole('button', { name: '分享' }).click();
-  await expect(page.getByRole('dialog')).toContainText(/time=/);
+  const dialog = page.getByRole('dialog');
+  const field = dialog.getByRole('textbox', { name: '分享链接' });
+  const preview = await field.inputValue();
+  expect(preview).toMatch(/time=/);
+  await page.waitForTimeout(1_100);
+  await expect(field).toHaveValue(preview);
+  await dialog.getByRole('button', { name: '复制分享链接' }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as typeof window & { copiedShareUrl?: string })
+            .copiedShareUrl,
+      ),
+    )
+    .toBe(preview);
 });
 
 test('keeps mode lifecycle stable across repeated switching', async ({
@@ -3112,6 +3171,19 @@ test('keeps mode lifecycle stable across repeated switching', async ({
 test('isolates Share, traps focus, closes cleanly, and preserves URL state', async ({
   page,
 }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText(value: string) {
+          (
+            window as typeof window & { copiedShareUrl?: string }
+          ).copiedShareUrl = value;
+          return Promise.resolve();
+        },
+      },
+    });
+  });
   await page.goto('./?point=30.25%2C120.75&v=1');
   const initialUrl = page.url();
   const opener = page.getByRole('button', { name: '分享' });
@@ -3120,31 +3192,54 @@ test('isolates Share, traps focus, closes cleanly, and preserves URL state', asy
   await expect(dialog).toBeVisible();
   await expect(page.locator('#root')).toHaveAttribute('inert', '');
   await expect(page).toHaveURL(initialUrl);
-  await expect(dialog.getByText(/point=30%2C121/)).toBeVisible();
+  const field = dialog.getByRole('textbox', { name: '分享链接' });
+  await expect(field).toHaveValue(/point=30.25%2C120.75/);
   const close = dialog.getByRole('button', { name: '关闭' });
-  const approximate = dialog.getByRole('button', { name: '复制约略位置' });
-  const exact = dialog.getByRole('button', { name: '复制精确位置' });
-  await expect(approximate).toBeVisible();
-  await expect(exact).toBeVisible();
+  const copy = dialog.getByRole('button', { name: '复制分享链接' });
+  await expect(copy).toBeVisible();
+  await expect(
+    dialog.getByRole('button', { name: /约略|approximate/i }),
+  ).toHaveCount(0);
   await expect(close).toBeFocused();
   await page.keyboard.press('Shift+Tab');
-  await expect(exact).toBeFocused();
+  await expect(copy).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(close).toBeFocused();
 
-  await dialog.locator('..').click({ position: { x: 2, y: 2 } });
-  await expect(dialog).toBeHidden();
-  await expect(page.locator('#root')).not.toHaveAttribute('inert', '');
-  await expect(opener).toBeFocused();
-  await expect(page).toHaveURL(initialUrl);
+  const preview = await field.inputValue();
+  await copy.click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as typeof window & { copiedShareUrl?: string })
+            .copiedShareUrl,
+      ),
+    )
+    .toBe(preview);
+  await page.goto(preview);
+  await expect(page).toHaveURL(preview);
+  await page.reload();
+  await expect(page).toHaveURL(preview);
+  await expect(
+    page.getByRole('complementary', { name: '位置结果' }),
+  ).toContainText('30.2500°, 120.7500°');
 
-  await opener.click();
-  await expect(dialog).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(dialog).toBeHidden();
+  await page.getByRole('button', { name: '分享' }).click();
+  const reopenedDialog = page.getByRole('dialog', { name: '分享这一视角' });
+  await reopenedDialog.locator('..').click({ position: { x: 2, y: 2 } });
+  await expect(reopenedDialog).toBeHidden();
   await expect(page.locator('#root')).not.toHaveAttribute('inert', '');
-  await expect(opener).toBeFocused();
-  await expect(page).toHaveURL(initialUrl);
+  await expect(page.getByRole('button', { name: '分享' })).toBeFocused();
+  await expect(page).toHaveURL(preview);
+
+  await page.getByRole('button', { name: '分享' }).click();
+  await expect(reopenedDialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(reopenedDialog).toBeHidden();
+  await expect(page.locator('#root')).not.toHaveAttribute('inert', '');
+  await expect(page.getByRole('button', { name: '分享' })).toBeFocused();
+  await expect(page).toHaveURL(preview);
 });
 
 test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
@@ -3198,7 +3293,11 @@ test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
 
   await page.getByRole('button', { name: '分享' }).click();
   const share = page.getByRole('dialog', { name: '分享这一视角' });
-  for (const action of ['关闭', '复制约略位置', '复制精确位置']) {
+  await expectMinimumHeight(
+    share.getByRole('textbox', { name: '分享链接' }),
+    44,
+  );
+  for (const action of ['关闭', '复制分享链接']) {
     await expectMinimumHeight(share.getByRole('button', { name: action }), 44);
   }
 
@@ -3210,7 +3309,11 @@ test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
   );
   await page.getByRole('button', { name: '分享' }).click();
   const compactShare = page.getByRole('dialog', { name: '分享这一视角' });
-  for (const action of ['关闭', '复制约略位置', '复制精确位置']) {
+  await expectMinimumHeight(
+    compactShare.getByRole('textbox', { name: '分享链接' }),
+    44,
+  );
+  for (const action of ['关闭', '复制分享链接']) {
     await expectMinimumHeight(
       compactShare.getByRole('button', { name: action }),
       44,
