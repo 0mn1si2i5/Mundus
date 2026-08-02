@@ -176,7 +176,15 @@ test('vector drag shell becomes transparent while the hit sphere remains active'
   await expect(globe).toHaveAttribute('data-vector-drag-transparent', 'true');
   await expect(globe).toHaveAttribute(
     'data-vector-drag-effective-alpha',
-    'oceanAlpha:0.76,landAlpha:0,effectiveAlpha:0.76',
+    'oceanAlpha:0.52,landLayerAlpha:0.48,effectiveCompositeAlpha:0.7504',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-vector-drag-render-order',
+    'innerWall:1,ocean:2,land:2.5,highlight:3,markers:5',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-vector-palette-version',
+    /[1-9]\d*/,
   );
   await expect(globe).toHaveAttribute('data-antipode-hit-sphere', 'enabled');
   await expect(globe).toHaveAttribute(

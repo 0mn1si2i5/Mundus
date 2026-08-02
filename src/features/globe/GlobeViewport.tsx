@@ -134,6 +134,7 @@ export function GlobeViewport({
   const [vectorGeometryId, setVectorGeometryId] = useState('');
   const [vectorDragTransparent, setVectorDragTransparent] = useState(false);
   const [vectorDragEvidence, setVectorDragEvidence] = useState('');
+  const [vectorDragOrderEvidence, setVectorDragOrderEvidence] = useState('');
   const [vectorSunlineHighlight, setVectorSunlineHighlight] = useState<
     string | null
   >(null);
@@ -512,6 +513,11 @@ export function GlobeViewport({
         vectorState === 'ready' ? String(vectorDragTransparent) : undefined
       }
       data-vector-drag-effective-alpha={vectorDragEvidence || undefined}
+      data-vector-drag-render-order={
+        vectorState === 'ready' && antipodeDragVisible
+          ? vectorDragOrderEvidence || undefined
+          : undefined
+      }
       data-vector-sunline-highlight={vectorSunlineHighlight ?? undefined}
       data-marker-role-count={
         showAntipodes ? (relationReady ? 4 : 2) : undefined
@@ -641,7 +647,10 @@ export function GlobeViewport({
           onVectorPaletteUpdate={setVectorPaletteVersion}
           onVectorDragMaterialChange={setVectorDragTransparent}
           onVectorSunlineHighlightChange={setVectorSunlineHighlight}
-          onVectorDragEvidence={setVectorDragEvidence}
+          onVectorDragEvidence={(alphaEvidence, orderEvidence) => {
+            setVectorDragEvidence(alphaEvidence);
+            setVectorDragOrderEvidence(orderEvidence);
+          }}
           onVectorRenderEvidence={(vectorDraws, rendererCalls) =>
             setVectorRenderEvidence((current) => ({
               vectorDraws,
@@ -721,7 +730,7 @@ interface GlobeSceneProps {
   ) => void;
   onVectorPaletteUpdate: (version: number) => void;
   onVectorDragMaterialChange: (transparent: boolean) => void;
-  onVectorDragEvidence: (evidence: string) => void;
+  onVectorDragEvidence: (alphaEvidence: string, orderEvidence: string) => void;
   onVectorSunlineHighlightChange: (evidence: string | null) => void;
   onVectorRenderEvidence: (vectorDraws: number, rendererCalls: number) => void;
   vectorRenderSampleKey: number;
