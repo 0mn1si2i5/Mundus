@@ -3260,12 +3260,31 @@ test('drives fixed, playing, and live Sunline time in UTC', async ({
 
   await page.getByRole('button', { name: '分享', exact: true }).click();
   const dialog = page.getByRole('dialog');
+  const disclosure = dialog.getByText(
+    '分享链接会包含当前所选位置的坐标、恢复观察方式并固定当前显示的 UTC 时间；复制前请确认你愿意分享这一位置与时间。',
+  );
+  await expect(disclosure).toBeVisible();
   const field = dialog.getByRole('textbox', { name: '分享链接' });
   const preview = await field.inputValue();
   expect(preview).toMatch(/time=/);
   await page.waitForTimeout(1_100);
   await expect(field).toHaveValue(preview);
-  await dialog.getByRole('button', { name: '复制分享链接' }).click();
+  const copy = dialog.getByRole('button', { name: '复制分享链接' });
+  expect(
+    await dialog.evaluate((element) => {
+      const description = element.querySelector('#share-description');
+      const button = [...element.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === '复制分享链接',
+      );
+      return Boolean(
+        description &&
+        button &&
+        description.compareDocumentPosition(button) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    }),
+  ).toBe(true);
+  await copy.click();
   await expect
     .poll(() =>
       page.evaluate(
@@ -3360,10 +3379,28 @@ test('isolates Share, traps focus, closes cleanly, and preserves URL state', asy
   await expect(field).toHaveValue(/point=30.25%2C120.75/);
   const close = dialog.getByRole('button', { name: '关闭' });
   const copy = dialog.getByRole('button', { name: '复制分享链接' });
+  const disclosure = dialog.getByText(
+    '分享链接会包含当前所选位置的坐标并恢复观察方式；复制前请确认你愿意分享这一位置。',
+  );
+  await expect(disclosure).toBeVisible();
   await expect(copy).toBeVisible();
   await expect(
     dialog.getByRole('button', { name: /约略|approximate/i }),
   ).toHaveCount(0);
+  expect(
+    await dialog.evaluate((element) => {
+      const description = element.querySelector('#share-description');
+      const button = [...element.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === '复制分享链接',
+      );
+      return Boolean(
+        description &&
+        button &&
+        description.compareDocumentPosition(button) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    }),
+  ).toBe(true);
   await expect(close).toBeFocused();
   await page.keyboard.press('Shift+Tab');
   await expect(copy).toBeFocused();
