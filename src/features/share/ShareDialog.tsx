@@ -9,9 +9,9 @@ const COPY = {
   zh: {
     title: '分享这一视角',
     description:
-      '分享链接会包含当前所选位置的坐标并恢复观察方式；复制前请确认你愿意分享这一位置。',
+      '分享链接会编码并恢复当前所选位置与观察方式；复制前请确认你愿意分享这一位置。',
     sunlineDescription:
-      '分享链接会包含当前所选位置的坐标、恢复观察方式并固定当前显示的 UTC 时间；复制前请确认你愿意分享这一位置与时间。',
+      '分享链接会编码并恢复当前所选位置与观察方式，并固定当前显示的 UTC 时间；复制前请确认你愿意分享这一位置与时间。',
     fieldLabel: '分享链接',
     copy: '复制分享链接',
     close: '关闭',
@@ -21,9 +21,9 @@ const COPY = {
   en: {
     title: 'Share this view',
     description:
-      'The share link includes the selected location coordinates and restores the observation mode. Before copying, confirm that you are willing to share this location.',
+      'The share link encodes and restores the selected location and observation mode. Before copying, confirm that you are willing to share this location.',
     sunlineDescription:
-      'The share link includes the selected location coordinates, restores the observation mode, and fixes the displayed UTC time. Before copying, confirm that you are willing to share this location and time.',
+      'The share link encodes and restores the selected location and observation mode, and fixes the displayed UTC time. Before copying, confirm that you are willing to share this location and time.',
     fieldLabel: 'Share link',
     copy: 'Copy share link',
     close: 'Close',

@@ -11,6 +11,11 @@ The public product includes the parchment presentation, draggable cross-section,
 bilingual GeoNames search, bilateral city relations, and Natural Earth vector
 globe.
 
+A later interaction-clarity correction changes the current Share UI to one
+canonical-precision location link with explicit privacy disclosure. Historical
+whole-degree links remain readable. This current behavior supersedes, but does
+not rewrite, the precise/approximate V1.0 history below.
+
 Release metadata has a narrower boundary: tag `v1.0.0` and the GitHub Release
 still target `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`. No `v1.1.0` tag or GitHub
 Release exists. Do not create or retarget one without separate authorization.

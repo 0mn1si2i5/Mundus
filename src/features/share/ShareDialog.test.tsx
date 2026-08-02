@@ -85,7 +85,7 @@ describe('ShareDialog', () => {
     const chinese = render(<ShareDialog locale="zh" onClose={vi.fn()} />);
     expect(
       screen.getByText(
-        '分享链接会包含当前所选位置的坐标并恢复观察方式；复制前请确认你愿意分享这一位置。',
+        '分享链接会编码并恢复当前所选位置与观察方式；复制前请确认你愿意分享这一位置。',
       ),
     ).toBeVisible();
     chinese.unmount();
@@ -93,7 +93,7 @@ describe('ShareDialog', () => {
     render(<ShareDialog locale="en" onClose={vi.fn()} />);
     expect(
       screen.getByText(
-        'The share link includes the selected location coordinates and restores the observation mode. Before copying, confirm that you are willing to share this location.',
+        'The share link encodes and restores the selected location and observation mode. Before copying, confirm that you are willing to share this location.',
       ),
     ).toBeVisible();
   });
@@ -114,7 +114,7 @@ describe('ShareDialog', () => {
     expect(snapshot).toContain('time=2026-07-14T09%3A37Z');
     expect(
       screen.getByText(
-        'The share link includes the selected location coordinates, restores the observation mode, and fixes the displayed UTC time. Before copying, confirm that you are willing to share this location and time.',
+        'The share link encodes and restores the selected location and observation mode, and fixes the displayed UTC time. Before copying, confirm that you are willing to share this location and time.',
       ),
     ).toBeVisible();
 
