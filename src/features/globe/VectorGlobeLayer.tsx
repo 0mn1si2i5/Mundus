@@ -10,13 +10,13 @@ import { Color, FrontSide } from 'three';
 import {
   ANTIPODE_DRAG_RENDERING,
   GLOBE_RENDERING,
+  getAntipodeDragSurfaceProps,
+  getVectorSurfaceRenderOrders,
   getVectorLineMaterialProps,
 } from './rendering';
 import type { QualityProfile } from './quality';
 import {
   createVectorGlobeResources,
-  effectiveLayerAlpha,
-  landLayerAlphaForTarget,
   updateVectorPalette,
   type VectorGlobeResources,
 } from './vectorGlobe';
@@ -37,7 +37,7 @@ interface VectorGlobeLayerProps {
   ) => void;
   onPaletteUpdate: (version: number) => void;
   onDragMaterialChange: (transparent: boolean) => void;
-  onDragEvidence: (evidence: string) => void;
+  onDragEvidence: (alphaEvidence: string, orderEvidence: string) => void;
   sunlineActive: boolean;
   onSunlineHighlightChange: (evidence: string | null) => void;
   onRenderEvidence: (vectorDraws: number, rendererCalls: number) => void;
@@ -101,6 +101,8 @@ export function VectorGlobeLayer({
   renderSampleKey,
 }: VectorGlobeLayerProps) {
   const [resources, setResources] = useState<VectorGlobeResources | null>(null);
+  const oceanMesh = useRef<Mesh>(null);
+  const landMesh = useRef<Mesh>(null);
   const material = useRef<ShaderMaterial>(null);
   const oceanMaterial = useRef<MeshStandardMaterial>(null);
   const sunlineHighlight = useRef<Mesh>(null);
@@ -110,8 +112,8 @@ export function VectorGlobeLayer({
   const countedFrame = useRef(-1);
   const samplePending = useRef(false);
   const sampleScheduled = useRef(false);
-  const dragOpacity = ANTIPODE_DRAG_RENDERING.outerShell.dragOpacity;
-  const dragLandOpacity = landLayerAlphaForTarget(dragOpacity, dragOpacity);
+  const dragSurface = getAntipodeDragSurfaceProps();
+  const surfaceRenderOrders = getVectorSurfaceRenderOrders(dragActive);
   const vectorLineMaterials = getVectorLineMaterialProps(dragActive);
   const selectedCountryIndex =
     resources?.countries.find(
@@ -194,29 +196,34 @@ export function VectorGlobeLayer({
 
   useEffect(() => {
     const shader = material.current;
-    if (!shader) return;
-    shader.uniforms.uOpacity!.value = dragActive ? dragLandOpacity : 1;
+    const oceanSurface = oceanMesh.current;
+    const landSurface = landMesh.current;
+    if (!shader || !oceanSurface || !landSurface) return;
+    shader.uniforms.uOpacity!.value = dragActive
+      ? dragSurface.landLayerAlpha
+      : 1;
     shader.depthWrite = !dragActive;
     shader.transparent = dragActive;
     shader.needsUpdate = true;
     const ocean = oceanMaterial.current;
     if (ocean) {
-      ocean.opacity = dragActive
-        ? ANTIPODE_DRAG_RENDERING.outerShell.dragOpacity
-        : 1;
+      ocean.opacity = dragActive ? dragSurface.oceanAlpha : 1;
       ocean.transparent = dragActive;
       ocean.depthWrite = !dragActive;
       ocean.needsUpdate = true;
     }
     onDragMaterialChange(dragActive);
     onDragEvidence(
-      `oceanAlpha:${ocean?.opacity ?? 1},landAlpha:${shader.uniforms.uOpacity!.value},effectiveAlpha:${effectiveLayerAlpha([ocean?.opacity ?? 1, shader.uniforms.uOpacity!.value])}`,
+      `oceanAlpha:${ocean?.opacity ?? 1},landLayerAlpha:${shader.uniforms.uOpacity!.value},effectiveCompositeAlpha:${dragActive ? dragSurface.compositeLandAlpha : 1}`,
+      `innerWall:${ANTIPODE_DRAG_RENDERING.innerWall.renderOrder},ocean:${oceanSurface.renderOrder},land:${landSurface.renderOrder},highlight:${ANTIPODE_DRAG_RENDERING.highlight.renderOrder},markers:${ANTIPODE_DRAG_RENDERING.markerRenderOrder}`,
     );
     requestRenderEvidence();
     invalidate();
   }, [
     dragActive,
-    dragLandOpacity,
+    dragSurface.landLayerAlpha,
+    dragSurface.oceanAlpha,
+    dragSurface.compositeLandAlpha,
     invalidate,
     onDragEvidence,
     onDragMaterialChange,
@@ -247,7 +254,8 @@ export function VectorGlobeLayer({
   return (
     <>
       <mesh
-        renderOrder={-1}
+        ref={oceanMesh}
+        renderOrder={surfaceRenderOrders.ocean}
         raycast={ignoreRaycast}
         onBeforeRender={countVectorDraw}
       >
@@ -258,15 +266,14 @@ export function VectorGlobeLayer({
           roughness={GLOBE_RENDERING.material.roughness}
           metalness={GLOBE_RENDERING.material.metalness}
           transparent={dragActive}
-          opacity={dragActive ? dragOpacity : 1}
+          opacity={dragActive ? dragSurface.oceanAlpha : 1}
           depthWrite={!dragActive}
         />
       </mesh>
       <mesh
+        ref={landMesh}
         geometry={resources.surface}
-        renderOrder={
-          dragActive ? ANTIPODE_DRAG_RENDERING.outerShell.renderOrder : 0
-        }
+        renderOrder={surfaceRenderOrders.land}
         raycast={ignoreRaycast}
         onBeforeRender={countVectorDraw}
       >
@@ -276,7 +283,7 @@ export function VectorGlobeLayer({
             uPalette: { value: resources.palette },
             uPaletteWidth: { value: resources.palette.image.width },
             uOpacity: {
-              value: dragActive ? dragLandOpacity : 1,
+              value: dragActive ? dragSurface.landLayerAlpha : 1,
             },
             uAmbientColor: {
               value: new Color(GLOBE_RENDERING.ambient.color).multiplyScalar(

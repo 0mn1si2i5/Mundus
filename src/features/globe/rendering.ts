@@ -27,12 +27,37 @@ export function getVectorLineMaterialProps(dragActive: boolean) {
   };
 }
 
+export function effectiveLayerAlpha(alphas: readonly number[]) {
+  return (
+    1 - alphas.reduce((transmission, alpha) => transmission * (1 - alpha), 1)
+  );
+}
+
+export function getAntipodeDragSurfaceProps() {
+  const oceanAlpha = 0.52;
+  const landLayerAlpha = 0.48;
+  return {
+    oceanAlpha,
+    landLayerAlpha,
+    compositeLandAlpha: effectiveLayerAlpha([oceanAlpha, landLayerAlpha]),
+    oceanRenderOrder: 2,
+    landRenderOrder: 2.5,
+  } as const;
+}
+
+export function getVectorSurfaceRenderOrders(dragActive: boolean) {
+  const drag = getAntipodeDragSurfaceProps();
+  return dragActive
+    ? { ocean: drag.oceanRenderOrder, land: drag.landRenderOrder }
+    : { ocean: -1, land: 0 };
+}
+
 export const ANTIPODE_DRAG_RENDERING = {
   outerShell: {
     radius: 1,
     renderOrder: 2,
     color: '#ffffff',
-    dragOpacity: 0.76,
+    dragOpacity: getAntipodeDragSurfaceProps().compositeLandAlpha,
     side: FrontSide,
     depthTest: true,
     depthWrite: false,
@@ -41,7 +66,7 @@ export const ANTIPODE_DRAG_RENDERING = {
     radius: 0.985,
     renderOrder: 1,
     color: '#7b5542',
-    opacity: 0.3,
+    opacity: 0.34,
     side: BackSide,
     depthTest: true,
     depthWrite: false,

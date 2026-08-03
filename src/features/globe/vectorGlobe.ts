@@ -46,20 +46,6 @@ const BASE_LAND = new Color(COUNTRY_TEXTURE_STYLE.landColor);
 const HOVER = new Color('#779c91');
 const SELECTED = new Color('#c98755');
 
-export function effectiveLayerAlpha(alphas: readonly number[]) {
-  return (
-    1 - alphas.reduce((transmission, alpha) => transmission * (1 - alpha), 1)
-  );
-}
-
-export function landLayerAlphaForTarget(
-  oceanAlpha: number,
-  targetAlpha: number,
-) {
-  if (oceanAlpha >= targetAlpha) return 0;
-  return (targetAlpha - oceanAlpha) / (1 - oceanAlpha);
-}
-
 export function createVectorGlobeResources(
   decoded: DecodedVectorGlobe,
 ): VectorGlobeResources {

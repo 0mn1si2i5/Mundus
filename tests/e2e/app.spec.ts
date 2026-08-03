@@ -60,6 +60,13 @@ async function expectCameraDiagnosticCleared(page: Page) {
   await expect(globe).not.toHaveAttribute('data-camera-center-latitude', /.+/);
   await expect(globe).not.toHaveAttribute('data-camera-center-longitude', /.+/);
   await expect(globe).not.toHaveAttribute('data-camera-focus-motion', /.+/);
+  await expect(globe).toHaveAttribute('data-camera-focus-state', 'idle');
+  await expect(globe).not.toHaveAttribute('data-camera-focus-started-at', /.+/);
+  await expect(globe).not.toHaveAttribute('data-camera-focus-elapsed-ms', /.+/);
+  await expect(globe).not.toHaveAttribute(
+    'data-camera-focus-completed-revision',
+    /.+/,
+  );
 }
 
 function globeRegion(page: Page) {
@@ -102,6 +109,30 @@ async function expectAntipodeRelationReady(page: Page) {
   await expect(globe).toHaveAttribute('data-antipode-relation-state', 'ready');
   await expect(page.getByTestId('antipode-relation-status')).toBeHidden();
   await expect(globe).toHaveAttribute('data-antipode-relation-arc-count', '2');
+}
+
+async function pinchGlobe(page: Page, scale: 'in' | 'out') {
+  const center = await globeCenter(page);
+  const session = await page.context().newCDPSession(page);
+  const startGap = scale === 'in' ? 36 : 92;
+  const endGap = scale === 'in' ? 92 : 36;
+  const touchPoints = (gap: number) => [
+    { x: center.x - gap, y: center.y, id: 0 },
+    { x: center.x + gap, y: center.y, id: 1 },
+  ];
+  await session.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: touchPoints(startGap),
+  });
+  await session.send('Input.dispatchTouchEvent', {
+    type: 'touchMove',
+    touchPoints: touchPoints(endGap),
+  });
+  await session.send('Input.dispatchTouchEvent', {
+    type: 'touchEnd',
+    touchPoints: [],
+  });
+  await session.detach();
 }
 
 test('loads only the quality-selected vector resolution and hides raster after readiness', async ({
@@ -176,7 +207,15 @@ test('vector drag shell becomes transparent while the hit sphere remains active'
   await expect(globe).toHaveAttribute('data-vector-drag-transparent', 'true');
   await expect(globe).toHaveAttribute(
     'data-vector-drag-effective-alpha',
-    'oceanAlpha:0.76,landAlpha:0,effectiveAlpha:0.76',
+    'oceanAlpha:0.52,landLayerAlpha:0.48,effectiveCompositeAlpha:0.7504',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-vector-drag-render-order',
+    'innerWall:1,ocean:2,land:2.5,highlight:3,markers:5',
+  );
+  await expect(globe).toHaveAttribute(
+    'data-vector-palette-version',
+    /[1-9]\d*/,
   );
   await expect(globe).toHaveAttribute('data-antipode-hit-sphere', 'enabled');
   await expect(globe).toHaveAttribute(
@@ -789,7 +828,8 @@ test('explains the opaque through-Earth cross-section in both languages', async 
 
 test('keeps exact marker roles and center dots legible across the zoom range', async ({
   page,
-}) => {
+}, testInfo) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('./');
   const globe = page.getByRole('region', { name: '交互式三维地球' });
   await expect(globe).toHaveAttribute('data-marker-role-count', '4');
@@ -925,8 +965,26 @@ test('keeps exact marker roles and center dots legible across the zoom range', a
     }
   }
 
-  await zoomUntil('=', '2.15', 16);
-  await expect(globe).toHaveAttribute('data-camera-distance', '2.15');
+  const initialDistance = Number(
+    await globe.getAttribute('data-camera-distance'),
+  );
+  if (testInfo.project.name === 'mobile') {
+    await pinchGlobe(page, 'in');
+  } else {
+    const center = await globeCenter(page);
+    await page.mouse.move(center.x, center.y);
+    await page.mouse.wheel(0, -600);
+  }
+  await expect
+    .poll(async () => Number(await globe.getAttribute('data-camera-distance')))
+    .toBeLessThan(initialDistance);
+
+  await globe.focus();
+
+  await zoomUntil('=', '1.55', 16);
+  await expect(globe).toHaveAttribute('data-camera-distance', '1.55');
+  await page.keyboard.press('=');
+  await expect(globe).toHaveAttribute('data-camera-distance', '1.55');
   await expect(globe).not.toHaveAttribute(
     'data-marker-diagnostic-revision',
     idleRevision!,
@@ -938,9 +996,46 @@ test('keeps exact marker roles and center dots legible across the zoom range', a
     relationRevisionAfterResize,
   );
   await expectProjectedMarkerSize();
+  const originCity = page.getByRole('button', { name: /黄浦 查看城市/ });
+  await originCity.click();
+  await expect(globe).toHaveAttribute(
+    'data-camera-focus-motion',
+    /instant|animated/,
+    { timeout: 10_000 },
+  );
+  await expect(globe).toHaveAttribute('data-camera-distance', '1.55');
+  await expect(globe).toHaveAttribute(
+    'data-antipode-relation-focus-evidence',
+    /markerFrontFacing:true,markerInViewport:true,arcPoints:\d+,arcAllInViewport:true,arcDepthTest:true/,
+  );
+  const result = page.getByRole('complementary', { name: '位置结果' });
+  const focusControl = page.getByRole('button', { name: '翻到对跖点' });
+  await expect(result).toBeVisible();
+  await expect(focusControl).toBeVisible();
+  for (const locator of [result, focusControl]) {
+    const box = await locator.boundingBox();
+    const viewport = page.viewportSize();
+    expect(box).not.toBeNull();
+    expect(viewport).not.toBeNull();
+    expect(box!.x + box!.width).toBeGreaterThan(0);
+    expect(box!.x).toBeLessThan(viewport!.width);
+    expect(box!.y + box!.height).toBeGreaterThan(0);
+    expect(box!.y).toBeLessThan(viewport!.height);
+  }
 
+  await globe.focus();
   await zoomUntil('-', '5', 24);
   await expect(globe).toHaveAttribute('data-camera-distance', '5');
+  const revisionBeforeMaximumClamp = Number(
+    await globe.getAttribute('data-marker-diagnostic-revision'),
+  );
+  await page.keyboard.press('-');
+  await expect(globe).toHaveAttribute('data-camera-distance', '5');
+  await expect
+    .poll(async () =>
+      Number(await globe.getAttribute('data-marker-diagnostic-revision')),
+    )
+    .toBeGreaterThan(revisionBeforeMaximumClamp);
   expect(
     Number(
       await globe.getAttribute('data-antipode-relation-diagnostic-revision'),
@@ -1479,7 +1574,7 @@ test('keeps the hint for incidental pointing and accepts wheel use', async ({
 
 test('opens the mode atlas and restores keyboard focus', async ({ page }) => {
   await page.goto('./?point=30.25%2C120.75&v=1');
-  const opener = page.getByRole('button', { name: '模式图鉴' });
+  const opener = page.getByRole('button', { name: '模式图鉴', exact: true });
   expect((await opener.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   await opener.focus();
   await opener.click();
@@ -1506,7 +1601,7 @@ test('selects a mode from the atlas without moving the selected place', async ({
   page,
 }) => {
   await page.goto('./?point=30.25%2C120.75&v=1');
-  await page.getByRole('button', { name: '模式图鉴' }).click();
+  await page.getByRole('button', { name: '模式图鉴', exact: true }).click();
   const developmentEntry = page
     .getByRole('listitem')
     .filter({ hasText: '发展的不同侧面' });
@@ -1538,7 +1633,7 @@ test('keeps the English mode atlas usable at 320px', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('button', { name: '切换为英文' }).click();
 
-  const opener = page.getByRole('button', { name: 'Mode atlas' });
+  const opener = page.getByRole('button', { name: 'Mode atlas', exact: true });
   expect((await opener.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   expect(
     await page.evaluate(
@@ -2421,8 +2516,53 @@ test('focuses a represented major city without changing the exact relation or UR
   await page.keyboard.press('Enter');
 
   await expectCameraCenter(page, -31.39195, -58.01706);
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-antipode-relation-focus-evidence',
+    /markerTarget:-31\.39195,-58\.01706,markerRadius:1\.021,markerFrontFacing:true,markerInViewport:true/,
+  );
   await expect(page).toHaveURL(urlBefore);
   await expect(result).toHaveText(relationBefore ?? '');
+});
+
+test('restarts the same represented-city animation after manual cancellation', async ({
+  page,
+}) => {
+  await page.goto('./');
+  await expectAntipodeRelationReady(page);
+  const globe = globeRegion(page);
+  const city = page.getByRole('button', { name: /康科迪亚 查看城市/ });
+
+  await city.click();
+  await expect(globe).toHaveAttribute(
+    'data-camera-focus-request-revision',
+    '1',
+  );
+  const firstStartedAt = Number(
+    await globe.getAttribute('data-camera-focus-started-at'),
+  );
+  await globe.focus();
+  await page.keyboard.press('ArrowRight');
+  await expectCameraDiagnosticCleared(page);
+
+  await city.click();
+  await expect(globe).toHaveAttribute(
+    'data-camera-focus-request-revision',
+    '2',
+  );
+  await expectCameraCenter(page, -31.39195, -58.01706);
+  await expect(globe).toHaveAttribute('data-camera-focus-state', 'complete');
+  await expect(globe).toHaveAttribute(
+    'data-camera-focus-completed-revision',
+    '2',
+  );
+  expect(
+    Number(await globe.getAttribute('data-camera-focus-started-at')),
+  ).toBeGreaterThan(firstStartedAt);
+  await expect
+    .poll(async () =>
+      Number(await globe.getAttribute('data-camera-focus-elapsed-ms')),
+    )
+    .toBeGreaterThan(0);
 });
 
 test('uses exact bilateral labels in English', async ({ page }, testInfo) => {
@@ -2491,6 +2631,37 @@ test('restores shareable state and browser history', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
 });
 
+test('accepts legacy whole-degree share URLs without warning or mutation', async ({
+  page,
+}) => {
+  const scenarios = [
+    {
+      path: './?point=31%2C121&v=1',
+      heading: '地球另一端',
+    },
+    {
+      path: './?mode=development&point=31%2C121&indicator=income&year=2010&v=1',
+      heading: '发展的不同侧面',
+    },
+    {
+      path: './?mode=sunline&point=31%2C121&time=2024-03-20T12%3A00Z&v=1',
+      heading: '日照线',
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    const expectedUrl = new URL(scenario.path, 'http://127.0.0.1:4173');
+    await page.goto(scenario.path);
+    await expect(
+      page.getByRole('heading', { name: scenario.heading }),
+    ).toBeVisible();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    const loadedUrl = new URL(page.url());
+    expect(loadedUrl.pathname).toBe(expectedUrl.pathname);
+    expect(loadedUrl.search).toBe(expectedUrl.search);
+  }
+});
+
 test('replaces continuous timeline changes instead of flooding history', async ({
   page,
 }, testInfo) => {
@@ -2551,7 +2722,7 @@ test('keeps controls reachable after crossing the mobile breakpoint', async ({
   await expect(page.getByLabel('UTC 日期')).toBeVisible();
   await expect(page.getByRole('slider', { name: /UTC 时间/ })).toBeVisible();
 
-  await page.getByRole('button', { name: '模式图鉴' }).click();
+  await page.getByRole('button', { name: '模式图鉴', exact: true }).click();
   const developmentEntry = page
     .getByRole('listitem')
     .filter({ hasText: '发展的不同侧面' });
@@ -3051,6 +3222,19 @@ test('explains Development evidence consistently in English', async ({
 test('drives fixed, playing, and live Sunline time in UTC', async ({
   page,
 }, testInfo) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText(value: string) {
+          (
+            window as typeof window & { copiedShareUrl?: string }
+          ).copiedShareUrl = value;
+          return Promise.resolve();
+        },
+      },
+    });
+  });
   await page.goto('./?mode=sunline&point=0%2C0&time=2024-03-20T12%3A00Z&v=1');
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开日照线控件' }).click();
@@ -3074,8 +3258,74 @@ test('drives fixed, playing, and live Sunline time in UTC', async ({
   await expect(page).not.toHaveURL(/time=/);
   await expect(page.getByText(/实时 · 1440×/)).toBeVisible();
 
-  await page.getByRole('button', { name: '分享' }).click();
-  await expect(page.getByRole('dialog')).toContainText(/time=/);
+  await page.getByRole('button', { name: '分享', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  const disclosure = dialog.getByText(
+    '分享链接会编码并恢复当前所选位置与观察方式，并固定当前显示的 UTC 时间；复制前请确认你愿意分享这一位置与时间。',
+  );
+  await expect(disclosure).toBeVisible();
+  const field = dialog.getByRole('textbox', { name: '分享链接' });
+  const preview = await field.inputValue();
+  expect(preview).toMatch(/time=/);
+  await page.waitForTimeout(1_100);
+  await expect(field).toHaveValue(preview);
+  const copy = dialog.getByRole('button', { name: '复制分享链接' });
+  expect(
+    await dialog.evaluate((element) => {
+      const description = element.querySelector('#share-description');
+      const button = [...element.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === '复制分享链接',
+      );
+      return Boolean(
+        description &&
+        button &&
+        description.compareDocumentPosition(button) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    }),
+  ).toBe(true);
+  await copy.click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as typeof window & { copiedShareUrl?: string })
+            .copiedShareUrl,
+      ),
+    )
+    .toBe(preview);
+});
+
+test('labels and defines civil twilight consistently in both languages', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./?mode=sunline&point=0%2C0&time=2024-03-20T06%3A00Z&v=1');
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开日照线控件' }).click();
+  }
+
+  const result = page.getByRole('complementary', { name: '太阳位置结果' });
+  await expect(result.getByText('-2.0°', { exact: true })).toBeVisible();
+  await expect(result.getByText('曙暮光', { exact: true })).toBeVisible();
+  await page.getByText('计算说明', { exact: true }).click();
+  await expect(page.locator('details')).toContainText(
+    '“曙暮光”表示太阳高度低于 0° 至 -6°（含 -6°）的民用曙暮光范围。',
+  );
+
+  await page.getByRole('button', { name: '切换为英文' }).click();
+  const englishResult = page.getByRole('complementary', {
+    name: 'Solar position result',
+  });
+  await expect(
+    englishResult.getByText('Twilight', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    englishResult.getByText('Civil twilight', { exact: true }),
+  ).toHaveCount(0);
+  await expect(page.locator('details')).toContainText(
+    '“Twilight” denotes the civil-twilight range from below 0° through -6° (inclusive).',
+  );
+  await expect(page.getByText('06:00 UTC', { exact: true })).toBeVisible();
 });
 
 test('keeps mode lifecycle stable across repeated switching', async ({
@@ -3104,39 +3354,97 @@ test('keeps mode lifecycle stable across repeated switching', async ({
 test('isolates Share, traps focus, closes cleanly, and preserves URL state', async ({
   page,
 }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText(value: string) {
+          (
+            window as typeof window & { copiedShareUrl?: string }
+          ).copiedShareUrl = value;
+          return Promise.resolve();
+        },
+      },
+    });
+  });
   await page.goto('./?point=30.25%2C120.75&v=1');
   const initialUrl = page.url();
-  const opener = page.getByRole('button', { name: '分享' });
+  const opener = page.getByRole('button', { name: '分享', exact: true });
   await opener.click();
   const dialog = page.getByRole('dialog', { name: '分享这一视角' });
   await expect(dialog).toBeVisible();
   await expect(page.locator('#root')).toHaveAttribute('inert', '');
   await expect(page).toHaveURL(initialUrl);
-  await expect(dialog.getByText(/point=30%2C121/)).toBeVisible();
+  const field = dialog.getByRole('textbox', { name: '分享链接' });
+  await expect(field).toHaveValue(/point=30.25%2C120.75/);
   const close = dialog.getByRole('button', { name: '关闭' });
-  const approximate = dialog.getByRole('button', { name: '复制约略位置' });
-  const exact = dialog.getByRole('button', { name: '复制精确位置' });
-  await expect(approximate).toBeVisible();
-  await expect(exact).toBeVisible();
+  const copy = dialog.getByRole('button', { name: '复制分享链接' });
+  const disclosure = dialog.getByText(
+    '分享链接会编码并恢复当前所选位置与观察方式；复制前请确认你愿意分享这一位置。',
+  );
+  await expect(disclosure).toBeVisible();
+  await expect(copy).toBeVisible();
+  await expect(
+    dialog.getByRole('button', { name: /约略|approximate/i }),
+  ).toHaveCount(0);
+  expect(
+    await dialog.evaluate((element) => {
+      const description = element.querySelector('#share-description');
+      const button = [...element.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === '复制分享链接',
+      );
+      return Boolean(
+        description &&
+        button &&
+        description.compareDocumentPosition(button) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    }),
+  ).toBe(true);
   await expect(close).toBeFocused();
   await page.keyboard.press('Shift+Tab');
-  await expect(exact).toBeFocused();
+  await expect(copy).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(close).toBeFocused();
 
-  await dialog.locator('..').click({ position: { x: 2, y: 2 } });
-  await expect(dialog).toBeHidden();
-  await expect(page.locator('#root')).not.toHaveAttribute('inert', '');
-  await expect(opener).toBeFocused();
-  await expect(page).toHaveURL(initialUrl);
+  const preview = await field.inputValue();
+  await copy.click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as typeof window & { copiedShareUrl?: string })
+            .copiedShareUrl,
+      ),
+    )
+    .toBe(preview);
+  await page.goto(preview);
+  await expect(page).toHaveURL(preview);
+  await page.reload();
+  await expect(page).toHaveURL(preview);
+  await expect(
+    page.getByRole('complementary', { name: '位置结果' }),
+  ).toContainText('30.2500°, 120.7500°');
 
-  await opener.click();
-  await expect(dialog).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(dialog).toBeHidden();
+  await page.getByRole('button', { name: '分享', exact: true }).click();
+  const reopenedDialog = page.getByRole('dialog', { name: '分享这一视角' });
+  await reopenedDialog.locator('..').click({ position: { x: 2, y: 2 } });
+  await expect(reopenedDialog).toBeHidden();
   await expect(page.locator('#root')).not.toHaveAttribute('inert', '');
-  await expect(opener).toBeFocused();
-  await expect(page).toHaveURL(initialUrl);
+  await expect(
+    page.getByRole('button', { name: '分享', exact: true }),
+  ).toBeFocused();
+  await expect(page).toHaveURL(preview);
+
+  await page.getByRole('button', { name: '分享', exact: true }).click();
+  await expect(reopenedDialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(reopenedDialog).toBeHidden();
+  await expect(page.locator('#root')).not.toHaveAttribute('inert', '');
+  await expect(
+    page.getByRole('button', { name: '分享', exact: true }),
+  ).toBeFocused();
+  await expect(page).toHaveURL(preview);
 });
 
 test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
@@ -3188,9 +3496,13 @@ test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
     44,
   );
 
-  await page.getByRole('button', { name: '分享' }).click();
+  await page.getByRole('button', { name: '分享', exact: true }).click();
   const share = page.getByRole('dialog', { name: '分享这一视角' });
-  for (const action of ['关闭', '复制约略位置', '复制精确位置']) {
+  await expectMinimumHeight(
+    share.getByRole('textbox', { name: '分享链接' }),
+    44,
+  );
+  for (const action of ['关闭', '复制分享链接']) {
     await expectMinimumHeight(share.getByRole('button', { name: action }), 44);
   }
 
@@ -3200,9 +3512,13 @@ test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
     page.getByRole('button', { name: '收起日照线控件' }),
     44,
   );
-  await page.getByRole('button', { name: '分享' }).click();
+  await page.getByRole('button', { name: '分享', exact: true }).click();
   const compactShare = page.getByRole('dialog', { name: '分享这一视角' });
-  for (const action of ['关闭', '复制约略位置', '复制精确位置']) {
+  await expectMinimumHeight(
+    compactShare.getByRole('textbox', { name: '分享链接' }),
+    44,
+  );
+  for (const action of ['关闭', '复制分享链接']) {
     await expectMinimumHeight(
       compactShare.getByRole('button', { name: action }),
       44,
@@ -3290,7 +3606,7 @@ test('uses the accent focus ring for keyboard form and disclosure controls only'
   await page.keyboard.press('Tab');
   await expectAccentFocusRing(summary);
 
-  const shareButton = page.getByRole('button', { name: '分享' });
+  const shareButton = page.getByRole('button', { name: '分享', exact: true });
   await shareButton.click();
   await page.keyboard.press('Escape');
   await page.mouse.click(4, 4);
@@ -3380,11 +3696,11 @@ test('uses the bright parchment atlas contract across modal surfaces', async ({
   page,
 }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: '分享' }).click();
+  await page.getByRole('button', { name: '分享', exact: true }).click();
   const share = page.getByRole('dialog', { name: '分享这一视角' });
   await expectPaperModal(share);
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: '模式图鉴' }).click();
+  await page.getByRole('button', { name: '模式图鉴', exact: true }).click();
   await expectPaperModal(
     page.getByRole('dialog', { name: '三种观察地球的方式' }),
   );

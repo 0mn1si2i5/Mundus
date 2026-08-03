@@ -5,6 +5,9 @@ import {
   GLOBE_RENDERING,
   SUNLINE_RENDERING,
   contrastRatio,
+  effectiveLayerAlpha,
+  getAntipodeDragSurfaceProps,
+  getVectorSurfaceRenderOrders,
   getVectorLineMaterialProps,
   sunlineOverlayAtAltitude,
 } from './rendering';
@@ -141,6 +144,44 @@ describe('Sunline rendering contract', () => {
 });
 
 describe('Other Side drag cross-section rendering contract', () => {
+  it('keeps independent ocean and land color layers within the target composite range', () => {
+    const surface = getAntipodeDragSurfaceProps();
+
+    expect(surface).toEqual({
+      oceanAlpha: 0.52,
+      landLayerAlpha: 0.48,
+      compositeLandAlpha: 0.7504,
+      oceanRenderOrder: 2,
+      landRenderOrder: 2.5,
+    });
+    expect(surface.oceanAlpha).toBeGreaterThanOrEqual(0.48);
+    expect(surface.oceanAlpha).toBeLessThanOrEqual(0.58);
+    expect(surface.landLayerAlpha).toBeGreaterThanOrEqual(0.42);
+    expect(surface.landLayerAlpha).toBeLessThanOrEqual(0.58);
+    expect(surface.compositeLandAlpha).toBe(
+      effectiveLayerAlpha([surface.oceanAlpha, surface.landLayerAlpha]),
+    );
+    expect(surface.compositeLandAlpha).toBeGreaterThanOrEqual(0.7);
+    expect(surface.compositeLandAlpha).toBeLessThanOrEqual(0.78);
+  });
+
+  it('draws vector drag surfaces after the inner wall and below interaction layers', () => {
+    const surface = getAntipodeDragSurfaceProps();
+
+    expect(surface.oceanRenderOrder).toBeGreaterThan(
+      ANTIPODE_DRAG_RENDERING.innerWall.renderOrder,
+    );
+    expect(surface.landRenderOrder).toBeGreaterThan(surface.oceanRenderOrder);
+    expect(surface.landRenderOrder).toBeLessThan(
+      ANTIPODE_DRAG_RENDERING.highlight.renderOrder,
+    );
+    expect(ANTIPODE_DRAG_RENDERING.highlight.renderOrder).toBeLessThan(
+      ANTIPODE_DRAG_RENDERING.markerRenderOrder,
+    );
+    expect(getVectorSurfaceRenderOrders(false)).toEqual({ ocean: -1, land: 0 });
+    expect(getVectorSurfaceRenderOrders(true)).toEqual({ ocean: 2, land: 2.5 });
+  });
+
   it('uses separate ordered transparent shell layers without writing depth', () => {
     expect(ANTIPODE_DRAG_RENDERING.outerShell).toMatchObject({
       radius: 1,
@@ -148,8 +189,9 @@ describe('Other Side drag cross-section rendering contract', () => {
       depthTest: true,
       depthWrite: false,
     });
-    expect(ANTIPODE_DRAG_RENDERING.outerShell.dragOpacity).toBeGreaterThan(0.6);
-    expect(ANTIPODE_DRAG_RENDERING.outerShell.dragOpacity).toBeLessThan(0.9);
+    expect(ANTIPODE_DRAG_RENDERING.outerShell.dragOpacity).toBe(
+      getAntipodeDragSurfaceProps().compositeLandAlpha,
+    );
     expect(ANTIPODE_DRAG_RENDERING.innerWall).toMatchObject({
       side: BackSide,
       depthTest: true,
@@ -158,6 +200,11 @@ describe('Other Side drag cross-section rendering contract', () => {
     expect(ANTIPODE_DRAG_RENDERING.innerWall.radius).toBeLessThan(
       ANTIPODE_DRAG_RENDERING.outerShell.radius,
     );
+    expect(ANTIPODE_DRAG_RENDERING.innerWall.opacity).toBeGreaterThanOrEqual(
+      0.3,
+    );
+    expect(ANTIPODE_DRAG_RENDERING.innerWall.opacity).toBeLessThanOrEqual(0.38);
+    expect(ANTIPODE_DRAG_RENDERING.innerWall.opacity).toBe(0.34);
     expect(ANTIPODE_DRAG_RENDERING.outerShell.renderOrder).toBeGreaterThan(
       ANTIPODE_DRAG_RENDERING.innerWall.renderOrder,
     );

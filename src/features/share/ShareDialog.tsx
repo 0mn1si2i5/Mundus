@@ -2,32 +2,33 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import type { Locale } from '../../i18n/messages';
 import { useAppStore } from '../../state/appStore';
-import { createShareUrl, type SharePrecision } from './shareUrl';
+import { createShareUrl } from './shareUrl';
 import styles from './ShareDialog.module.css';
 
 const COPY = {
   zh: {
     title: '分享这一视角',
-    description: '坐标会写入分享链接。你可以保留精确位置，或将坐标约化到整度。',
+    description:
+      '分享链接会编码并恢复当前所选位置与观察方式；复制前请确认你愿意分享这一位置。',
     sunlineDescription:
-      '坐标与当前 UTC 时间会固化到分享链接。你可以保留精确位置，或将坐标约化到整度。',
-    exact: '复制精确位置',
-    approximate: '复制约略位置',
+      '分享链接会编码并恢复当前所选位置与观察方式，并固定当前显示的 UTC 时间；复制前请确认你愿意分享这一位置与时间。',
+    fieldLabel: '分享链接',
+    copy: '复制分享链接',
     close: '关闭',
     copied: '链接已复制',
-    failed: '无法自动复制，请复制下方链接。',
+    failed: '无法自动复制，请手动复制上方链接。',
   },
   en: {
     title: 'Share this view',
     description:
-      'Coordinates are included in the link. Keep the exact point or round it to whole degrees.',
+      'The share link encodes and restores the selected location and observation mode. Before copying, confirm that you are willing to share this location.',
     sunlineDescription:
-      'Coordinates and the current UTC time are fixed in the link. Keep the exact point or round it to whole degrees.',
-    exact: 'Copy exact location',
-    approximate: 'Copy approximate location',
+      'The share link encodes and restores the selected location and observation mode, and fixes the displayed UTC time. Before copying, confirm that you are willing to share this location and time.',
+    fieldLabel: 'Share link',
+    copy: 'Copy share link',
     close: 'Close',
     copied: 'Link copied',
-    failed: 'Automatic copy failed. Copy the link below.',
+    failed: 'Automatic copy failed. Manually copy the link above.',
   },
 } as const;
 
@@ -38,31 +39,30 @@ export function ShareDialog({
   locale: Locale;
   onClose: () => void;
 }) {
-  const activeMode = useAppStore((state) => state.activeMode);
-  const point = useAppStore((state) => state.point);
-  const developmentIndicator = useAppStore(
-    (state) => state.developmentIndicator,
-  );
-  const developmentYear = useAppStore((state) => state.developmentYear);
-  const sunlineTimeMs = useAppStore((state) => state.sunlineTimeMs);
-  const sunlineClockMode = useAppStore((state) => state.sunlineClockMode);
-  const shareableState = {
-    activeMode,
-    point,
-    developmentIndicator,
-    developmentYear,
-    sunlineTimeMs,
-    sunlineClockMode,
-  };
-  const [preview, setPreview] = useState(() =>
-    createShareUrl(window.location.href, shareableState, 'approximate'),
-  );
+  const [snapshot] = useState(() => {
+    const state = useAppStore.getState();
+    const shareableState = {
+      activeMode: state.activeMode,
+      point: state.point,
+      developmentIndicator: state.developmentIndicator,
+      developmentYear: state.developmentYear,
+      sunlineTimeMs: state.sunlineTimeMs,
+      sunlineClockMode: state.sunlineClockMode,
+    };
+    return {
+      activeMode: state.activeMode,
+      url: createShareUrl(window.location.href, shareableState),
+    };
+  });
   const [status, setStatus] = useState('');
   const dialog = useRef<HTMLElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
+  const linkField = useRef<HTMLInputElement>(null);
   const copy = COPY[locale];
   const description =
-    activeMode === 'sunline' ? copy.sunlineDescription : copy.description;
+    snapshot.activeMode === 'sunline'
+      ? copy.sunlineDescription
+      : copy.description;
 
   useEffect(() => {
     const restoreFocus = document.activeElement;
@@ -99,14 +99,18 @@ export function ShareDialog({
     }
   }
 
-  async function copyLink(precision: SharePrecision) {
-    const url = createShareUrl(window.location.href, shareableState, precision);
-    setPreview(url);
+  function selectLink() {
+    linkField.current?.select();
+  }
+
+  async function copyLink() {
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(snapshot.url);
       setStatus(copy.copied);
     } catch {
       setStatus(copy.failed);
+      linkField.current?.focus();
+      selectLink();
     }
   }
 
@@ -140,13 +144,17 @@ export function ShareDialog({
         <p>URL / POSITION</p>
         <h2 id="share-title">{copy.title}</h2>
         <p id="share-description">{description}</p>
-        <code>{preview}</code>
+        <input
+          ref={linkField}
+          className={styles.linkField}
+          aria-label={copy.fieldLabel}
+          readOnly
+          value={snapshot.url}
+          onFocus={selectLink}
+        />
         <div className={styles.actions}>
-          <button type="button" onClick={() => copyLink('approximate')}>
-            {copy.approximate}
-          </button>
-          <button type="button" onClick={() => copyLink('exact')}>
-            {copy.exact}
+          <button type="button" onClick={copyLink}>
+            {copy.copy}
           </button>
         </div>
         <output aria-live="polite">{status}</output>

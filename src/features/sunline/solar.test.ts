@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MathUtils } from 'three';
 import {
+  daylightStateAtAltitude,
   formatSunlineTime,
   observeSun,
   parseSunlineTime,
@@ -83,6 +84,27 @@ describe('Sunline solar calculations', () => {
     expect(noon.altitudeDegrees).toBeGreaterThan(88);
     expect(midnight.daylight).toBe('night');
   });
+
+  it.each([
+    { altitudeDegrees: 0, expected: 'day' },
+    { altitudeDegrees: -0.0001, expected: 'civil-twilight' },
+    { altitudeDegrees: -6, expected: 'civil-twilight' },
+    { altitudeDegrees: -6.0001, expected: 'night' },
+  ] as const)(
+    'classifies $altitudeDegrees degrees as $expected',
+    ({ altitudeDegrees, expected }) => {
+      expect(daylightStateAtAltitude(altitudeDegrees)).toBe(expected);
+    },
+  );
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    'rejects non-finite altitude %s',
+    (altitudeDegrees) => {
+      expect(() => daylightStateAtAltitude(altitudeDegrees)).toThrowError(
+        new RangeError('Solar altitude must be finite'),
+      );
+    },
+  );
 
   it('approximates NOAA equatorial sunrise and sunset within five minutes', () => {
     const events = solarEventsUtc(

@@ -8,17 +8,20 @@ import {
   useRef,
   type Ref,
 } from 'react';
-import type { Group, PerspectiveCamera } from 'three';
+import type { Group, Material, Object3D, PerspectiveCamera } from 'three';
 import { Vector3 } from 'three';
 import type { AntipodeRelation } from '../antipodes/relation';
 import { sampleShortGeodesic } from '../antipodes/relation';
 import { geoToVector3 } from './geo';
-import { cssPixelsToWorldUnits } from './screenSpace';
+import { allPointsInClip, cssPixelsToWorldUnits } from './screenSpace';
 
 const RELATION_RADIUS = 1.018;
 
 export interface AntipodeRelationDiagnosticHandle {
-  request: (reason: AntipodeRelationDiagnosticReason) => void;
+  request: (
+    reason: AntipodeRelationDiagnosticReason,
+    focusedTarget?: { latitude: number; longitude: number },
+  ) => void;
 }
 
 export type AntipodeRelationDiagnosticReason =
@@ -33,6 +36,7 @@ export const AntipodeRelationLayer = forwardRef(function AntipodeRelationLayer(
     relation,
     onArcCount,
     onMarkerSize,
+    onFocusEvidence,
   }: {
     relation: AntipodeRelation;
     onArcCount: (count: number | null) => void;
@@ -41,6 +45,7 @@ export const AntipodeRelationLayer = forwardRef(function AntipodeRelationLayer(
       cssPixels: number | null,
       reason?: AntipodeRelationDiagnosticReason,
     ) => void;
+    onFocusEvidence: (evidence: string) => void;
   },
   ref: Ref<AntipodeRelationDiagnosticHandle>,
 ) {
@@ -54,6 +59,13 @@ export const AntipodeRelationLayer = forwardRef(function AntipodeRelationLayer(
   }, [onArcCount, onMarkerSize]);
   const originMarker = useRef<CityMarkerDiagnosticHandle>(null);
   const antipodeMarker = useRef<CityMarkerDiagnosticHandle>(null);
+  const originArcRef = useRef<Object3D & { material: Material }>(null);
+  const antipodeArcRef = useRef<Object3D & { material: Material }>(null);
+  const focusEvidencePending = useRef<{
+    target: { latitude: number; longitude: number };
+  } | null>(null);
+  const projectedPoint = useRef(new Vector3());
+  const { camera, invalidate } = useThree();
   const originArc = useMemo(
     () => relationPoints(relation.origin),
     [relation.origin],
@@ -81,11 +93,49 @@ export const AntipodeRelationLayer = forwardRef(function AntipodeRelationLayer(
     };
   }, []);
   useImperativeHandle(ref, () => ({
-    request(reason) {
+    request(reason, focusedTarget) {
       originMarker.current?.request(reason);
       antipodeMarker.current?.request(reason);
+      if (focusedTarget) {
+        focusEvidencePending.current = { target: focusedTarget };
+        invalidate();
+      }
     },
   }));
+  useFrame(() => {
+    const pending = focusEvidencePending.current;
+    if (!pending) return;
+    const matches = (point: { latitude: number; longitude: number }) =>
+      point.latitude === pending.target.latitude &&
+      point.longitude === pending.target.longitude;
+    const side =
+      matches(relation.origin.exactPoint) ||
+      (originCity && matches(originCity.city.point))
+        ? 'origin'
+        : matches(relation.antipode.exactPoint) ||
+            (antipodeCity && matches(antipodeCity.city.point))
+          ? 'antipode'
+          : null;
+    const points =
+      side === 'origin' ? originArc : side === 'antipode' ? antipodeArc : [];
+    const line =
+      side === 'origin' ? originArcRef.current : antipodeArcRef.current;
+    if (!line || points.length === 0) return;
+    line.updateWorldMatrix(true, false);
+    camera.updateMatrixWorld();
+    const projected = points.map((point) =>
+      projectedPoint.current
+        .copy(point)
+        .applyMatrix4(line.matrixWorld)
+        .project(camera)
+        .clone(),
+    );
+    const material = line.material as Material;
+    onFocusEvidence(
+      `arcPoints:${points.length},arcAllInViewport:${allPointsInClip(projected)},arcDepthTest:${material.depthTest}`,
+    );
+    focusEvidencePending.current = null;
+  });
   if (!originCity || !antipodeCity) return null;
   return (
     <>
@@ -109,8 +159,12 @@ export const AntipodeRelationLayer = forwardRef(function AntipodeRelationLayer(
           onMarkerSizeRef.current('antipode-city', cssPixels, reason)
         }
       />
-      {originArc.length > 1 ? <RelationArc points={originArc} /> : null}
-      {antipodeArc.length > 1 ? <RelationArc points={antipodeArc} /> : null}
+      {originArc.length > 1 ? (
+        <RelationArc ref={originArcRef} points={originArc} />
+      ) : null}
+      {antipodeArc.length > 1 ? (
+        <RelationArc ref={antipodeArcRef} points={antipodeArc} />
+      ) : null}
     </>
   );
 });
@@ -124,9 +178,13 @@ function relationPoints(side: AntipodeRelation['origin']): Vector3[] {
   ).map((point) => geoToVector3(point, RELATION_RADIUS));
 }
 
-function RelationArc({ points }: { points: Vector3[] }) {
+const RelationArc = forwardRef(function RelationArc(
+  { points }: { points: Vector3[] },
+  ref: Ref<Object3D & { material: Material }>,
+) {
   return (
     <Line
+      ref={ref as never}
       points={points}
       color="#c89b5d"
       lineWidth={1.15}
@@ -138,7 +196,7 @@ function RelationArc({ points }: { points: Vector3[] }) {
       renderOrder={4}
     />
   );
-}
+});
 
 const CityMarker = forwardRef(function CityMarker(
   {

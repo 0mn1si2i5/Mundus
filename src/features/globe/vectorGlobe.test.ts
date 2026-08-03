@@ -2,8 +2,6 @@ import { BufferGeometry } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import {
   createVectorGlobeResources,
-  effectiveLayerAlpha,
-  landLayerAlphaForTarget,
   updateVectorPalette,
   type DecodedVectorGlobe,
 } from './vectorGlobe';
@@ -81,16 +79,6 @@ function decodedFixture(): DecodedVectorGlobe {
 }
 
 describe('vector globe runtime resources', () => {
-  it('keeps effective drag alpha equal over land and ocean', () => {
-    expect(effectiveLayerAlpha([0.76])).toBeCloseTo(0.76, 8);
-    expect(effectiveLayerAlpha([0.76, 0])).toBeCloseTo(0.76, 8);
-    expect(effectiveLayerAlpha([0.76, 0.76])).toBeGreaterThan(0.9);
-    expect(landLayerAlphaForTarget(0.76, 0.76)).toBe(0);
-    expect(
-      effectiveLayerAlpha([0.76, landLayerAlphaForTarget(0.76, 0.76)]),
-    ).toBeCloseTo(0.76, 8);
-  });
-
   it('creates one merged surface and separate coastline and border geometries', () => {
     const resources = createVectorGlobeResources(decodedFixture());
     expect(resources.surface.getAttribute('position').count).toBe(3);

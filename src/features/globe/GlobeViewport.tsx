@@ -74,6 +74,12 @@ import {
 import { cssPixelsToWorldUnits } from './screenSpace';
 import { VectorGlobeLayer, type VectorGlobeState } from './VectorGlobeLayer';
 import type { VectorGlobeResources } from './vectorGlobe';
+import {
+  CAMERA_FOCUS_DURATION_MS,
+  cameraFocusAnimationProgress,
+  clampGlobeCameraDistance,
+  GLOBE_CAMERA_DISTANCE,
+} from './camera';
 
 interface GlobeViewportProps {
   diagnosticResetKey: string;
@@ -134,6 +140,7 @@ export function GlobeViewport({
   const [vectorGeometryId, setVectorGeometryId] = useState('');
   const [vectorDragTransparent, setVectorDragTransparent] = useState(false);
   const [vectorDragEvidence, setVectorDragEvidence] = useState('');
+  const [vectorDragOrderEvidence, setVectorDragOrderEvidence] = useState('');
   const [vectorSunlineHighlight, setVectorSunlineHighlight] = useState<
     string | null
   >(null);
@@ -163,6 +170,13 @@ export function GlobeViewport({
     },
     [],
   );
+  const handleVectorDragEvidence = useCallback(
+    (alphaEvidence: string, orderEvidence: string) => {
+      setVectorDragEvidence(alphaEvidence);
+      setVectorDragOrderEvidence(orderEvidence);
+    },
+    [],
+  );
   if (dragModeActive !== showAntipodes) {
     pointerStarts.clear();
     setAntipodeDragActive(false);
@@ -176,11 +190,16 @@ export function GlobeViewport({
     delete element.dataset.cameraCenterLatitude;
     delete element.dataset.cameraCenterLongitude;
     delete element.dataset.cameraFocusMotion;
+    delete element.dataset.cameraFocusStartedAt;
+    delete element.dataset.cameraFocusElapsedMs;
+    delete element.dataset.cameraFocusCompletedRevision;
+    element.dataset.cameraFocusState = 'idle';
   }
 
   function recordCameraDiagnostic(
     point: GeoPoint,
     motion: 'instant' | 'animated',
+    elapsedMs: number,
   ) {
     const element = viewport.current;
     if (!element) return;
@@ -190,6 +209,21 @@ export function GlobeViewport({
     element.dataset.cameraCenterLatitude = latitude;
     element.dataset.cameraCenterLongitude = longitude;
     element.dataset.cameraFocusMotion = motion;
+    element.dataset.cameraFocusElapsedMs = Math.round(elapsedMs).toString();
+    element.dataset.cameraFocusCompletedRevision =
+      element.dataset.cameraFocusRequestRevision ?? '0';
+    element.dataset.cameraFocusState = 'complete';
+  }
+
+  function recordCameraFocusStart(timestamp: number) {
+    clearCameraDiagnostic();
+    const element = viewport.current;
+    if (!element) return;
+    element.dataset.cameraFocusStartedAt = timestamp.toString();
+    element.dataset.cameraFocusState = 'animating';
+    element.dataset.cameraFocusRequestRevision = String(
+      Number(element.dataset.cameraFocusRequestRevision ?? 0) + 1,
+    );
   }
 
   function recordMarkerDiagnostic(
@@ -294,6 +328,19 @@ export function GlobeViewport({
     }
     element.dataset.antipodeRelationDiagnosticSource = 'measured';
     element.dataset.antipodeRelationArcCount = String(count);
+  }
+
+  function recordAntipodeRelationFocusEvidence(evidence: string) {
+    const element = viewport.current;
+    if (!element || !showAntipodes) return;
+    if (evidence.startsWith('arcPoints:')) {
+      const markerEvidence = element.dataset.antipodeRelationFocusEvidence;
+      element.dataset.antipodeRelationFocusEvidence = markerEvidence
+        ? `${markerEvidence},${evidence}`
+        : evidence;
+    } else {
+      element.dataset.antipodeRelationFocusEvidence = evidence;
+    }
   }
 
   function recordAntipodeCityMarkerSize(
@@ -465,6 +512,7 @@ export function GlobeViewport({
     delete element.dataset.markerOriginTarget;
     delete element.dataset.markerDiagnosticRevision;
     delete element.dataset.markerDiagnosticReason;
+    delete element.dataset.antipodeRelationFocusEvidence;
     if (showAntipodes) {
       element.dataset.markerDiagnosticState = 'idle-rotation';
     } else {
@@ -512,6 +560,11 @@ export function GlobeViewport({
         vectorState === 'ready' ? String(vectorDragTransparent) : undefined
       }
       data-vector-drag-effective-alpha={vectorDragEvidence || undefined}
+      data-vector-drag-render-order={
+        vectorState === 'ready' && antipodeDragVisible
+          ? vectorDragOrderEvidence || undefined
+          : undefined
+      }
       data-vector-sunline-highlight={vectorSunlineHighlight ?? undefined}
       data-marker-role-count={
         showAntipodes ? (relationReady ? 4 : 2) : undefined
@@ -626,6 +679,7 @@ export function GlobeViewport({
           sunline={sunline}
           antipodeRelation={antipodeRelation}
           onCameraFocusStart={clearCameraDiagnostic}
+          onCameraFocusAnimationStart={recordCameraFocusStart}
           onCameraFocusComplete={recordCameraDiagnostic}
           onMarkerDiagnostic={recordMarkerDiagnostic}
           onSunlineProjectionDiagnostic={recordSunlineProjectionDiagnostic}
@@ -636,12 +690,13 @@ export function GlobeViewport({
           onHitSpherePick={recordHitSpherePick}
           onGlobePick={recordGlobePick}
           onAntipodeRelationArcCount={recordAntipodeRelationArcCount}
+          onAntipodeRelationFocusEvidence={recordAntipodeRelationFocusEvidence}
           onAntipodeCityMarkerSize={recordAntipodeCityMarkerSize}
           onVectorStateChange={handleVectorStateChange}
           onVectorPaletteUpdate={setVectorPaletteVersion}
           onVectorDragMaterialChange={setVectorDragTransparent}
           onVectorSunlineHighlightChange={setVectorSunlineHighlight}
-          onVectorDragEvidence={setVectorDragEvidence}
+          onVectorDragEvidence={handleVectorDragEvidence}
           onVectorRenderEvidence={(vectorDraws, rendererCalls) =>
             setVectorRenderEvidence((current) => ({
               vectorDraws,
@@ -679,9 +734,11 @@ interface GlobeSceneProps {
   sunline: SunlineRenderState | null;
   antipodeRelation: AntipodeRelation | null;
   onCameraFocusStart: () => void;
+  onCameraFocusAnimationStart: (timestamp: number) => void;
   onCameraFocusComplete: (
     point: GeoPoint,
     motion: 'instant' | 'animated',
+    elapsedMs: number,
   ) => void;
   onMarkerDiagnostic: (
     globeCameraDistance: number,
@@ -710,6 +767,7 @@ interface GlobeSceneProps {
   onHitSpherePick: () => void;
   onGlobePick: (point: GeoPoint) => void;
   onAntipodeRelationArcCount: (count: number | null) => void;
+  onAntipodeRelationFocusEvidence: (evidence: string) => void;
   onAntipodeCityMarkerSize: (
     role: 'origin-city' | 'antipode-city',
     cssPixels: number | null,
@@ -721,7 +779,7 @@ interface GlobeSceneProps {
   ) => void;
   onVectorPaletteUpdate: (version: number) => void;
   onVectorDragMaterialChange: (transparent: boolean) => void;
-  onVectorDragEvidence: (evidence: string) => void;
+  onVectorDragEvidence: (alphaEvidence: string, orderEvidence: string) => void;
   onVectorSunlineHighlightChange: (evidence: string | null) => void;
   onVectorRenderEvidence: (vectorDraws: number, rendererCalls: number) => void;
   vectorRenderSampleKey: number;
@@ -746,6 +804,7 @@ function GlobeScene({
   sunline,
   antipodeRelation,
   onCameraFocusStart,
+  onCameraFocusAnimationStart,
   onCameraFocusComplete,
   onMarkerDiagnostic,
   onSunlineProjectionDiagnostic,
@@ -756,6 +815,7 @@ function GlobeScene({
   onHitSpherePick,
   onGlobePick,
   onAntipodeRelationArcCount,
+  onAntipodeRelationFocusEvidence,
   onAntipodeCityMarkerSize,
   onVectorStateChange,
   onVectorPaletteUpdate,
@@ -781,6 +841,16 @@ function GlobeScene({
   const clearCameraTarget = useAppStore((state) => state.clearCameraTarget);
   const group = useRef<Group>(null);
   const interactionStart = useRef<Vector3>(null);
+  const cameraFocusAnimation = useRef<{
+    target: GeoPoint;
+    startedAt: number;
+    startDirection: Vector3;
+    targetDirection: Vector3;
+  } | null>(null);
+  const cameraFocusRequest = useRef<{
+    target: GeoPoint;
+    startedAt: number;
+  } | null>(null);
   const markerDiagnostic = useRef<MarkerDiagnosticHandle>(null);
   const antipodeRelationDiagnostic =
     useRef<AntipodeRelationDiagnosticHandle>(null);
@@ -795,6 +865,14 @@ function GlobeScene({
   const innerMaterial = useRef<MeshBasicMaterial>(null);
   const [vectorReady, setVectorReady] = useState(false);
   const { camera, gl, invalidate } = useThree();
+  const onCameraFocusStartRef = useRef(onCameraFocusStart);
+  const onCameraFocusAnimationStartRef = useRef(onCameraFocusAnimationStart);
+  const invalidateRef = useRef(invalidate);
+  useEffect(() => {
+    onCameraFocusStartRef.current = onCameraFocusStart;
+    onCameraFocusAnimationStartRef.current = onCameraFocusAnimationStart;
+    invalidateRef.current = invalidate;
+  }, [invalidate, onCameraFocusAnimationStart, onCameraFocusStart]);
   const reducedMotion = useReducedMotion();
   const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
   const countries = useMemo(() => getCountryDataset(), []);
@@ -859,6 +937,7 @@ function GlobeScene({
   useImperativeHandle(keyboardController, () => {
     function finishCameraMove() {
       camera.lookAt(0, 0, 0);
+      camera.updateMatrixWorld();
       markerDiagnostic.current?.request('interaction');
       antipodeRelationDiagnostic.current?.request('interaction');
       sunlineDiagnostic.current?.request('interaction');
@@ -879,7 +958,7 @@ function GlobeScene({
       },
       zoom(factor) {
         camera.position.setLength(
-          MathUtils.clamp(camera.position.length() * factor, 2.15, 5),
+          clampGlobeCameraDistance(camera.position.length() * factor),
         );
         finishCameraMove();
       },
@@ -907,8 +986,29 @@ function GlobeScene({
   useEffect(() => () => texture.dispose(), [texture]);
   useEffect(() => () => highlights.texture.dispose(), [highlights]);
   useEffect(() => {
-    if (cameraTarget) onCameraFocusStart();
-  }, [cameraTarget, onCameraFocusStart]);
+    if (!cameraTarget) {
+      cameraFocusRequest.current = null;
+      cameraFocusAnimation.current = null;
+      return;
+    }
+    cameraFocusRequest.current = {
+      target: cameraTarget,
+      startedAt: performance.now(),
+    };
+    onCameraFocusAnimationStartRef.current(
+      cameraFocusRequest.current.startedAt,
+    );
+    let frame = 0;
+    const startedAt = cameraFocusRequest.current.startedAt;
+    const requestFocusFrame = (timestamp: number) => {
+      invalidateRef.current();
+      if (timestamp - startedAt <= CAMERA_FOCUS_DURATION_MS) {
+        frame = requestAnimationFrame(requestFocusFrame);
+      }
+    };
+    frame = requestAnimationFrame(requestFocusFrame);
+    return () => cancelAnimationFrame(frame);
+  }, [cameraTarget]);
   useEffect(() => {
     if (!showAntipodes) return;
     markerDiagnostic.current?.request('point');
@@ -990,35 +1090,105 @@ function GlobeScene({
       invalidate();
     }
     if (cameraTarget && group.current) {
-      const cameraDistance = camera.position.length();
+      const cameraDistance = clampGlobeCameraDistance(camera.position.length());
       const currentDirection = camera.position.clone().normalize();
-      const targetDirection = geoToVector3(cameraTarget)
+      if (cameraFocusAnimation.current?.target !== cameraTarget) {
+        cameraFocusAnimation.current = {
+          target: cameraTarget,
+          startedAt:
+            cameraFocusRequest.current?.target === cameraTarget
+              ? cameraFocusRequest.current.startedAt
+              : performance.now(),
+          startDirection: currentDirection,
+          targetDirection: geoToVector3(cameraTarget)
+            .applyQuaternion(group.current.quaternion)
+            .normalize(),
+        };
+      }
+      const animation = cameraFocusAnimation.current;
+      animation.targetDirection
+        .copy(geoToVector3(cameraTarget))
         .applyQuaternion(group.current.quaternion)
         .normalize();
+      const { progress, complete } = cameraFocusAnimationProgress(
+        animation.startedAt,
+        performance.now(),
+      );
+      const targetDirection = animation.targetDirection;
       const remaining = currentDirection.angleTo(targetDirection);
-      if (remaining < 0.003 || reducedMotion) {
+      if (complete || remaining < 0.003 || reducedMotion) {
         camera.position.copy(targetDirection.multiplyScalar(cameraDistance));
+        camera.lookAt(0, 0, 0);
+        camera.updateMatrixWorld();
         markerDiagnostic.current?.request('camera-focus');
-        antipodeRelationDiagnostic.current?.request('camera-focus');
+        antipodeRelationDiagnostic.current?.request(
+          'camera-focus',
+          cameraTarget,
+        );
         sunlineDiagnostic.current?.request('camera-focus');
         onCameraFocusComplete(
           vector3ToGeo(
             group.current.worldToLocal(camera.position.clone()).normalize(),
           ),
           reducedMotion ? 'instant' : 'animated',
+          performance.now() - animation.startedAt,
         );
+        const originCity =
+          antipodeRelation?.origin.nearestMajorCity?.city.point;
+        const antipodeCity =
+          antipodeRelation?.antipode.nearestMajorCity?.city.point;
+        const matchesTarget = (candidate: GeoPoint | undefined) =>
+          candidate?.latitude === cameraTarget.latitude &&
+          candidate.longitude === cameraTarget.longitude;
+        const focusedSide =
+          matchesTarget(relationOrigin) || matchesTarget(originCity)
+            ? antipodeRelation?.origin
+            : matchesTarget(relationAntipode) || matchesTarget(antipodeCity)
+              ? antipodeRelation?.antipode
+              : null;
+        if (focusedSide?.nearestMajorCity) {
+          const focusedCity = matchesTarget(
+            focusedSide.nearestMajorCity.city.point,
+          );
+          const markerPoint = focusedCity
+            ? focusedSide.nearestMajorCity.city.point
+            : focusedSide.exactPoint;
+          const markerRadius = focusedCity
+            ? 1.021
+            : focusedSide === antipodeRelation?.antipode
+              ? 1.0035
+              : 1.003;
+          group.current.updateWorldMatrix(true, false);
+          camera.updateMatrixWorld();
+          const markerWorld = geoToVector3(
+            markerPoint,
+            markerRadius,
+          ).applyMatrix4(group.current.matrixWorld);
+          const marker = markerWorld.clone().project(camera);
+          const markerFrontFacing =
+            markerWorld
+              .clone()
+              .normalize()
+              .dot(camera.position.clone().sub(markerWorld)) > 0;
+          const inViewport = (projected: Vector3) =>
+            projected.z >= -1 &&
+            projected.z <= 1 &&
+            Math.abs(projected.x) <= 1 &&
+            Math.abs(projected.y) <= 1;
+          onAntipodeRelationFocusEvidence(
+            `markerTarget:${formatDiagnosticCoordinate(markerPoint.latitude)},${formatDiagnosticCoordinate(markerPoint.longitude)},markerRadius:${markerRadius},markerFrontFacing:${markerFrontFacing},markerInViewport:${inViewport(marker)}`,
+          );
+        }
         clearCameraTarget(cameraTarget);
+        cameraFocusAnimation.current = null;
       } else {
         const rotation = new Quaternion().setFromUnitVectors(
-          currentDirection,
+          animation.startDirection,
           targetDirection,
         );
-        const partial = new Quaternion().slerp(
-          rotation,
-          1 - Math.exp(-delta * 3.2),
-        );
+        const partial = new Quaternion().slerp(rotation, progress);
         camera.position
-          .copy(currentDirection.applyQuaternion(partial))
+          .copy(animation.startDirection.clone().applyQuaternion(partial))
           .multiplyScalar(cameraDistance);
       }
       camera.lookAt(0, 0, 0);
@@ -1226,6 +1396,7 @@ function GlobeScene({
                 relation={antipodeRelation}
                 onArcCount={onAntipodeRelationArcCount}
                 onMarkerSize={onAntipodeCityMarkerSize}
+                onFocusEvidence={onAntipodeRelationFocusEvidence}
               />
             ) : null}
             <CenterCandleGlow
@@ -1240,8 +1411,8 @@ function GlobeScene({
       </group>
       <OrbitControls
         enablePan={false}
-        minDistance={2.15}
-        maxDistance={5}
+        minDistance={GLOBE_CAMERA_DISTANCE.min}
+        maxDistance={GLOBE_CAMERA_DISTANCE.max}
         rotateSpeed={0.55}
         zoomSpeed={0.65}
         onStart={() => {
@@ -1482,10 +1653,10 @@ function Marker({
   depthWrite?: boolean;
 }) {
   const marker = useRef<Group>(null);
-  const billboard = useRef<Group>(null);
   const worldPosition = useRef(new Vector3());
   const cameraDirection = useRef(new Vector3());
   const cameraOffset = useRef(new Vector3());
+  const cameraRight = useRef(new Vector3());
   const projectedCenter = useRef(new Vector3());
   const projectedRadius = useRef(new Vector3());
   const diagnosticPending = useRef<MarkerDiagnosticReason | null>(null);
@@ -1523,16 +1694,12 @@ function Marker({
     );
     group.scale.setScalar(diameter);
     if (diagnosticPending.current) {
-      const billboardGroup = billboard.current;
-      if (!billboardGroup || !point) return;
-      billboardGroup.updateWorldMatrix(true, false);
-      projectedCenter.current
-        .set(0, 0, 0)
-        .applyMatrix4(billboardGroup.matrixWorld)
-        .project(camera);
+      if (!point) return;
+      cameraRight.current.setFromMatrixColumn(camera.matrixWorld, 0);
+      projectedCenter.current.copy(worldPosition.current).project(camera);
       projectedRadius.current
-        .set(0.5, 0, 0)
-        .applyMatrix4(billboardGroup.matrixWorld)
+        .copy(worldPosition.current)
+        .addScaledVector(cameraRight.current, diameter / 2)
         .project(camera);
       const actualCssDiameter = Math.hypot(
         (projectedRadius.current.x - projectedCenter.current.x) * size.width,
@@ -1556,7 +1723,7 @@ function Marker({
       position={[position.x, position.y, position.z]}
       renderOrder={renderOrder}
     >
-      <Billboard ref={billboard}>
+      <Billboard>
         <mesh raycast={ignoreRaycast} renderOrder={renderOrder}>
           <circleGeometry args={[MARKER_CENTER_RATIO / 2, 24]} />
           <meshBasicMaterial
