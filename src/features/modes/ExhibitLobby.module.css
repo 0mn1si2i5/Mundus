@@ -91,8 +91,15 @@
 }
 
 @media (max-width: 760px) {
-  .heading {
+  .lobby {
     position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .heading {
+    position: static;
     top: auto;
     left: auto;
     max-width: none;
@@ -104,14 +111,11 @@
   }
 
   .orbit {
-    position: absolute;
-    top: auto;
-    right: 0;
-    bottom: calc(1rem + env(safe-area-inset-bottom));
-    left: 0;
+    position: static;
     display: flex;
     gap: 0.6rem;
     overflow-x: auto;
+    margin: auto 0 calc(1rem + env(safe-area-inset-bottom));
     padding: 0.25rem 1.25rem;
     scroll-snap-type: x proximity;
   }

@@ -74,7 +74,6 @@ export function App() {
   const previewMode = useAppStore((state) => state.previewMode);
   const point = useAppStore((state) => state.point);
   const hoveredCountry = useAppStore((state) => state.hoveredCountry);
-  const selectMode = useAppStore((state) => state.selectMode);
   const openModePreview = useAppStore((state) => state.openModePreview);
   const closeModePreview = useAppStore((state) => state.closeModePreview);
   const enterPreviewMode = useAppStore((state) => state.enterPreviewMode);
@@ -158,6 +157,15 @@ export function App() {
             <p className={styles.eyebrow}>{t.laboratory}</p>
           </div>
           <div className={styles.actions}>
+            {activeMode !== null ? (
+              <button
+                className={styles.textButton}
+                type="button"
+                onClick={returnToLobby}
+              >
+                {t.returnToLobby}
+              </button>
+            ) : null}
             <button
               className={styles.textButton}
               type="button"
@@ -273,30 +281,6 @@ export function App() {
           >
             <ModeControls locale={locale} presentation={presentation} />
           </ModeBoundary>
-
-          <nav className={styles.modeNav} aria-label={t.modes}>
-            {MODE_ORDER.map((modeId, index) => {
-              const item = MODE_DEFINITIONS[modeId];
-              return (
-                <button
-                  key={item.id}
-                  className={
-                    item.id === presentation.id ? styles.activeMode : undefined
-                  }
-                  type="button"
-                  onClick={() => selectMode(item.id)}
-                  aria-current={
-                    item.id === presentation.id ? 'page' : undefined
-                  }
-                >
-                  <span className={styles.modeNavIndex}>0{index + 1}</span>
-                  <span className={styles.modeNavTitle}>
-                    {item.title[locale]}
-                  </span>
-                </button>
-              );
-            })}
-          </nav>
         </>
       ) : null}
 
