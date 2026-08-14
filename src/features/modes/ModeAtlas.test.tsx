@@ -41,6 +41,13 @@ describe('ModeAtlas', () => {
     expect(screen.getByText('No matching observations.')).toBeVisible();
   });
 
+  it('shows an honest empty new-observations view', () => {
+    renderAtlas();
+    fireEvent.click(screen.getByRole('tab', { name: 'New' }));
+    expect(screen.getByText('No new observations yet.')).toBeVisible();
+    expect(screen.queryByText(/Other Side/)).not.toBeInTheDocument();
+  });
+
   it('filters the list by search text', () => {
     renderAtlas();
     fireEvent.change(

@@ -14,6 +14,7 @@ import {
   featuredModes,
   filterModesByTags,
   MODE_TAGS,
+  newModes,
   type ModeId,
   type ModeTag,
 } from './modeRegistry';
@@ -74,9 +75,7 @@ export function ModeAtlas({
       case 'featured':
         return featuredModes();
       case 'new':
-        return defaultVisibleModes().filter(
-          (mode) => mode.maturity === 'experimental',
-        );
+        return newModes();
       case 'all':
         return defaultVisibleModes();
       case 'archived':
@@ -206,7 +205,9 @@ export function ModeAtlas({
 
         <ol className={styles.modes}>
           {visible.length === 0 ? (
-            <li className={styles.empty}>{t.atlasNoResults}</li>
+            <li className={styles.empty}>
+              {view === 'new' ? t.atlasNoNew : t.atlasNoResults}
+            </li>
           ) : (
             visible.map((mode, index) => {
               const active = mode.id === activeMode;

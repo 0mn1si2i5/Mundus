@@ -7,6 +7,7 @@ import {
   MODE_DEFINITIONS,
   MODE_ORDER,
   modeIndex,
+  newModes,
   searchModes,
 } from './modeRegistry';
 
@@ -140,6 +141,22 @@ describe('mode registry', () => {
     expect(archived.every((mode) => mode.curation === 'archived')).toBe(true);
     expect(archived).toHaveLength(0);
     expect(visible).toHaveLength(MODE_ORDER.length);
+  });
+
+  it('keeps recency independent of maturity and curation', () => {
+    const modes = Object.values(MODE_DEFINITIONS);
+    expect(modes.every((mode) => mode.isNew === false)).toBe(true);
+    expect(newModes()).toHaveLength(0);
+    expect(MODE_DEFINITIONS.antipodes).toMatchObject({
+      isNew: false,
+      maturity: 'stable',
+      curation: 'featured',
+    });
+    expect(MODE_DEFINITIONS.development).toMatchObject({
+      isNew: false,
+      maturity: 'experimental',
+      curation: 'featured',
+    });
   });
 
   it('validates Other Side coordinates', () => {

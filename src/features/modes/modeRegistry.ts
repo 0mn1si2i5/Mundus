@@ -32,6 +32,7 @@ export interface ModeDefinition {
   maturity: Maturity;
   tags: readonly ModeTag[];
   featuredRank: number | null;
+  isNew: boolean;
   title: LocalizedText;
   titlePhrases: { zh: readonly string[] };
   question: LocalizedText;
@@ -50,6 +51,7 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
     maturity: 'stable',
     tags: ['place'],
     featuredRank: 1,
+    isNew: false,
     title: { zh: '地球另一端', en: 'Other Side' },
     titlePhrases: { zh: ['地球', '另一端'] },
     question: {
@@ -80,6 +82,7 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
     maturity: 'experimental',
     tags: ['humanity'],
     featuredRank: 2,
+    isNew: false,
     title: { zh: '发展的不同侧面', en: 'Development, Unpacked' },
     titlePhrases: { zh: ['发展的', '不同侧面'] },
     question: {
@@ -108,6 +111,7 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
     maturity: 'experimental',
     tags: ['time', 'nature'],
     featuredRank: 3,
+    isNew: false,
     title: { zh: '日照线', en: 'Sunline' },
     titlePhrases: { zh: ['日照线'] },
     question: {
@@ -162,6 +166,10 @@ export function defaultVisibleModes(): readonly ModeDefinition[] {
 
 export function archivedModes(): readonly ModeDefinition[] {
   return definitionsInOrder().filter((mode) => mode.curation === 'archived');
+}
+
+export function newModes(): readonly ModeDefinition[] {
+  return definitionsInOrder().filter((mode) => mode.isNew);
 }
 
 export function searchModes(
