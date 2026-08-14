@@ -15,19 +15,27 @@ export const DEFAULT_POINT: GeoPoint = {
   latitude: 31.2304,
   longitude: 121.4737,
 };
+
+/**
+ * The V1 fallback mode. A legacy or unversioned URL that carries historical
+ * mode state resolves to Other Side; this constant is not the V2 lobby default.
+ */
 export const DEFAULT_MODE: ModeId = 'antipodes';
 export const DEFAULT_DEVELOPMENT_INDICATOR: DevelopmentIndicator = 'hdi';
 export const DEFAULT_DEVELOPMENT_YEAR = 2023;
 export type SunlineClockMode = 'live' | 'fixed';
 
 export interface ShareableState {
-  activeMode: ModeId;
+  /** `null` represents the neutral exhibit lobby. */
+  activeMode: ModeId | null;
   point: GeoPoint;
   developmentIndicator: DevelopmentIndicator;
   developmentYear: number;
   sunlineTimeMs: number;
   sunlineClockMode: SunlineClockMode;
 }
+
+export type NavigationNotice = 'unknown-mode';
 
 const modeSchema = z.enum(['antipodes', 'development', 'sunline']);
 const developmentIndicatorSchema = z.enum([
@@ -46,13 +54,29 @@ const coordinateSchema = z
       Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180,
   );
 
+const LEGACY_STATE_KEYS = ['mode', 'point', 'indicator', 'year', 'time'] as const;
+
 export function parseUrlState(
   search: string,
   nowMs = Date.now(),
 ): ShareableState {
   const params = new URLSearchParams(search);
-  const mode = modeSchema.safeParse(params.get('mode'));
-  const activeMode = mode.success ? mode.data : DEFAULT_MODE;
+  const version = params.get('v');
+  const isV2 = version === '2';
+  const isV1 = version === '1';
+  const modeRaw = params.get('mode');
+  const mode = modeSchema.safeParse(modeRaw);
+  const hasLegacyState = LEGACY_STATE_KEYS.some((key) => params.has(key));
+
+  let activeMode: ModeId | null;
+  if (isV2) {
+    activeMode = mode.success ? mode.data : null;
+  } else if (isV1 || hasLegacyState) {
+    activeMode = mode.success ? mode.data : DEFAULT_MODE;
+  } else {
+    activeMode = null;
+  }
+
   const coordinate = coordinateSchema.safeParse(params.get('point'));
   const developmentIndicator = developmentIndicatorSchema.safeParse(
     params.get('indicator'),
@@ -83,35 +107,48 @@ export function parseUrlState(
   };
 }
 
+export function parseNavigationNotice(search: string): NavigationNotice | null {
+  const params = new URLSearchParams(search);
+  if (params.get('v') !== '2') return null;
+  const modeRaw = params.get('mode');
+  if (modeRaw === null) return null;
+  return modeSchema.safeParse(modeRaw).success ? null : 'unknown-mode';
+}
+
 export function serializeUrlState(state: ShareableState): string {
   const params = new URLSearchParams();
-  const hasMode = state.activeMode !== DEFAULT_MODE;
   const hasPoint =
     state.point.latitude !== DEFAULT_POINT.latitude ||
     state.point.longitude !== DEFAULT_POINT.longitude;
 
-  if (hasMode) params.set('mode', state.activeMode);
-  if (hasPoint) {
-    params.set(
-      'point',
-      `${formatCoordinate(state.point.latitude)},${formatCoordinate(state.point.longitude)}`,
-    );
-  }
-  if (state.activeMode === 'development') {
-    if (state.developmentIndicator !== DEFAULT_DEVELOPMENT_INDICATOR) {
-      params.set('indicator', state.developmentIndicator);
+  if (state.activeMode === null) {
+    if (hasPoint) {
+      params.set('point', formatPoint(state.point));
+      params.set('v', '2');
     }
-    if (state.developmentYear !== DEFAULT_DEVELOPMENT_YEAR) {
-      params.set('year', String(state.developmentYear));
+  } else {
+    params.set('mode', state.activeMode);
+    if (hasPoint) params.set('point', formatPoint(state.point));
+    if (state.activeMode === 'development') {
+      if (state.developmentIndicator !== DEFAULT_DEVELOPMENT_INDICATOR) {
+        params.set('indicator', state.developmentIndicator);
+      }
+      if (state.developmentYear !== DEFAULT_DEVELOPMENT_YEAR) {
+        params.set('year', String(state.developmentYear));
+      }
     }
+    if (state.activeMode === 'sunline' && state.sunlineClockMode === 'fixed') {
+      params.set('time', formatSunlineTime(state.sunlineTimeMs));
+    }
+    params.set('v', '2');
   }
-  if (state.activeMode === 'sunline' && state.sunlineClockMode === 'fixed') {
-    params.set('time', formatSunlineTime(state.sunlineTimeMs));
-  }
-  if (params.size > 0) params.set('v', '1');
 
   const query = params.toString();
   return query ? `?${query}` : '';
+}
+
+function formatPoint(point: GeoPoint): string {
+  return `${formatCoordinate(point.latitude)},${formatCoordinate(point.longitude)}`;
 }
 
 function formatCoordinate(value: number): string {

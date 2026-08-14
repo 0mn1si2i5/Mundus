@@ -192,3 +192,69 @@ describe('camera focus intent', () => {
     expect(useAppStore.getState().cameraFocusIntent).toEqual(newerIntent);
   });
 });
+
+describe('shell mode state', () => {
+  beforeEach(() => {
+    useAppStore.setState({
+      activeMode: null,
+      previewMode: null,
+      point: origin,
+      cameraFocusIntent: { side: 'free', target: null },
+      sunlinePlaying: false,
+      hoveredCountry: null,
+    });
+  });
+
+  it('opens and closes a mode preview without activating it', () => {
+    useAppStore.getState().openModePreview('sunline');
+    expect(useAppStore.getState().previewMode).toBe('sunline');
+    expect(useAppStore.getState().activeMode).toBeNull();
+
+    useAppStore.getState().closeModePreview();
+    expect(useAppStore.getState().previewMode).toBeNull();
+  });
+
+  it('enters the previewed mode and clears the preview', () => {
+    useAppStore.getState().openModePreview('development');
+    useAppStore.getState().enterPreviewMode();
+
+    expect(useAppStore.getState().activeMode).toBe('development');
+    expect(useAppStore.getState().previewMode).toBeNull();
+  });
+
+  it('entering preview without a preview is a no-op', () => {
+    useAppStore.getState().enterPreviewMode();
+    expect(useAppStore.getState().activeMode).toBeNull();
+  });
+
+  it('enterPreviewMode stops Sunline playback', () => {
+    useAppStore.setState({ sunlinePlaying: true });
+    useAppStore.getState().openModePreview('sunline');
+    useAppStore.getState().enterPreviewMode();
+
+    expect(useAppStore.getState().activeMode).toBe('sunline');
+    expect(useAppStore.getState().sunlinePlaying).toBe(false);
+  });
+
+  it('exitMode returns to the lobby and preserves point and camera intent', () => {
+    useAppStore.setState({
+      activeMode: 'antipodes',
+      previewMode: null,
+      point: origin,
+      cameraFocusIntent: { side: 'origin', target: origin },
+      sunlinePlaying: true,
+      hoveredCountry: { countryId: 'cn', name: 'China' },
+    });
+    useAppStore.getState().exitMode();
+
+    expect(useAppStore.getState().activeMode).toBeNull();
+    expect(useAppStore.getState().previewMode).toBeNull();
+    expect(useAppStore.getState().sunlinePlaying).toBe(false);
+    expect(useAppStore.getState().hoveredCountry).toBeNull();
+    expect(useAppStore.getState().point).toEqual(origin);
+    expect(useAppStore.getState().cameraFocusIntent).toEqual({
+      side: 'origin',
+      target: origin,
+    });
+  });
+});

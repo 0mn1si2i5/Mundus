@@ -4,7 +4,11 @@ import type { ModeId } from '../features/modes/modeRegistry';
 import type { CountryRef } from '../features/globe/country';
 import { antipodeOf, type GeoPoint } from '../features/antipodes/geography';
 import type { DevelopmentIndicator } from '../features/development/developmentData';
-import { parseUrlState } from './urlState';
+import {
+  parseNavigationNotice,
+  parseUrlState,
+  type NavigationNotice,
+} from './urlState';
 import type { SunlineClockMode } from './urlState';
 import { clampSunlineTime } from '../features/sunline/solar';
 
@@ -15,7 +19,9 @@ export interface CameraFocusIntent {
 
 interface AppState {
   locale: Locale;
-  activeMode: ModeId;
+  activeMode: ModeId | null;
+  previewMode: ModeId | null;
+  navigationNotice: NavigationNotice | null;
   point: GeoPoint;
   developmentIndicator: DevelopmentIndicator;
   developmentYear: number;
@@ -29,6 +35,11 @@ interface AppState {
   hasInteracted: boolean;
   hasMeaningfulInteraction: boolean;
   selectMode: (mode: ModeId) => void;
+  openModePreview: (mode: ModeId) => void;
+  closeModePreview: () => void;
+  enterPreviewMode: () => void;
+  exitMode: () => void;
+  dismissNavigationNotice: () => void;
   selectPoint: (point: GeoPoint) => void;
   selectDevelopmentIndicator: (indicator: DevelopmentIndicator) => void;
   selectDevelopmentYear: (year: number) => void;
@@ -54,14 +65,15 @@ function preferredLocale(): Locale {
   return navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en';
 }
 
-const initialUrlState =
-  typeof window === 'undefined'
-    ? parseUrlState('')
-    : parseUrlState(window.location.search);
+const initialSearch =
+  typeof window === 'undefined' ? '' : window.location.search;
+const initialUrlState = parseUrlState(initialSearch);
 
 export const useAppStore = create<AppState>((set) => ({
   locale: preferredLocale(),
   ...initialUrlState,
+  previewMode: null,
+  navigationNotice: parseNavigationNotice(initialSearch),
   selectedCountry: null,
   antipodeCountry: null,
   hoveredCountry: null,
@@ -72,10 +84,32 @@ export const useAppStore = create<AppState>((set) => ({
   selectMode: (activeMode) =>
     set({
       activeMode,
+      previewMode: null,
       hoveredCountry: null,
       cameraFocusIntent: { side: 'free', target: null },
       sunlinePlaying: false,
     }),
+  openModePreview: (previewMode) => set({ previewMode }),
+  closeModePreview: () => set({ previewMode: null }),
+  enterPreviewMode: () =>
+    set((state) => {
+      if (state.previewMode === null) return state;
+      return {
+        activeMode: state.previewMode,
+        previewMode: null,
+        hoveredCountry: null,
+        cameraFocusIntent: { side: 'free', target: null },
+        sunlinePlaying: false,
+      };
+    }),
+  exitMode: () =>
+    set({
+      activeMode: null,
+      previewMode: null,
+      hoveredCountry: null,
+      sunlinePlaying: false,
+    }),
+  dismissNavigationNotice: () => set({ navigationNotice: null }),
   selectPoint: (point) =>
     set({
       point,
