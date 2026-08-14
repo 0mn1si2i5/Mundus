@@ -21,7 +21,7 @@ import {
   type GeoNamesCityLoadState,
 } from '../antipodes/useGeoNamesCityIndex';
 
-interface GlobePresentation {
+export interface GlobePresentation {
   countryFills: ReadonlyMap<string, string> | null;
   showAntipodes: boolean;
   sunline: SunlineRenderState | null;
@@ -152,6 +152,64 @@ export function useModePresentation(): ModePresentation | null {
     default:
       return assertNever(activeMode);
   }
+}
+
+/**
+ * A defensive globe-only presentation for the base Canvas. Unlike
+ * `useModePresentation`, this never throws: any mode-calculation failure
+ * degrades to a neutral globe instead of taking down the shell.
+ */
+export function useGlobePresentation(): GlobePresentation {
+  const activeMode = useAppStore((state) => state.activeMode);
+  const point = useAppStore((state) => state.point);
+  const indicator = useAppStore((state) => state.developmentIndicator);
+  const year = useAppStore((state) => state.developmentYear);
+  const sunlineTimeMs = useAppStore((state) => state.sunlineTimeMs);
+  const developmentData = useDevelopmentDataset(activeMode === 'development');
+  const cityIndex = useGeoNamesCityIndex(activeMode === 'antipodes');
+
+  const countryFills = useMemo(() => {
+    if (activeMode !== 'development' || developmentData.status !== 'ready') {
+      return null;
+    }
+    try {
+      return new Map(
+        [...valuesByCountryId(developmentData.data, indicator, year)].map(
+          ([countryId, value]) => [countryId, developmentColor(value)],
+        ),
+      );
+    } catch {
+      return null;
+    }
+  }, [activeMode, developmentData, indicator, year]);
+
+  const sunline = useMemo(() => {
+    if (activeMode !== 'sunline') return null;
+    try {
+      return { subsolarPoint: solarPosition(sunlineTimeMs).subsolarPoint };
+    } catch {
+      return null;
+    }
+  }, [activeMode, sunlineTimeMs]);
+
+  const antipodeRelation = useMemo(() => {
+    if (activeMode !== 'antipodes') return null;
+    try {
+      return createAntipodeRelation(
+        point,
+        cityIndex.status === 'ready' ? cityIndex.data : undefined,
+      );
+    } catch {
+      return null;
+    }
+  }, [activeMode, cityIndex, point]);
+
+  return {
+    countryFills,
+    showAntipodes: activeMode === 'antipodes',
+    sunline,
+    antipodeRelation,
+  };
 }
 
 function assertNever(value: never): never {

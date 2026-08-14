@@ -1,4 +1,4 @@
-import { useEffect, useRef, type KeyboardEvent } from 'react';
+import { useEffect, useRef, type KeyboardEvent, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import type { Locale } from '../../i18n/messages';
 import { messages } from '../../i18n/messages';
@@ -8,11 +8,13 @@ import styles from './ModePreview.module.css';
 export function ModePreview({
   locale,
   modeId,
+  restoreFocusRef,
   onClose,
   onEnter,
 }: {
   locale: Locale;
   modeId: ModeId;
+  restoreFocusRef?: RefObject<HTMLElement | null>;
   onClose: () => void;
   onEnter: () => void;
 }) {
@@ -23,14 +25,18 @@ export function ModePreview({
 
   useEffect(() => {
     const previousFocus = document.activeElement;
+    const explicitRestore = restoreFocusRef?.current;
     const root = document.getElementById('root');
     root?.setAttribute('inert', '');
     enterButton.current?.focus();
     return () => {
       root?.removeAttribute('inert');
-      if (previousFocus instanceof HTMLElement) previousFocus.focus();
+      const target =
+        explicitRestore ??
+        (previousFocus instanceof HTMLElement ? previousFocus : null);
+      if (target instanceof HTMLElement && target.isConnected) target.focus();
     };
-  }, []);
+  }, [restoreFocusRef]);
 
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.key === 'Escape') {

@@ -3952,3 +3952,42 @@ test('keeps the same canvas across lobby, enter, and exit', async ({
   );
   expect(same).toBe(true);
 });
+
+test('restores focus to the lobby label after closing its preview', async ({
+  page,
+}) => {
+  await page.goto('./');
+  const label = page.getByRole('button', { name: /地球另一端/ });
+  await label.focus();
+  await label.click();
+  await expect(page.getByRole('dialog', { name: '地球另一端' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: '地球另一端' })).toBeHidden();
+  await expect(label).toBeFocused();
+});
+
+test('restores focus to the atlas opener after closing an atlas preview', async ({
+  page,
+}) => {
+  await page.goto('./?mode=antipodes&v=2');
+  const opener = page.getByRole('button', { name: '模式图鉴', exact: true });
+  await opener.click();
+  await expect(
+    page.getByRole('dialog', { name: '观察地球的方式' }),
+  ).toBeVisible();
+
+  await page
+    .getByRole('listitem')
+    .filter({ hasText: '发展的不同侧面' })
+    .getByRole('button', { name: '预览' })
+    .click();
+  await expect(
+    page.getByRole('dialog', { name: '发展的不同侧面' }),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: '关闭预览' }).click();
+  await expect(
+    page.getByRole('dialog', { name: '发展的不同侧面' }),
+  ).toBeHidden();
+  await expect(opener).toBeFocused();
+});

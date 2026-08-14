@@ -5,6 +5,7 @@ import {
   type ErrorInfo,
   type ReactNode,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -14,9 +15,8 @@ import {
   type ModeId,
 } from '../features/modes/modeRegistry';
 import { ModeAtlas } from '../features/modes/ModeAtlas';
-import { ModeControls } from '../features/modes/ModeControls';
-import { ModeResult } from '../features/modes/ModeResult';
-import { useModePresentation } from '../features/modes/useModePresentation';
+import { ModeExperience } from '../features/modes/ModeExperience';
+import { useGlobePresentation } from '../features/modes/useModePresentation';
 import { ExhibitLobby } from '../features/modes/ExhibitLobby';
 import { ModePreview } from '../features/modes/ModePreview';
 import { FirstInteractionHint } from '../features/discovery/FirstInteractionHint';
@@ -85,11 +85,19 @@ export function App() {
   const requestCameraFocus = useAppStore((state) => state.requestCameraFocus);
   const setLocale = useAppStore((state) => state.setLocale);
   const t = messages[locale];
-  const presentation = useModePresentation();
+  const globe = useGlobePresentation();
+  const atlasButtonRef = useRef<HTMLButtonElement>(null);
+  const previewRestoreRef = useRef<HTMLElement | null>(null);
   useUrlState();
   useCountrySelection();
 
+  function previewFromLobby(selectedMode: ModeId) {
+    previewRestoreRef.current = null;
+    openModePreview(selectedMode);
+  }
+
   function previewFromAtlas(selectedMode: ModeId) {
+    previewRestoreRef.current = atlasButtonRef.current;
     openModePreview(selectedMode);
     setAtlasOpen(false);
   }
@@ -167,6 +175,7 @@ export function App() {
               </button>
             ) : null}
             <button
+              ref={atlasButtonRef}
               className={styles.textButton}
               type="button"
               onClick={() => {
@@ -197,21 +206,21 @@ export function App() {
           </div>
         </header>
 
-        {presentation === null ? (
-          <ExhibitLobby locale={locale} onSelectPreview={openModePreview} />
+        {activeMode === null ? (
+          <ExhibitLobby locale={locale} onSelectPreview={previewFromLobby} />
         ) : (
           <section
-            key={presentation.id}
+            key={activeMode}
             className={styles.intro}
-            data-mode={presentation.id}
+            data-mode={activeMode}
             aria-labelledby="mode-title"
           >
             <p className={styles.index}>
-              0{modeIndex(presentation.id) + 1} / 0{MODE_ORDER.length}
+              0{modeIndex(activeMode) + 1} / 0{MODE_ORDER.length}
             </p>
             <h1 id="mode-title" tabIndex={-1}>
               {locale === 'zh'
-                ? MODE_DEFINITIONS[presentation.id].titlePhrases.zh.map(
+                ? MODE_DEFINITIONS[activeMode].titlePhrases.zh.map(
                     (phrase, index) => (
                       <span key={phrase}>
                         {index > 0 ? <wbr /> : null}
@@ -221,9 +230,9 @@ export function App() {
                       </span>
                     ),
                   )
-                : MODE_DEFINITIONS[presentation.id].title.en}
+                : MODE_DEFINITIONS[activeMode].title.en}
             </h1>
-            <p>{MODE_DEFINITIONS[presentation.id].question[locale]}</p>
+            <p>{MODE_DEFINITIONS[activeMode].question[locale]}</p>
           </section>
         )}
 
@@ -248,40 +257,36 @@ export function App() {
               keyboardMovedLabel={t.globeMoved}
               keyboardZoomedLabel={t.globeZoomed}
               keyboardSelectedLabel={t.globeSelected}
-              countryFills={presentation?.globe.countryFills ?? null}
-              showAntipodes={presentation?.globe.showAntipodes ?? false}
-              sunline={presentation?.globe.sunline ?? null}
-              antipodeRelation={presentation?.globe.antipodeRelation ?? null}
+              countryFills={globe.countryFills}
+              showAntipodes={globe.showAntipodes}
+              sunline={globe.sunline}
+              antipodeRelation={globe.antipodeRelation}
             />
           </Suspense>
         </ErrorBoundary>
       </div>
 
-      {presentation ? (
-        <>
-          {MODE_DEFINITIONS[presentation.id].curation === 'archived' ? (
-            <div className={styles.notice} role="status">
-              <p>{t.archiveNotice}</p>
-            </div>
-          ) : null}
-          <ModeResult
-            locale={locale}
-            presentation={presentation}
-            onCameraFocus={requestCameraFocus}
-          />
+      {activeMode !== null &&
+      MODE_DEFINITIONS[activeMode].curation === 'archived' ? (
+        <div className={styles.notice} role="status">
+          <p>{t.archiveNotice}</p>
+        </div>
+      ) : null}
 
-          {hoveredCountry ? (
-            <p className={styles.hoverLabel}>{hoveredCountry.name}</p>
-          ) : null}
+      {activeMode !== null ? (
+        <ModeBoundary
+          mode={activeMode}
+          label={t.componentFailed}
+          retry={t.retry}
+          returnLabel={t.returnToLobby}
+          onReturnToLobby={returnToLobby}
+        >
+          <ModeExperience locale={locale} onCameraFocus={requestCameraFocus} />
+        </ModeBoundary>
+      ) : null}
 
-          <ModeBoundary
-            mode={presentation.id}
-            label={t.componentFailed}
-            retry={t.retry}
-          >
-            <ModeControls locale={locale} presentation={presentation} />
-          </ModeBoundary>
-        </>
+      {hoveredCountry ? (
+        <p className={styles.hoverLabel}>{hoveredCountry.name}</p>
       ) : null}
 
       <FirstInteractionHint locale={locale} />
@@ -300,6 +305,7 @@ export function App() {
         <ModePreview
           locale={locale}
           modeId={previewMode}
+          restoreFocusRef={previewRestoreRef}
           onClose={closeModePreview}
           onEnter={enterFromPreview}
         />
@@ -321,18 +327,29 @@ function ModeBoundary({
   mode,
   label,
   retry,
+  returnLabel,
+  onReturnToLobby,
   children,
 }: {
   mode: string;
   label: string;
   retry: string;
+  returnLabel: string;
+  onReturnToLobby: () => void;
   children: ReactNode;
 }) {
   return (
     <ErrorBoundary
       resetKey={mode}
-      scope={`${mode} controls`}
-      fallback={<RecoverableFallback label={label} retryLabel={retry} />}
+      scope={`${mode} experience`}
+      fallback={
+        <RecoverableFallback
+          label={label}
+          retryLabel={retry}
+          returnLabel={returnLabel}
+          onReturnToLobby={onReturnToLobby}
+        />
+      }
     >
       {children}
     </ErrorBoundary>
@@ -342,10 +359,14 @@ function ModeBoundary({
 function RecoverableFallback({
   label,
   retryLabel,
+  returnLabel,
+  onReturnToLobby,
   globe = false,
 }: {
   label: string;
   retryLabel: string;
+  returnLabel?: string;
+  onReturnToLobby?: () => void;
   globe?: boolean;
 }) {
   return (
@@ -357,6 +378,11 @@ function RecoverableFallback({
       <button type="button" onClick={() => window.location.reload()}>
         {retryLabel}
       </button>
+      {!globe && returnLabel && onReturnToLobby ? (
+        <button type="button" onClick={onReturnToLobby}>
+          {returnLabel}
+        </button>
+      ) : null}
     </section>
   );
 }
