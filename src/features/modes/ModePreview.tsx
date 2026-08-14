@@ -70,7 +70,9 @@ export function ModePreview({
         <p className={styles.summary}>{mode.summary[locale]}</p>
         <p className={styles.sourceScope}>{mode.sourceScope[locale]}</p>
         <p className={styles.maturity}>
-          {mode.maturity === 'stable' ? t.maturityStable : t.maturityExperimental}
+          {mode.maturity === 'stable'
+            ? t.maturityStable
+            : t.maturityExperimental}
         </p>
         <div className={styles.actions}>
           <button ref={enterButton} type="button" onClick={onEnter}>

@@ -1,6 +1,6 @@
 # Mundus Exhibit Shell V2
 
-Status: accepted product and architecture design; implementation not started
+Status: implemented and locally verified; awaiting product-owner review
 
 Accepted: 2026-08-15, Asia/Shanghai
 

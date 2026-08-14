@@ -61,7 +61,8 @@ export const messages = {
     returnToLobby: '返回展厅',
     previewClose: '关闭预览',
     atlasTitle: '观察地球的方式',
-    atlasDescription: '选择一种观察方式，先预览再进入。切换观察不会移动你正在看的地方。',
+    atlasDescription:
+      '选择一种观察方式，先预览再进入。切换观察不会移动你正在看的地方。',
     atlasClose: '关闭模式图鉴',
     atlasViewing: '正在观察',
     atlasPreview: '预览',

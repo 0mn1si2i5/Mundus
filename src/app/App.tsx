@@ -207,10 +207,7 @@ export function App() {
                     (phrase, index) => (
                       <span key={phrase}>
                         {index > 0 ? <wbr /> : null}
-                        <span
-                          className={styles.titlePhrase}
-                          data-title-phrase
-                        >
+                        <span className={styles.titlePhrase} data-title-phrase>
                           {phrase}
                         </span>
                       </span>
@@ -284,9 +281,7 @@ export function App() {
                 <button
                   key={item.id}
                   className={
-                    item.id === presentation.id
-                      ? styles.activeMode
-                      : undefined
+                    item.id === presentation.id ? styles.activeMode : undefined
                   }
                   type="button"
                   onClick={() => selectMode(item.id)}

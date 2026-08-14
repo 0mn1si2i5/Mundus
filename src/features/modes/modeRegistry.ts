@@ -149,7 +149,9 @@ function definitionsInOrder(): ModeDefinition[] {
 
 export function featuredModes(): readonly ModeDefinition[] {
   return definitionsInOrder()
-    .filter((mode) => mode.curation === 'featured' && mode.featuredRank !== null)
+    .filter(
+      (mode) => mode.curation === 'featured' && mode.featuredRank !== null,
+    )
     .sort((a, b) => (a.featuredRank ?? 0) - (b.featuredRank ?? 0))
     .slice(0, MAX_FEATURED_MODES);
 }

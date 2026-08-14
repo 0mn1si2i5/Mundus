@@ -22,12 +22,8 @@ describe('ModePreview', () => {
   it('shows catalog metadata without activating the mode', () => {
     setup();
     expect(screen.getByRole('heading', { name: 'Other Side' })).toBeVisible();
-    expect(
-      screen.getByText(/If you passed through Earth/),
-    ).toBeVisible();
-    expect(
-      screen.getByText(/Choose a point and pass through/),
-    ).toBeVisible();
+    expect(screen.getByText(/If you passed through Earth/)).toBeVisible();
+    expect(screen.getByText(/Choose a point and pass through/)).toBeVisible();
     expect(screen.getByText(/GeoNames major cities/)).toBeVisible();
     expect(screen.getByText('Stable')).toBeVisible();
   });

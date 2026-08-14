@@ -74,7 +74,8 @@ describe('ModeAtlas', () => {
 
   it('requests a preview for the selected mode', () => {
     const { onSelectMode } = renderAtlas();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Preview' })[0]);
+    const preview = screen.getAllByRole('button', { name: 'Preview' })[0]!;
+    fireEvent.click(preview);
     expect(onSelectMode).toHaveBeenCalled();
   });
 

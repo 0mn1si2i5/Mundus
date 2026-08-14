@@ -80,9 +80,7 @@ describe('mode registry', () => {
       ),
     ).toBe(true);
     expect(
-      modes.every((mode) =>
-        ['stable', 'experimental'].includes(mode.maturity),
-      ),
+      modes.every((mode) => ['stable', 'experimental'].includes(mode.maturity)),
     ).toBe(true);
   });
 

@@ -54,7 +54,13 @@ const coordinateSchema = z
       Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180,
   );
 
-const LEGACY_STATE_KEYS = ['mode', 'point', 'indicator', 'year', 'time'] as const;
+const LEGACY_STATE_KEYS = [
+  'mode',
+  'point',
+  'indicator',
+  'year',
+  'time',
+] as const;
 
 export function parseUrlState(
   search: string,
