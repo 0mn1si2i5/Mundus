@@ -86,16 +86,44 @@ The executor must not, without separate authorization:
 
 ## 6. Stop Conditions
 
-Stop immediately and report, without proceeding, on:
+Ordinary test, lint, type, or build failures are repair input for the
+continuous harness, not stop conditions. Within scope, the executor reproduces,
+classifies (implementation defect, wrong expectation, environment issue, or
+reproducible flake), and repairs the root cause without loosening assertions,
+adding retries, increasing timeouts, or skipping tests.
 
-- product ambiguity or an unclear expected finding;
-- unexpected dirty state or unaccounted changes;
-- failing tests or a reproduced flaky or timed-out result;
-- missing dependencies or toolchain drift;
-- scope change beyond the accepted packet;
-- any action crossing the authorization boundary.
+Stop immediately and report, without proceeding, only on:
 
-## 7. Return Format
+- crossing an authorization or scope boundary;
+- genuine product ambiguity with no design answer;
+- unexpected or unaccounted local changes;
+- a destructive or remote action the packet does not authorize;
+- scope growth beyond the accepted packet;
+- an external blocker that survives at least three distinct, bounded
+  diagnostic or safe-recovery attempts.
+
+## 7. Continuous Execution Harness
+
+For an approved multi-step packet, the executor runs one continuous loop and
+does not request confirmation between slices:
+
+1. preflight the current state;
+2. write a failing test that proves the current gap;
+3. confirm it fails for the expected reason;
+4. implement the minimum to pass;
+5. run the focused test;
+6. on failure, classify the root cause and repair within scope;
+7. once focused tests pass, run the relevant regression;
+8. run `git diff --check`;
+9. review the staged diff;
+10. create a local commit at the approved boundary;
+11. proceed to the next slice;
+12. run the full gate at the end and report.
+
+Harness scratch state and logs live only under `/tmp` or the executor context,
+never in the tracked repository.
+
+## 8. Return Format
 
 The executor returns:
 
@@ -110,7 +138,7 @@ The executor returns:
 - blocking decision, if any;
 - recommended next action.
 
-## 8. Acceptance Loop
+## 9. Acceptance Loop
 
 A task completes only through the full main-brain loop:
 
@@ -134,7 +162,7 @@ A task completes only through the full main-brain loop:
    authorization does any push, pull request, merge, deploy, tag, release, or
    remote-setting change proceed.
 
-## 9. Evidence Rule
+## 10. Evidence Rule
 
 A conclusion of "complete", "fixed", or "tests pass" is valid only when it
 comes from fresh verification run against the final commit, not from an earlier

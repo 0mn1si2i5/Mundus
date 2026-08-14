@@ -44,6 +44,11 @@ the globe. The orbit is editorial, not a complete navigation surface. It does
 not autoplay. Labels may respond with restrained parallax to direct user
 interaction; under reduced motion they remain still.
 
+The initial shell has exactly three real modes, so the first orbit shows those
+three labels. It must not fabricate placeholder modes to fill a target count.
+As the collection grows, the curated orbit targets four to six labels, with a
+hard cap of six.
+
 On mobile, the same curated sequence appears as a horizontally scrollable
 label strip below the globe. Mobile does not shrink the complete desktop orbit
 into small or overlapping touch targets.

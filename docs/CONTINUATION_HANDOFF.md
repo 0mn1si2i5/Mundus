@@ -355,7 +355,9 @@ For an accepted product packet:
    architecture boundaries, failure states, accessibility, and acceptance;
 2. obtain product-owner approval;
 3. write a repository-grounded implementation plan;
-4. use an isolated `codex/` branch or worktree where appropriate;
+4. use the task packet's independent `codex/` branch inside a `.worktrees/`
+   worktree by default; only bootstrap or governance tasks may be exempted by
+   explicit main-brain approval;
 5. demonstrate the current gap with a focused failing test or deterministic
    reproduction;
 6. implement in small, reviewable slices;
