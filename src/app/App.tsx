@@ -17,6 +17,8 @@ import { ModeAtlas } from '../features/modes/ModeAtlas';
 import { ModeControls } from '../features/modes/ModeControls';
 import { ModeResult } from '../features/modes/ModeResult';
 import { useModePresentation } from '../features/modes/useModePresentation';
+import { ExhibitLobby } from '../features/modes/ExhibitLobby';
+import { ModePreview } from '../features/modes/ModePreview';
 import { FirstInteractionHint } from '../features/discovery/FirstInteractionHint';
 import { ShareDialog } from '../features/share/ShareDialog';
 import { useAppStore } from '../state/appStore';
@@ -69,13 +71,17 @@ export function App() {
   const [atlasOpen, setAtlasOpen] = useState(false);
   const locale = useAppStore((state) => state.locale);
   const activeMode = useAppStore((state) => state.activeMode);
+  const previewMode = useAppStore((state) => state.previewMode);
   const point = useAppStore((state) => state.point);
   const hoveredCountry = useAppStore((state) => state.hoveredCountry);
   const selectMode = useAppStore((state) => state.selectMode);
+  const openModePreview = useAppStore((state) => state.openModePreview);
+  const closeModePreview = useAppStore((state) => state.closeModePreview);
+  const enterPreviewMode = useAppStore((state) => state.enterPreviewMode);
+  const exitMode = useAppStore((state) => state.exitMode);
   const requestCameraFocus = useAppStore((state) => state.requestCameraFocus);
   const setLocale = useAppStore((state) => state.setLocale);
   const t = messages[locale];
-  const mode = MODE_DEFINITIONS[activeMode];
   const presentation = useModePresentation();
   useUrlState();
   useCountrySelection();
@@ -85,6 +91,20 @@ export function App() {
     setAtlasOpen(false);
     window.requestAnimationFrame(() => {
       document.getElementById('mode-title')?.focus();
+    });
+  }
+
+  function enterFromPreview() {
+    enterPreviewMode();
+    window.requestAnimationFrame(() => {
+      document.getElementById('mode-title')?.focus();
+    });
+  }
+
+  function returnToLobby() {
+    exitMode();
+    window.requestAnimationFrame(() => {
+      document.getElementById('lobby-heading')?.focus();
     });
   }
 
@@ -109,7 +129,17 @@ export function App() {
       <div className={styles.stage} data-testid="app-stage">
         <header className={styles.header}>
           <div>
-            <a className={styles.brand} href="./" aria-label="Mundus home">
+            <a
+              className={styles.brand}
+              href="./"
+              aria-label="Mundus home"
+              onClick={(event) => {
+                if (activeMode !== null) {
+                  event.preventDefault();
+                  returnToLobby();
+                }
+              }}
+            >
               MUNDUS
             </a>
             <p className={styles.eyebrow}>{t.laboratory}</p>
@@ -146,32 +176,41 @@ export function App() {
           </div>
         </header>
 
-        <section
-          key={activeMode}
-          className={styles.intro}
-          data-mode={activeMode}
-          aria-labelledby="mode-title"
-        >
-          <p className={styles.index}>
-            0{modeIndex(activeMode) + 1} / 0{MODE_ORDER.length}
-          </p>
-          <h1 id="mode-title" tabIndex={-1}>
-            {locale === 'zh'
-              ? mode.titlePhrases.zh.map((phrase, index) => (
-                  <span key={phrase}>
-                    {index > 0 ? <wbr /> : null}
-                    <span className={styles.titlePhrase} data-title-phrase>
-                      {phrase}
-                    </span>
-                  </span>
-                ))
-              : mode.title.en}
-          </h1>
-          <p>{mode.question[locale]}</p>
-        </section>
+        {presentation === null ? (
+          <ExhibitLobby locale={locale} onSelectPreview={openModePreview} />
+        ) : (
+          <section
+            key={presentation.id}
+            className={styles.intro}
+            data-mode={presentation.id}
+            aria-labelledby="mode-title"
+          >
+            <p className={styles.index}>
+              0{modeIndex(presentation.id) + 1} / 0{MODE_ORDER.length}
+            </p>
+            <h1 id="mode-title" tabIndex={-1}>
+              {locale === 'zh'
+                ? MODE_DEFINITIONS[presentation.id].titlePhrases.zh.map(
+                    (phrase, index) => (
+                      <span key={phrase}>
+                        {index > 0 ? <wbr /> : null}
+                        <span
+                          className={styles.titlePhrase}
+                          data-title-phrase
+                        >
+                          {phrase}
+                        </span>
+                      </span>
+                    ),
+                  )
+                : MODE_DEFINITIONS[presentation.id].title.en}
+            </h1>
+            <p>{MODE_DEFINITIONS[presentation.id].question[locale]}</p>
+          </section>
+        )}
 
         <ErrorBoundary
-          resetKey={activeMode}
+          resetKey={activeMode ?? 'lobby'}
           scope="Globe viewport"
           fallback={
             <RecoverableFallback
@@ -183,7 +222,7 @@ export function App() {
         >
           <Suspense fallback={<GlobeFallback label={t.loadingGlobe} />}>
             <GlobeViewport
-              diagnosticResetKey={`${activeMode}:${point.latitude},${point.longitude}`}
+              diagnosticResetKey={`${activeMode ?? 'lobby'}:${point.latitude},${point.longitude}`}
               fallbackLabel={t.fallback}
               contextLostLabel={t.contextLost}
               ariaLabel={t.globeLabel}
@@ -191,46 +230,62 @@ export function App() {
               keyboardMovedLabel={t.globeMoved}
               keyboardZoomedLabel={t.globeZoomed}
               keyboardSelectedLabel={t.globeSelected}
-              countryFills={presentation.globe.countryFills}
-              showAntipodes={presentation.globe.showAntipodes}
-              sunline={presentation.globe.sunline}
-              antipodeRelation={presentation.globe.antipodeRelation}
+              countryFills={presentation?.globe.countryFills ?? null}
+              showAntipodes={presentation?.globe.showAntipodes ?? false}
+              sunline={presentation?.globe.sunline ?? null}
+              antipodeRelation={presentation?.globe.antipodeRelation ?? null}
             />
           </Suspense>
         </ErrorBoundary>
       </div>
 
-      <ModeResult
-        locale={locale}
-        presentation={presentation}
-        onCameraFocus={requestCameraFocus}
-      />
+      {presentation ? (
+        <>
+          <ModeResult
+            locale={locale}
+            presentation={presentation}
+            onCameraFocus={requestCameraFocus}
+          />
 
-      {hoveredCountry ? (
-        <p className={styles.hoverLabel}>{hoveredCountry.name}</p>
+          {hoveredCountry ? (
+            <p className={styles.hoverLabel}>{hoveredCountry.name}</p>
+          ) : null}
+
+          <ModeBoundary
+            mode={presentation.id}
+            label={t.componentFailed}
+            retry={t.retry}
+          >
+            <ModeControls locale={locale} presentation={presentation} />
+          </ModeBoundary>
+
+          <nav className={styles.modeNav} aria-label={t.modes}>
+            {MODE_ORDER.map((modeId, index) => {
+              const item = MODE_DEFINITIONS[modeId];
+              return (
+                <button
+                  key={item.id}
+                  className={
+                    item.id === presentation.id
+                      ? styles.activeMode
+                      : undefined
+                  }
+                  type="button"
+                  onClick={() => selectMode(item.id)}
+                  aria-current={
+                    item.id === presentation.id ? 'page' : undefined
+                  }
+                >
+                  <span className={styles.modeNavIndex}>0{index + 1}</span>
+                  <span className={styles.modeNavTitle}>
+                    {item.title[locale]}
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
+        </>
       ) : null}
-
-      <ModeBoundary mode={activeMode} label={t.componentFailed} retry={t.retry}>
-        <ModeControls locale={locale} presentation={presentation} />
-      </ModeBoundary>
-
-      <nav className={styles.modeNav} aria-label={t.modes}>
-        {MODE_ORDER.map((modeId, index) => {
-          const item = MODE_DEFINITIONS[modeId];
-          return (
-            <button
-              key={item.id}
-              className={item.id === activeMode ? styles.activeMode : undefined}
-              type="button"
-              onClick={() => selectMode(item.id)}
-              aria-current={item.id === activeMode ? 'page' : undefined}
-            >
-              <span className={styles.modeNavIndex}>0{index + 1}</span>
-              <span className={styles.modeNavTitle}>{item.title[locale]}</span>
-            </button>
-          );
-        })}
-      </nav>
 
       <FirstInteractionHint locale={locale} />
       {shareOpen ? (
@@ -239,9 +294,17 @@ export function App() {
       {atlasOpen ? (
         <ModeAtlas
           locale={locale}
-          activeMode={activeMode}
+          activeMode={activeMode!}
           onSelectMode={chooseModeFromAtlas}
           onClose={() => setAtlasOpen(false)}
+        />
+      ) : null}
+      {previewMode ? (
+        <ModePreview
+          locale={locale}
+          modeId={previewMode}
+          onClose={closeModePreview}
+          onEnter={enterFromPreview}
         />
       ) : null}
     </main>

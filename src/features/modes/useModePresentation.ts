@@ -58,7 +58,12 @@ export type ModePresentation =
       };
     };
 
-export function useModePresentation(): ModePresentation {
+/**
+ * Returns the active-mode presentation, or `null` when the shell is in the
+ * neutral lobby. Inactive-mode resources stay idle and inactive-mode
+ * computations are skipped.
+ */
+export function useModePresentation(): ModePresentation | null {
   const activeMode = useAppStore((state) => state.activeMode);
   const point = useAppStore((state) => state.point);
   const selectedCountry = useAppStore((state) => state.selectedCountry);
@@ -68,32 +73,40 @@ export function useModePresentation(): ModePresentation {
   const sunlineTimeMs = useAppStore((state) => state.sunlineTimeMs);
   const developmentData = useDevelopmentDataset(activeMode === 'development');
   const cityIndex = useGeoNamesCityIndex(activeMode === 'antipodes');
+
   const relation = useMemo(
     () =>
-      createAntipodeRelation(
-        point,
-        cityIndex.status === 'ready' ? cityIndex.data : undefined,
-      ),
-    [cityIndex, point],
+      activeMode === 'antipodes'
+        ? createAntipodeRelation(
+            point,
+            cityIndex.status === 'ready' ? cityIndex.data : undefined,
+          )
+        : null,
+    [activeMode, cityIndex, point],
   );
   const developmentFills = useMemo(() => {
-    if (developmentData.status !== 'ready') return null;
+    if (activeMode !== 'development' || developmentData.status !== 'ready') {
+      return null;
+    }
     return new Map(
       [...valuesByCountryId(developmentData.data, indicator, year)].map(
         ([countryId, value]) => [countryId, developmentColor(value)],
       ),
     );
-  }, [developmentData, indicator, year]);
+  }, [activeMode, developmentData, indicator, year]);
   const sun = useMemo(() => {
+    if (activeMode !== 'sunline') return null;
     const position = solarPosition(sunlineTimeMs);
     return {
       position,
       observation: observeSun(point, sunlineTimeMs),
       events: solarEventsUtc(point, sunlineTimeMs),
     };
-  }, [point, sunlineTimeMs]);
+  }, [activeMode, point, sunlineTimeMs]);
 
   switch (activeMode) {
+    case null:
+      return null;
     case 'antipodes':
       return {
         id: activeMode,
@@ -105,7 +118,8 @@ export function useModePresentation(): ModePresentation {
         },
         selectedCountry,
         antipodeCountry,
-        relation,
+        // activeMode === 'antipodes' guarantees a non-null relation.
+        relation: relation!,
         relationStatus: cityIndex.status,
         cityIndex,
       };
@@ -127,12 +141,13 @@ export function useModePresentation(): ModePresentation {
         globe: {
           countryFills: null,
           showAntipodes: false,
-          sunline: { subsolarPoint: sun.position.subsolarPoint },
+          sunline: { subsolarPoint: sun!.position.subsolarPoint },
           antipodeRelation: null,
         },
         point,
         selectedCountry,
-        sun,
+        // activeMode === 'sunline' guarantees a non-null sun.
+        sun: sun!,
       };
     default:
       return assertNever(activeMode);

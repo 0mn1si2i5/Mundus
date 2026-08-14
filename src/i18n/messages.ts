@@ -55,6 +55,11 @@ export const messages = {
     curationArchived: '归档',
     maturityStable: '稳定',
     maturityExperimental: '实验',
+    lobbyTitle: '选择一种观察',
+    lobbyDescription: '转动地球，选择地点，再进入一种观察方式。',
+    enterObservation: '进入观察',
+    returnToLobby: '返回展厅',
+    previewClose: '关闭预览',
   },
   en: {
     laboratory: 'Interactive terrestrial laboratory',
@@ -113,5 +118,10 @@ export const messages = {
     curationArchived: 'Archived',
     maturityStable: 'Stable',
     maturityExperimental: 'Experimental',
+    lobbyTitle: 'Choose an observation',
+    lobbyDescription: 'Turn Earth, choose a place, then enter a way of seeing.',
+    enterObservation: 'Enter observation',
+    returnToLobby: 'Return to lobby',
+    previewClose: 'Close preview',
   },
 } as const;

@@ -1,0 +1,139 @@
+.lobby {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.heading {
+  position: absolute;
+  top: 22%;
+  left: calc(2.5rem + env(safe-area-inset-left));
+  max-width: min(26rem, 31vw);
+}
+
+.heading h1 {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 4.8vw, 5.6rem);
+  font-weight: 400;
+  letter-spacing: -0.05em;
+  line-height: 0.95;
+}
+
+.heading p {
+  max-width: 27rem;
+  margin: 0;
+  color: var(--color-subtle);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+:global(html:lang(zh-CN)) .heading h1 {
+  font-family: var(--font-cjk-display);
+  font-weight: 500;
+}
+
+.orbit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.orbitItem {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translate(
+    calc(-50% + var(--orbit-x, 0vw)),
+    calc(-50% + var(--orbit-y, 0vh))
+  );
+  pointer-events: auto;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  align-items: center;
+  min-width: 8rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  color: var(--color-text);
+  background: var(--color-panel);
+  box-shadow: var(--shadow-paper);
+  font: inherit;
+  cursor: pointer;
+  transition: transform 200ms ease;
+}
+
+.label:hover {
+  transform: translateY(-0.15rem);
+}
+
+.index {
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+}
+
+.title {
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+}
+
+:global(html:lang(zh-CN)) .title {
+  font-family: var(--font-cjk-sans);
+}
+
+@media (max-width: 760px) {
+  .heading {
+    position: relative;
+    top: auto;
+    left: auto;
+    max-width: none;
+    margin: 1rem 1.25rem 0;
+  }
+
+  .heading h1 {
+    font-size: clamp(1.9rem, 8vw, 2.6rem);
+  }
+
+  .orbit {
+    position: absolute;
+    top: auto;
+    right: 0;
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+    left: 0;
+    display: flex;
+    gap: 0.6rem;
+    overflow-x: auto;
+    padding: 0.25rem 1.25rem;
+    scroll-snap-type: x proximity;
+  }
+
+  .orbitItem {
+    position: static;
+    flex: 0 0 auto;
+    transform: none;
+    scroll-snap-align: start;
+  }
+
+  .label {
+    min-width: 8.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .label {
+    transition: none;
+  }
+
+  .label:hover {
+    transform: none;
+  }
+}
