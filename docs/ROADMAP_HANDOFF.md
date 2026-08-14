@@ -11,8 +11,10 @@ The next accepted product architecture is
 [`docs/EXHIBIT_SHELL_V2.md`](EXHIBIT_SHELL_V2.md): a mode-neutral globe lobby,
 curated featured orbit, scalable Mode Atlas, explicit mode previews, and
 versioned URL compatibility for a growing observation collection. Its design
-is accepted; implementation has not started and still requires a reviewed
-detailed plan. This direction does not reopen GHSL or authorize a new mode.
+is accepted. An implementation candidate exists on the local
+`codex/exhibit-shell-v2` branch and is awaiting product-owner review; it is
+not published, merged, tagged, or released. This direction does not reopen
+GHSL or authorize a new mode.
 
 ## 1. Three Planning Layers
 

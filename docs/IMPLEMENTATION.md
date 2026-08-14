@@ -15,6 +15,9 @@ V1.1 的候选期验收、测试、审阅与发布边界见
 
 ## Exhibit Shell V2：中立展厅壳层
 
+本地实现候选位于 `codex/exhibit-shell-v2` 分支。以下条目均为本地验证结果，
+尚未经过产品所有者独立验收，未发布、未合并到 `main`。
+
 - [x] `activeMode: ModeId | null` 与 `previewMode` 状态；`null` 代表中立展厅
 - [x] 裸地址与硬刷新进入展厅；历史无版本与 `v=1` 链接保持 Other Side/V1 语义；`v=2` 活动模式始终显式携带 `mode`
 - [x] 纯元数据目录（curation lifecycle、maturity、tags、featuredRank、双语 sourceScope）与纯 selector
