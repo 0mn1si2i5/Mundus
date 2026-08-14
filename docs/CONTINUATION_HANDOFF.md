@@ -377,9 +377,12 @@ The agent may autonomously perform read-only inspection, local analysis,
 approved in-scope file changes, focused tests, full local gates, and local
 design/plan preparation.
 
+An approved session task packet may authorize staging and local step-wise
+commits. The packet must specify the branch/worktree and the commit boundaries;
+any staging or commit outside the packet still requires separate authorization.
+
 Obtain separate authorization before:
 
-- staging or committing files;
 - pushing a branch or creating/updating a pull request;
 - merging, deploying, tagging, or creating a GitHub Release;
 - changing repository visibility, Pages, protection, vulnerability reporting,

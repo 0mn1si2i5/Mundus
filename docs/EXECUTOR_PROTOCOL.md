@@ -37,7 +37,8 @@ A task packet must include:
 - **SCOPE** — the exact files and steps in scope;
 - **NON-GOALS** — explicit exclusions;
 - **ACCEPTANCE** — measurable acceptance criteria;
-- **EXECUTION** — ordered implementation steps;
+- **EXECUTION** — ordered implementation steps with the exact branch, worktree,
+  and commit boundaries;
 - **VERIFICATION** — exact commands and expected results;
 - **STOP CONDITIONS** — when to stop and report instead of proceeding;
 - **RETURN FORMAT** — the fields the executor must report back.
@@ -58,10 +59,13 @@ anything reproducible from the repository itself.
 
 ## 4. Branch And Worktree Hygiene
 
-- The executor works on an independent `codex/` branch and, when isolation is
-  needed, a `.worktrees/` worktree.
-- Exactly one writer per worktree at a time.
-- Local commits are allowed only at task boundaries.
+- The executor works by default on the task packet's independent `codex/`
+  branch inside a `.worktrees/` worktree. Isolation is mandatory, not optional.
+- Only repository bootstrap or governance tasks may be exempted from the
+  isolated worktree, and only by explicit main-brain approval.
+- Exactly one writer per worktree at a time. The main brain must not modify the
+  executor's worktree concurrently.
+- Local commits are allowed only at the commit boundaries the packet specifies.
 - Never discard unknown or unexpected local changes; they belong to the owner
   unless the current task proves otherwise.
 
@@ -69,6 +73,8 @@ anything reproducible from the repository itself.
 
 The executor must not, without separate authorization:
 
+- stage or commit changes outside the commit boundaries the task packet
+  specifies;
 - push, open or update a pull request, merge, deploy, tag, or create a GitHub
   Release;
 - change repository visibility, Pages, protection, vulnerability reporting,
@@ -104,7 +110,31 @@ The executor returns:
 - blocking decision, if any;
 - recommended next action.
 
-## 8. Evidence Rule
+## 8. Acceptance Loop
+
+A task completes only through the full main-brain loop:
+
+1. **Decision** — the main brain decides the direction and the packet.
+2. **Approval** — the packet is accepted and its scope, boundaries, and
+   acceptance criteria are fixed.
+3. **Preflight and restate** — the executor inspects current state and restates
+   the packet, stopping on any conflict or unexpected dirty state.
+4. **Implement and commit** — step-wise implementation with local commits only
+   at the packet's commit boundaries.
+5. **Self-verify and report** — the executor runs the packet's verification and
+   returns the evidence.
+6. **Independent verification** — the main brain verifies the result itself,
+   not relying on the executor's claim alone.
+7. **Verdict** — the main brain returns one of:
+   - **Accept** — the work satisfies the packet;
+   - **Correct** — specific changes are required before acceptance;
+   - **Block** — a conflict, ambiguity, or out-of-scope change stops the work;
+   - **Reject** — the direction or work is abandoned.
+8. **Remote operations** — only after an Accept verdict and separate
+   authorization does any push, pull request, merge, deploy, tag, release, or
+   remote-setting change proceed.
+
+## 9. Evidence Rule
 
 A conclusion of "complete", "fixed", or "tests pass" is valid only when it
 comes from fresh verification run against the final commit, not from an earlier
