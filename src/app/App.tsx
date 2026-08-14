@@ -79,6 +79,10 @@ export function App() {
   const closeModePreview = useAppStore((state) => state.closeModePreview);
   const enterPreviewMode = useAppStore((state) => state.enterPreviewMode);
   const exitMode = useAppStore((state) => state.exitMode);
+  const navigationNotice = useAppStore((state) => state.navigationNotice);
+  const dismissNavigationNotice = useAppStore(
+    (state) => state.dismissNavigationNotice,
+  );
   const requestCameraFocus = useAppStore((state) => state.requestCameraFocus);
   const setLocale = useAppStore((state) => state.setLocale);
   const t = messages[locale];
@@ -86,12 +90,9 @@ export function App() {
   useUrlState();
   useCountrySelection();
 
-  function chooseModeFromAtlas(selectedMode: ModeId) {
-    selectMode(selectedMode);
+  function previewFromAtlas(selectedMode: ModeId) {
+    openModePreview(selectedMode);
     setAtlasOpen(false);
-    window.requestAnimationFrame(() => {
-      document.getElementById('mode-title')?.focus();
-    });
   }
 
   function enterFromPreview() {
@@ -126,6 +127,18 @@ export function App() {
 
   return (
     <main className={styles.shell}>
+      {navigationNotice ? (
+        <div className={styles.notice} role="status">
+          <p>{t.unknownModeNotice}</p>
+          <button
+            type="button"
+            onClick={dismissNavigationNotice}
+            aria-label={t.dismissNotice}
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
       <div className={styles.stage} data-testid="app-stage">
         <header className={styles.header}>
           <div>
@@ -241,6 +254,11 @@ export function App() {
 
       {presentation ? (
         <>
+          {MODE_DEFINITIONS[presentation.id].curation === 'archived' ? (
+            <div className={styles.notice} role="status">
+              <p>{t.archiveNotice}</p>
+            </div>
+          ) : null}
           <ModeResult
             locale={locale}
             presentation={presentation}
@@ -294,8 +312,8 @@ export function App() {
       {atlasOpen ? (
         <ModeAtlas
           locale={locale}
-          activeMode={activeMode!}
-          onSelectMode={chooseModeFromAtlas}
+          activeMode={activeMode}
+          onSelectMode={previewFromAtlas}
           onClose={() => setAtlasOpen(false)}
         />
       ) : null}
