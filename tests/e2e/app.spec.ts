@@ -3163,6 +3163,14 @@ test('loads GeoNames only for Other Side and reuses one lazy asset', async ({
     )
     .toBe(1);
   expect(requests.some((url) => url.includes('geonames.org'))).toBe(false);
+  // The asset lifecycle now aborts an in-flight request when the last Other
+  // Side consumer leaves, so let the load finish before the mode round trip to
+  // prove the cached index is reused without a second request.
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-antipode-relation-state',
+    'ready',
+    { timeout: 15000 },
+  );
 
   await switchModeFromAtlas(page, '日照线');
   await switchModeFromAtlas(page, '地球另一端');

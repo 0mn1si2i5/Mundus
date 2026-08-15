@@ -30,10 +30,13 @@ export interface NearestMajorCity {
   distanceKm: number;
 }
 
-type DataImporter = () => Promise<{ default: unknown }>;
+type DataImporter = (signal?: AbortSignal) => Promise<{ default: unknown }>;
 
 let importer: DataImporter | null = null;
-let cityPromise: Promise<readonly GeoNamesCity[]> | null = null;
+let cityLoad: {
+  signal?: AbortSignal;
+  promise: Promise<readonly GeoNamesCity[]>;
+} | null = null;
 
 export function decodeGeoNamesCityIndex(
   value: unknown,
@@ -279,23 +282,31 @@ export function configureGeoNamesCityImporter(value: DataImporter) {
   if (!importer) importer = value;
 }
 
-export function loadGeoNamesCityIndex(): Promise<readonly GeoNamesCity[]> {
-  if (cityPromise) return cityPromise;
+export function loadGeoNamesCityIndex(
+  signal?: AbortSignal,
+): Promise<readonly GeoNamesCity[]> {
+  // Reuse a pending or settled load only while its request was not aborted.
+  // A consumer that arrives after the last one left must start a fresh request
+  // instead of inheriting a promise that is already being cancelled.
+  if (cityLoad && !cityLoad.signal?.aborted) return cityLoad.promise;
   if (!importer)
     return Promise.reject(
       new Error('GeoNames city importer is not configured'),
     );
-  cityPromise = importer()
-    .then((module) => decodeGeoNamesCityIndex(module.default))
-    .catch((error) => {
-      cityPromise = null;
-      throw error;
-    });
-  return cityPromise;
+  cityLoad = {
+    signal,
+    promise: importer(signal)
+      .then((module) => decodeGeoNamesCityIndex(module.default))
+      .catch((error) => {
+        cityLoad = null;
+        throw error;
+      }),
+  };
+  return cityLoad.promise;
 }
 
 export function resetGeoNamesCityIndex() {
-  cityPromise = null;
+  cityLoad = null;
   importer = null;
 }
 
