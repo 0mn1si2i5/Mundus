@@ -1678,6 +1678,93 @@ test('keeps the English mode atlas usable at 320px', async ({ page }) => {
   }
 });
 
+async function expectHeaderActionsContained(
+  page: Page,
+  viewport: { width: number; height: number },
+) {
+  const header = page.locator('header').first();
+  const buttons = header.getByRole('button');
+  const count = await buttons.count();
+  expect(count).toBeGreaterThan(0);
+  for (let index = 0; index < count; index += 1) {
+    const button = buttons.nth(index);
+    const box = await button.boundingBox();
+    expect(box, `header action ${index} has a bounding box`).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(-0.5);
+    expect(box!.y).toBeGreaterThanOrEqual(-0.5);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width + 0.5);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height + 0.5);
+    expect(box!.width).toBeGreaterThan(0);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    const hit = await page.evaluate(
+      (point) => document.elementFromPoint(point.x, point.y)?.closest('button'),
+      { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 },
+    );
+    expect(hit).not.toBeNull();
+  }
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+}
+
+test('keeps every lobby and active header action inside compact viewports', async ({
+  page,
+}) => {
+  const compactViewports = [
+    { width: 320, height: 568 },
+    { width: 390, height: 844 },
+    { width: 412, height: 915 },
+  ];
+  for (const viewport of compactViewports) {
+    await page.setViewportSize(viewport);
+
+    await page.goto('./');
+    for (let language = 0; language < 2; language += 1) {
+      if (language === 1) {
+        await page.getByRole('button', { name: '切换为英文' }).click();
+      }
+      await expectHeaderActionsContained(page, viewport);
+      const header = page.locator('header').first();
+      const heading = page.getByRole('heading', { level: 1 });
+      await expect(heading).toBeVisible();
+      const headerBox = await header.boundingBox();
+      const headingBox = await heading.boundingBox();
+      const verticalOverlap =
+        headerBox &&
+        headingBox &&
+        headerBox.y + headerBox.height > headingBox.y &&
+        headingBox.y + headingBox.height > headerBox.y;
+      expect(
+        verticalOverlap,
+        `lobby heading overlaps the header at ${viewport.width}px`,
+      ).toBe(false);
+      if (language === 0) {
+        const strip = page.locator(
+          'section[aria-labelledby="lobby-heading"] ul',
+        );
+        const stripScroll = await strip.evaluate((element) => ({
+          overflowX: getComputedStyle(element).overflowX,
+          scrollWidth: element.scrollWidth,
+          clientWidth: element.clientWidth,
+        }));
+        expect(stripScroll.overflowX).toBe('auto');
+        expect(stripScroll.scrollWidth).toBeGreaterThanOrEqual(
+          stripScroll.clientWidth,
+        );
+      }
+    }
+
+    await page.goto('./?mode=antipodes&v=2');
+    await expectHeaderActionsContained(page, viewport);
+    await page.getByRole('button', { name: '切换为英文' }).click();
+    await expectHeaderActionsContained(page, viewport);
+  }
+});
+
 test('keeps compact result, collapsed controls, and mode navigation separate', async ({
   page,
 }) => {
