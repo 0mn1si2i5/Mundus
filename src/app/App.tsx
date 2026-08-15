@@ -88,6 +88,9 @@ export function App() {
   const globe = useGlobePresentation();
   const atlasButtonRef = useRef<HTMLButtonElement>(null);
   const previewRestoreRef = useRef<HTMLElement | null>(null);
+  // The mode the user entered through an explicit preview. A direct V2 URL
+  // entry leaves this null so exiting falls back to the stable lobby heading.
+  const lobbyEntryModeRef = useRef<ModeId | null>(null);
   useUrlState();
   useCountrySelection();
 
@@ -103,6 +106,7 @@ export function App() {
   }
 
   function enterFromPreview() {
+    lobbyEntryModeRef.current = previewMode;
     enterPreviewMode();
     window.requestAnimationFrame(() => {
       document.getElementById('mode-title')?.focus();
@@ -110,8 +114,19 @@ export function App() {
   }
 
   function returnToLobby() {
+    const entryMode = lobbyEntryModeRef.current;
+    lobbyEntryModeRef.current = null;
     exitMode();
     window.requestAnimationFrame(() => {
+      if (entryMode) {
+        const label = document.querySelector<HTMLElement>(
+          `[data-lobby-mode="${entryMode}"]`,
+        );
+        if (label?.isConnected) {
+          label.focus();
+          return;
+        }
+      }
       document.getElementById('lobby-heading')?.focus();
     });
   }

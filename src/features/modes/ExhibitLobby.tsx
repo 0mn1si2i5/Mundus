@@ -41,6 +41,7 @@ export function ExhibitLobby({
               <button
                 type="button"
                 className={styles.label}
+                data-lobby-mode={mode.id}
                 onClick={() => onSelectPreview(mode.id)}
               >
                 <span className={styles.index}>

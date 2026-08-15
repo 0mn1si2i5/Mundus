@@ -1765,6 +1765,50 @@ test('keeps every lobby and active header action inside compact viewports', asyn
   }
 });
 
+test('returns lobby focus to the originating label and falls back to the heading', async ({
+  page,
+}) => {
+  await page.goto('./');
+  const otherSideLabel = page
+    .locator('section[aria-labelledby="lobby-heading"]')
+    .getByRole('button', { name: /地球另一端/ });
+  await otherSideLabel.click();
+  await page.getByRole('button', { name: '进入观察' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '地球另一端' }),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: '返回展厅' }).click();
+  await expect(otherSideLabel).toBeFocused();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '选择一种观察' }),
+  ).toBeVisible();
+
+  await otherSideLabel.click();
+  await page.getByRole('button', { name: '进入观察' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '地球另一端' }),
+  ).toBeVisible();
+  await page.goBack();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '选择一种观察' }),
+  ).toBeVisible();
+});
+
+test('uses the stable lobby heading when a mode was opened by a direct V2 URL', async ({
+  page,
+}) => {
+  await page.goto('./?mode=sunline&v=2');
+  await expect(
+    page.getByRole('heading', { level: 1, name: '日照线' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: '返回展厅' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '选择一种观察' }),
+  ).toBeVisible();
+  await expect(page.locator('#lobby-heading')).toBeFocused();
+});
+
 test('keeps compact result, collapsed controls, and mode navigation separate', async ({
   page,
 }) => {
