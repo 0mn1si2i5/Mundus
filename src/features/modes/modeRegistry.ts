@@ -2,8 +2,16 @@ import type { Locale } from '../../i18n/messages';
 import { z } from 'zod';
 import { SUNLINE_MAX_TIME_MS, SUNLINE_MIN_TIME_MS } from '../sunline/solar';
 
-export const MODE_ORDER = ['antipodes', 'development', 'sunline'] as const;
+export const MODE_ORDER = [
+  'antipodes',
+  'development',
+  'sunline',
+  'historical-echoes',
+] as const;
 export type ModeId = (typeof MODE_ORDER)[number];
+
+export const AVAILABILITY = ['available', 'coming-soon'] as const;
+export type Availability = (typeof AVAILABILITY)[number];
 
 export const CURATION_LIFECYCLES = [
   'featured',
@@ -30,6 +38,7 @@ export interface ModeDefinition {
   version: 1;
   curation: CurationLifecycle;
   maturity: Maturity;
+  availability: Availability;
   tags: readonly ModeTag[];
   featuredRank: number | null;
   isNew: boolean;
@@ -49,6 +58,7 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
     version: 1,
     curation: 'featured',
     maturity: 'stable',
+    availability: 'available',
     tags: ['place'],
     featuredRank: 1,
     isNew: false,
@@ -78,10 +88,11 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
   development: {
     id: 'development',
     version: 1,
-    curation: 'featured',
+    curation: 'collection',
     maturity: 'experimental',
+    availability: 'available',
     tags: ['humanity'],
-    featuredRank: 2,
+    featuredRank: null,
     isNew: false,
     title: { zh: '发展的不同侧面', en: 'Development, Unpacked' },
     titlePhrases: { zh: ['发展的', '不同侧面'] },
@@ -107,10 +118,11 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
   sunline: {
     id: 'sunline',
     version: 1,
-    curation: 'featured',
+    curation: 'collection',
     maturity: 'experimental',
+    availability: 'available',
     tags: ['time', 'nature'],
-    featuredRank: 3,
+    featuredRank: null,
     isNew: false,
     title: { zh: '日照线', en: 'Sunline' },
     titlePhrases: { zh: ['日照线'] },
@@ -137,6 +149,34 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
       clockMode: z.enum(['live', 'fixed']),
     }),
   },
+  'historical-echoes': {
+    id: 'historical-echoes',
+    version: 1,
+    curation: 'featured',
+    maturity: 'experimental',
+    availability: 'coming-soon',
+    tags: ['place', 'time'],
+    featuredRank: 2,
+    isNew: true,
+    title: { zh: '历史回响', en: 'Historical Echoes' },
+    titlePhrases: { zh: ['历史', '回响'] },
+    question: {
+      zh: '这一点周围，快照收录了多少条具有可解释起始年代、且年代早于 1500 年的记录？这些记录最早能追溯到何时？',
+      en: 'Around this point, how many records in the snapshot carry an interpretable start date before 1500, and how far back do they reach?',
+    },
+    summary: {
+      zh: '观察固定快照中早于 1500 年的记录覆盖与最早可追溯年代。',
+      en: 'Inspect the coverage and earliest reach of pre-1500 records in a fixed snapshot.',
+    },
+    sourceScope: {
+      zh: '数据：固定 Wikidata 2026-08-10 快照，仅用年代早于 1500 年、精度可解释、具有英文或中文标签的 P571/P580 起始记录。',
+      en: 'Data: a fixed Wikidata 2026-08-10 snapshot, using P571/P580 start records before 1500 with interpretable precision and an English or Chinese label.',
+    },
+    cameraPolicy: 'preserve',
+    resources: [],
+    // HE 首版无模式局部状态；共享 point 由 shell 持有。
+    stateSchema: z.object({}),
+  },
 };
 
 export function modeIndex(mode: ModeId): number {
@@ -149,6 +189,22 @@ export function isLocale(value: string | null): value is Locale {
 
 function definitionsInOrder(): ModeDefinition[] {
   return MODE_ORDER.map((id) => MODE_DEFINITIONS[id]);
+}
+
+export function collectionModes(): readonly ModeDefinition[] {
+  return definitionsInOrder().filter((mode) => mode.curation === 'collection');
+}
+
+export function isCatalogModeId(value: string): value is ModeId {
+  return (MODE_ORDER as readonly string[]).includes(value);
+}
+
+export function isComingSoon(mode: ModeId): boolean {
+  return MODE_DEFINITIONS[mode].availability === 'coming-soon';
+}
+
+export function isAvailableMode(mode: ModeId): boolean {
+  return MODE_DEFINITIONS[mode].availability === 'available';
 }
 
 export function featuredModes(): readonly ModeDefinition[] {

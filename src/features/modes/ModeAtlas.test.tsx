@@ -27,12 +27,11 @@ describe('ModeAtlas', () => {
     }
   });
 
-  it('lists the three featured modes by default', () => {
+  it('lists the two featured modes by default', () => {
     renderAtlas();
-    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
     expect(screen.getByText('Other Side')).toBeVisible();
-    expect(screen.getByText('Development, Unpacked')).toBeVisible();
-    expect(screen.getByText('Sunline')).toBeVisible();
+    expect(screen.getByText('Historical Echoes')).toBeVisible();
   });
 
   it('shows an empty archived view', () => {
@@ -41,15 +40,16 @@ describe('ModeAtlas', () => {
     expect(screen.getByText('No matching observations.')).toBeVisible();
   });
 
-  it('shows an honest empty new-observations view', () => {
+  it('shows the new observations view with Historical Echoes', () => {
     renderAtlas();
     fireEvent.click(screen.getByRole('tab', { name: 'New' }));
-    expect(screen.getByText('No new observations yet.')).toBeVisible();
+    expect(screen.getByText('Historical Echoes')).toBeVisible();
     expect(screen.queryByText(/Other Side/)).not.toBeInTheDocument();
   });
 
   it('filters the list by search text', () => {
     renderAtlas();
+    fireEvent.click(screen.getByRole('tab', { name: 'All' }));
     fireEvent.change(
       screen.getByRole('searchbox', { name: 'Search observations' }),
       { target: { value: 'Sunline' } },
@@ -60,20 +60,22 @@ describe('ModeAtlas', () => {
 
   it('filters the list by tag', () => {
     renderAtlas();
+    fireEvent.click(screen.getByRole('tab', { name: 'All' }));
     fireEvent.click(screen.getByRole('button', { name: 'Time' }));
     expect(screen.getByText('Sunline')).toBeVisible();
+    expect(screen.getByText('Historical Echoes')).toBeVisible();
     expect(screen.queryByText('Other Side')).not.toBeInTheDocument();
   });
 
   it('marks the active mode as viewing and disables it', () => {
     renderAtlas('antipodes');
     expect(screen.getByRole('button', { name: 'Viewing' })).toBeDisabled();
-    expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(1);
   });
 
   it('offers a preview for every mode when in the lobby', () => {
     renderAtlas(null);
-    expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(2);
     expect(
       screen.queryByRole('button', { name: 'Viewing' }),
     ).not.toBeInTheDocument();

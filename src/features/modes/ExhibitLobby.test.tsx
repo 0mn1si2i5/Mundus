@@ -32,17 +32,18 @@ describe('ExhibitLobby', () => {
     expect(
       screen.getByRole('list', { name: 'Observation modes' }),
     ).toBeVisible();
-    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
     expect(screen.getByRole('button', { name: /Other Side/ })).toBeVisible();
-    expect(screen.getByRole('button', { name: /Development/ })).toBeVisible();
-    expect(screen.getByRole('button', { name: /Sunline/ })).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: /Historical Echoes/ }),
+    ).toBeVisible();
   });
 
   it('requests a preview for the selected mode without activating it', () => {
     const onSelectPreview = vi.fn();
     render(<ExhibitLobby locale="en" onSelectPreview={onSelectPreview} />);
-    fireEvent.click(screen.getByRole('button', { name: /Sunline/ }));
-    expect(onSelectPreview).toHaveBeenCalledWith('sunline');
+    fireEvent.click(screen.getByRole('button', { name: /Historical Echoes/ }));
+    expect(onSelectPreview).toHaveBeenCalledWith('historical-echoes');
   });
 
   it('disables orbit parallax under reduced motion', () => {
