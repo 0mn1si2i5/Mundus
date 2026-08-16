@@ -58,4 +58,24 @@ describe('ModePreview', () => {
     fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true });
     expect(close).toHaveFocus();
   });
+
+  it('shows coming soon and no enter action for an unreleased mode', () => {
+    render(
+      <ModePreview
+        locale="en"
+        modeId="historical-echoes"
+        onClose={vi.fn()}
+        onEnter={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole('heading', { name: 'Historical Echoes' }),
+    ).toBeVisible();
+    expect(screen.getByText('Coming soon')).toBeVisible();
+    expect(screen.getByText('Experimental')).toBeVisible();
+    expect(
+      screen.queryByRole('button', { name: 'Enter observation' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close preview' })).toHaveFocus();
+  });
 });

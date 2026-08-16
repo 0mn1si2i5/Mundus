@@ -20,15 +20,18 @@ export function ModePreview({
 }) {
   const dialog = useRef<HTMLElement>(null);
   const enterButton = useRef<HTMLButtonElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
   const t = messages[locale];
   const mode = MODE_DEFINITIONS[modeId];
+  const available = mode.availability === 'available';
 
   useEffect(() => {
     const previousFocus = document.activeElement;
     const explicitRestore = restoreFocusRef?.current;
     const root = document.getElementById('root');
     root?.setAttribute('inert', '');
-    enterButton.current?.focus();
+    if (available) enterButton.current?.focus();
+    else closeButton.current?.focus();
     return () => {
       root?.removeAttribute('inert');
       const target =
@@ -36,7 +39,7 @@ export function ModePreview({
         (previousFocus instanceof HTMLElement ? previousFocus : null);
       if (target instanceof HTMLElement && target.isConnected) target.focus();
     };
-  }, [restoreFocusRef]);
+  }, [available, restoreFocusRef]);
 
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.key === 'Escape') {
@@ -81,10 +84,14 @@ export function ModePreview({
             : t.maturityExperimental}
         </p>
         <div className={styles.actions}>
-          <button ref={enterButton} type="button" onClick={onEnter}>
-            {t.enterObservation}
-          </button>
-          <button type="button" onClick={onClose}>
+          {available ? (
+            <button ref={enterButton} type="button" onClick={onEnter}>
+              {t.enterObservation}
+            </button>
+          ) : (
+            <p className={styles.comingSoon}>{t.comingSoon}</p>
+          )}
+          <button ref={closeButton} type="button" onClick={onClose}>
             {t.previewClose}
           </button>
         </div>
