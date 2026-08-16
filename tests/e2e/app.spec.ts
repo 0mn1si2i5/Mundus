@@ -111,8 +111,15 @@ async function expectAntipodeRelationReady(page: Page) {
   await expect(globe).toHaveAttribute('data-antipode-relation-arc-count', '2');
 }
 
-async function switchModeFromAtlas(page: Page, modeTitle: string) {
+async function switchModeFromAtlas(
+  page: Page,
+  modeTitle: string,
+  view: 'featured' | 'collection' = 'featured',
+) {
   await page.getByRole('button', { name: '模式图鉴', exact: true }).click();
+  if (view === 'collection') {
+    await page.getByRole('tab', { name: '其他模式' }).click();
+  }
   await page
     .getByRole('listitem')
     .filter({ hasText: modeTitle })
@@ -673,7 +680,7 @@ test('keeps drag active until the final active pointer ends and clears on mode e
     clientY: 100,
   });
   await expect(globe).toHaveAttribute('data-antipode-drag-state', 'active');
-  await switchModeFromAtlas(page, '发展的不同侧面');
+  await switchModeFromAtlas(page, '发展的不同侧面', 'collection');
   await switchModeFromAtlas(page, '地球另一端');
   await expectAntipodeDragInactive(page);
 
@@ -1073,7 +1080,7 @@ test('clears marker diagnostics by mode and refreshes them for point focus', asy
     '31.2304,121.4737',
   );
 
-  await switchModeFromAtlas(page, '发展的不同侧面');
+  await switchModeFromAtlas(page, '发展的不同侧面', 'collection');
   await expect(globe).not.toHaveAttribute('data-antipode-relation-arc-count');
   await expect(globe).not.toHaveAttribute(
     'data-marker-origin-city-actual-css-diameter',
@@ -1251,7 +1258,7 @@ test('keeps overlapping selected and subsolar roles visible and depth-occluded',
   }
   await page.getByRole('button', { name: '翻到对跖点' }).click();
   await expectCameraCenter(page, 0.15, -178.02);
-  await switchModeFromAtlas(page, '日照线');
+  await switchModeFromAtlas(page, '日照线', 'collection');
   await expect(globe).toHaveAttribute(
     'data-sunline-selected-front-facing',
     'false',
@@ -1439,7 +1446,7 @@ test('selects reviewed night-side land through the Sunline mask with a real poin
   await page.getByLabel('搜索全球主要城市').fill('Tokyo');
   await localizedCityOption(page, '东京').click();
   await expectCameraCenter(page, 35.6895, 139.69171);
-  await switchModeFromAtlas(page, '日照线');
+  await switchModeFromAtlas(page, '日照线', 'collection');
 
   const globe = page.getByRole('region', { name: '交互式三维地球' });
   const canvas = page.locator('canvas');
@@ -1596,7 +1603,7 @@ test('opens the mode atlas and restores keyboard focus', async ({ page }) => {
 
   const atlas = page.getByRole('dialog', { name: '观察地球的方式' });
   await expect(atlas).toBeVisible();
-  await expect(atlas.getByRole('heading', { level: 3 })).toHaveCount(3);
+  await expect(atlas.getByRole('heading', { level: 3 })).toHaveCount(2);
   await expect(page.locator('#root')).toHaveAttribute('inert', '');
   await expect(
     atlas.getByRole('button', { name: '关闭模式图鉴' }),
@@ -1617,6 +1624,7 @@ test('selects a mode from the atlas without moving the selected place', async ({
 }) => {
   await page.goto('./?point=30.25%2C120.75&v=1');
   await page.getByRole('button', { name: '模式图鉴', exact: true }).click();
+  await page.getByRole('tab', { name: '其他模式' }).click();
   const developmentEntry = page
     .getByRole('listitem')
     .filter({ hasText: '发展的不同侧面' });
@@ -2523,11 +2531,9 @@ test('matches the document language to an English browser', async ({
 
 test('keeps observation mode entry keyboard accessible', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /发展的不同侧面/ }).focus();
+  await page.getByRole('button', { name: /地球另一端/ }).focus();
   await page.keyboard.press('Enter');
-  await expect(
-    page.getByRole('dialog', { name: '发展的不同侧面' }),
-  ).toBeVisible();
+  await expect(page.getByRole('dialog', { name: '地球另一端' })).toBeVisible();
 });
 
 test('rotates and selects the globe from the keyboard', async ({ page }) => {
@@ -2593,7 +2599,7 @@ test('resets bilateral focus for new points and mode round trips', async ({
   await expect(page.getByRole('button', { name: '返回起点' })).toBeVisible();
   await expectCameraCenter(page, -31.2304, -58.5263);
 
-  await switchModeFromAtlas(page, '发展的不同侧面');
+  await switchModeFromAtlas(page, '发展的不同侧面', 'collection');
   await expectCameraDiagnosticCleared(page);
   await switchModeFromAtlas(page, '地球另一端');
 
@@ -2606,7 +2612,7 @@ test('resets bilateral focus for new points and mode round trips', async ({
   await expect(page.getByRole('button', { name: '翻到对跖点' })).toBeVisible();
 
   await page.getByRole('button', { name: '翻到对跖点' }).click();
-  await switchModeFromAtlas(page, '发展的不同侧面');
+  await switchModeFromAtlas(page, '发展的不同侧面', 'collection');
   await switchModeFromAtlas(page, '地球另一端');
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
@@ -2739,7 +2745,7 @@ test('restores shareable state and browser history', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
   await expect(page).toHaveURL(/point=0%2C-140/);
 
-  await switchModeFromAtlas(page, '发展的不同侧面');
+  await switchModeFromAtlas(page, '发展的不同侧面', 'collection');
   await expect(page).toHaveURL(/mode=development/);
   await page.goBack();
   await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
@@ -2837,6 +2843,7 @@ test('keeps controls reachable after crossing the mobile breakpoint', async ({
   await expect(page.getByRole('slider', { name: /UTC 时间/ })).toBeVisible();
 
   await page.getByRole('button', { name: '模式图鉴', exact: true }).click();
+  await page.getByRole('tab', { name: '其他模式' }).click();
   const developmentEntry = page
     .getByRole('listitem')
     .filter({ hasText: '发展的不同侧面' });
@@ -3119,11 +3126,11 @@ test('keeps Development data lazy and cached across mode switches', async ({
   await expect(page.locator('canvas')).toBeVisible();
   expect(requests.some((url) => url.includes('undp-hdr'))).toBe(false);
 
-  await switchModeFromAtlas(page, '发展的不同侧面');
+  await switchModeFromAtlas(page, '发展的不同侧面', 'collection');
   await expect(page.getByText('全球中位数', { exact: true })).toBeVisible();
   expect(requests.filter((url) => url.includes('undp-hdr'))).toHaveLength(1);
   await switchModeFromAtlas(page, '地球另一端');
-  await switchModeFromAtlas(page, '发展的不同侧面');
+  await switchModeFromAtlas(page, '发展的不同侧面', 'collection');
   await expect(page.getByText('全球中位数', { exact: true })).toBeVisible();
   expect(requests.filter((url) => url.includes('undp-hdr'))).toHaveLength(1);
 });
@@ -3172,7 +3179,7 @@ test('loads GeoNames only for Other Side and reuses one lazy asset', async ({
     { timeout: 15000 },
   );
 
-  await switchModeFromAtlas(page, '日照线');
+  await switchModeFromAtlas(page, '日照线', 'collection');
   await switchModeFromAtlas(page, '地球另一端');
   const citySearch = page.getByRole('combobox', { name: '搜索全球主要城市' });
   await citySearch.fill('北京');
@@ -3194,7 +3201,7 @@ test('reopens mobile place controls before city search after a mode round trip',
 }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile', 'Responsive panel coverage');
   await page.goto('./?mode=antipodes&v=2');
-  await switchModeFromAtlas(page, '日照线');
+  await switchModeFromAtlas(page, '日照线', 'collection');
   await switchModeFromAtlas(page, '地球另一端');
   await page.getByRole('button', { name: '展开地点控件' }).click();
   const search = page.getByRole('combobox', { name: '搜索全球主要城市' });
@@ -3447,9 +3454,14 @@ test('keeps mode lifecycle stable across repeated switching', async ({
   page.on('pageerror', (error) => pageErrors.push(error.message));
   await page.goto('./?mode=sunline&time=2024-03-20T12%3A00Z&v=1');
 
-  const modeTitles = ['地球另一端', '发展的不同侧面', '日照线'];
+  const modeTitles = [
+    { title: '地球另一端', view: 'featured' },
+    { title: '发展的不同侧面', view: 'collection' },
+    { title: '日照线', view: 'collection' },
+  ] as const;
   for (let index = 0; index < 6; index += 1) {
-    await switchModeFromAtlas(page, modeTitles[index % 3]);
+    const target = modeTitles[index % 3];
+    await switchModeFromAtlas(page, target.title, target.view);
   }
 
   await expect(page.locator('canvas')).toBeVisible();
@@ -3572,7 +3584,7 @@ test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
     await expectMinimumHeight(control, 44);
   }
 
-  await switchModeFromAtlas(page, '发展的不同侧面');
+  await switchModeFromAtlas(page, '发展的不同侧面', 'collection');
   const developmentToggle = page.getByRole('button', { name: '展开发展控件' });
   await expectMinimumHeight(developmentToggle, 44);
   await developmentToggle.click();
@@ -3586,7 +3598,7 @@ test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
     );
   }
 
-  await switchModeFromAtlas(page, '日照线');
+  await switchModeFromAtlas(page, '日照线', 'collection');
   const sunlineToggle = page.getByRole('button', { name: '展开日照线控件' });
   await expectMinimumHeight(sunlineToggle, 44);
   await sunlineToggle.click();
@@ -3888,17 +3900,18 @@ test('opens the neutral lobby on the bare address and after a hard refresh', asy
   ).toBeVisible();
 });
 
-test('presents the three featured modes as one semantic lobby list', async ({
+test('presents the two featured modes as one semantic lobby list', async ({
   page,
 }) => {
   await page.goto('./');
   const list = page.getByRole('list', { name: '观察模式' });
-  await expect(list.getByRole('listitem')).toHaveCount(3);
+  await expect(list.getByRole('listitem')).toHaveCount(2);
   await expect(list.getByRole('button', { name: /地球另一端/ })).toBeVisible();
+  await expect(list.getByRole('button', { name: /历史回响/ })).toBeVisible();
   await expect(
     list.getByRole('button', { name: /发展的不同侧面/ }),
-  ).toBeVisible();
-  await expect(list.getByRole('button', { name: /日照线/ })).toBeVisible();
+  ).not.toBeVisible();
+  await expect(list.getByRole('button', { name: /日照线/ })).not.toBeVisible();
 });
 
 test('opens a preview without changing the URL or loading mode resources', async ({
@@ -4115,6 +4128,7 @@ test('restores focus to the atlas opener after closing an atlas preview', async 
     page.getByRole('dialog', { name: '观察地球的方式' }),
   ).toBeVisible();
 
+  await page.getByRole('tab', { name: '其他模式' }).click();
   await page
     .getByRole('listitem')
     .filter({ hasText: '发展的不同侧面' })
