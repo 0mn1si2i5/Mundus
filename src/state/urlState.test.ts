@@ -84,9 +84,11 @@ describe('URL state codec', () => {
       expect(parseNavigationNotice('?v=2&mode=historical-echoes')).toBe(
         'coming-soon',
       );
-      expect(parseUrlState('?v=2&mode=historical-echoes', nowMs)).toMatchObject({
-        activeMode: null,
-      });
+      expect(parseUrlState('?v=2&mode=historical-echoes', nowMs)).toMatchObject(
+        {
+          activeMode: null,
+        },
+      );
       expect(parseNavigationNotice('?v=2&mode=bogus')).toBe('unknown-mode');
     });
 
