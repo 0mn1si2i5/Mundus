@@ -73,6 +73,7 @@ export const messages = {
     atlasNoNew: '暂无新近观察。',
     atlasFeatured: '精选',
     atlasNew: '新近',
+    atlasCollection: '其他模式',
     atlasAll: '全部',
     atlasArchived: '归档',
     unknownModeNotice: '这个观察方式暂时不可用，已回到展厅。',
@@ -154,6 +155,7 @@ export const messages = {
     atlasNoNew: 'No new observations yet.',
     atlasFeatured: 'Featured',
     atlasNew: 'New',
+    atlasCollection: 'Other modes',
     atlasAll: 'All',
     atlasArchived: 'Archived',
     unknownModeNotice:

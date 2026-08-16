@@ -20,9 +20,9 @@ describe('ModeAtlas', () => {
     return { onSelectMode, onClose, ...utils };
   }
 
-  it('offers Featured, New, All, and Archived views', () => {
+  it('offers Featured, New, Other modes, All, and Archived views', () => {
     renderAtlas();
-    for (const name of ['Featured', 'New', 'All', 'Archived']) {
+    for (const name of ['Featured', 'New', 'Other modes', 'All', 'Archived']) {
       expect(screen.getByRole('tab', { name })).toBeVisible();
     }
   });
@@ -38,6 +38,15 @@ describe('ModeAtlas', () => {
     renderAtlas();
     fireEvent.click(screen.getByRole('tab', { name: 'Archived' }));
     expect(screen.getByText('No matching observations.')).toBeVisible();
+  });
+
+  it('lists Development and Sunline under Other modes', () => {
+    renderAtlas();
+    fireEvent.click(screen.getByRole('tab', { name: 'Other modes' }));
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    expect(screen.getByText('Development, Unpacked')).toBeVisible();
+    expect(screen.getByText('Sunline')).toBeVisible();
+    expect(screen.queryByText('Other Side')).not.toBeInTheDocument();
   });
 
   it('shows the new observations view with Historical Echoes', () => {

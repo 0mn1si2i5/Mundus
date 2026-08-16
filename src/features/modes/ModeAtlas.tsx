@@ -10,6 +10,7 @@ import type { Locale } from '../../i18n/messages';
 import { messages } from '../../i18n/messages';
 import {
   archivedModes,
+  collectionModes,
   defaultVisibleModes,
   featuredModes,
   filterModesByTags,
@@ -20,13 +21,14 @@ import {
 } from './modeRegistry';
 import styles from './ModeAtlas.module.css';
 
-type AtlasView = 'featured' | 'new' | 'all' | 'archived';
+type AtlasView = 'featured' | 'new' | 'collection' | 'all' | 'archived';
 
-const VIEWS: AtlasView[] = ['featured', 'new', 'all', 'archived'];
+const VIEWS: AtlasView[] = ['featured', 'new', 'collection', 'all', 'archived'];
 
 const VIEW_LABEL = {
   featured: 'atlasFeatured',
   new: 'atlasNew',
+  collection: 'atlasCollection',
   all: 'atlasAll',
   archived: 'atlasArchived',
 } as const;
@@ -76,6 +78,8 @@ export function ModeAtlas({
         return featuredModes();
       case 'new':
         return newModes();
+      case 'collection':
+        return collectionModes();
       case 'all':
         return defaultVisibleModes();
       case 'archived':
