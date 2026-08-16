@@ -227,6 +227,14 @@ describe('shell mode state', () => {
     expect(useAppStore.getState().activeMode).toBeNull();
   });
 
+  it('refuses to enter a coming-soon mode preview', () => {
+    useAppStore.getState().openModePreview('historical-echoes');
+    useAppStore.getState().enterPreviewMode();
+
+    expect(useAppStore.getState().activeMode).toBeNull();
+    expect(useAppStore.getState().previewMode).toBe('historical-echoes');
+  });
+
   it('enterPreviewMode stops Sunline playback', () => {
     useAppStore.setState({ sunlinePlaying: true });
     useAppStore.getState().openModePreview('sunline');

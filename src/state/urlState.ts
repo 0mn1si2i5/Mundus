@@ -3,7 +3,11 @@ import {
   normalizeLongitude,
   type GeoPoint,
 } from '../features/antipodes/geography';
-import type { ModeId } from '../features/modes/modeRegistry';
+import {
+  isCatalogModeId,
+  isComingSoon,
+  type ModeId,
+} from '../features/modes/modeRegistry';
 import type { DevelopmentIndicator } from '../features/development/developmentData';
 import {
   clampSunlineTime,
@@ -35,7 +39,7 @@ export interface ShareableState {
   sunlineClockMode: SunlineClockMode;
 }
 
-export type NavigationNotice = 'unknown-mode';
+export type NavigationNotice = 'unknown-mode' | 'coming-soon';
 
 const modeSchema = z.enum(['antipodes', 'development', 'sunline']);
 const developmentIndicatorSchema = z.enum([
@@ -118,7 +122,9 @@ export function parseNavigationNotice(search: string): NavigationNotice | null {
   if (params.get('v') !== '2') return null;
   const modeRaw = params.get('mode');
   if (modeRaw === null) return null;
-  return modeSchema.safeParse(modeRaw).success ? null : 'unknown-mode';
+  if (modeSchema.safeParse(modeRaw).success) return null;
+  if (isCatalogModeId(modeRaw) && isComingSoon(modeRaw)) return 'coming-soon';
+  return 'unknown-mode';
 }
 
 export function serializeUrlState(state: ShareableState): string {
