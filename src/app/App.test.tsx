@@ -192,4 +192,11 @@ describe('App mode failure isolation', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(await screen.findByTestId('globe-canvas')).toBeInTheDocument();
   });
+
+  it('shows a coming-soon notice for an unreleased mode URL', () => {
+    window.history.replaceState(null, '', '?v=2&mode=historical-echoes');
+    useAppStore.setState({ locale: 'en', navigationNotice: 'coming-soon' });
+    render(<App />);
+    expect(screen.getByRole('status')).toHaveTextContent('coming soon');
+  });
 });

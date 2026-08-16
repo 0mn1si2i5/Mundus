@@ -46,6 +46,11 @@ describe('ExhibitLobby', () => {
     expect(onSelectPreview).toHaveBeenCalledWith('historical-echoes');
   });
 
+  it('marks the new featured mode', () => {
+    render(<ExhibitLobby locale="en" onSelectPreview={vi.fn()} />);
+    expect(screen.getByText('New')).toBeVisible();
+  });
+
   it('disables orbit parallax under reduced motion', () => {
     const css = readFileSync(
       resolve(process.cwd(), 'src/features/modes/ExhibitLobby.module.css'),
