@@ -102,7 +102,14 @@ The first release uses a reproducibly derived, fixed snapshot with this scope:
   retained class records its nearest seed root; equal-distance ties use the
   seed order listed above. A class reached through a seed root remains eligible
   even if it also has a denylisted ancestor. This rule is the `current` profile
-  in the extraction script and is fingerprinted in metadata;
+  in the extraction script and is fingerprinted in metadata. The normative
+  adjudication is the local-only spec
+  `docs/superpowers/specs/2026-08-17-historical-echoes-type-closure.md`; that
+  spec is not currently tracked in the public repository, so this paragraph is
+  a design constraint rather than reproducibility evidence. Before any rebuild
+  is authorized, the owner-approved implementation packet must promote the
+  closure rules and fingerprint inputs into tracked evidence and bind the
+  resulting artifact metadata to them;
 - `P571` and `P580` start properties only;
 - a valid Earth `P625` coordinate with finite latitude/longitude;
 - interpretable Wikidata time precision 6 through 11;
