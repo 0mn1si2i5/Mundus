@@ -2717,7 +2717,7 @@ test('focuses bilateral targets immediately with reduced motion', async ({
 });
 
 test('does not turn a globe drag into a point selection', async ({ page }) => {
-  await page.goto('./?mode=sunline&v=1');
+  await page.goto('./?mode=sunline&time=2024-03-20T12%3A00Z&v=1');
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
   const box = await canvas.boundingBox();
