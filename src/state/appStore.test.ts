@@ -222,6 +222,13 @@ describe('shell mode state', () => {
     expect(useAppStore.getState().previewMode).toBeNull();
   });
 
+  it('refuses direct selection of a coming-soon mode', () => {
+    useAppStore.setState({ activeMode: 'development' });
+    useAppStore.getState().selectMode('historical-echoes');
+
+    expect(useAppStore.getState().activeMode).toBe('development');
+  });
+
   it('entering preview without a preview is a no-op', () => {
     useAppStore.getState().enterPreviewMode();
     expect(useAppStore.getState().activeMode).toBeNull();

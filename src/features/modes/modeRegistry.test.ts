@@ -69,7 +69,8 @@ describe('mode registry', () => {
     expect(featured.length).toBeLessThanOrEqual(6);
     expect(featured.map((mode) => mode.id)).toEqual([
       'antipodes',
-      'historical-echoes',
+      'development',
+      'sunline',
     ]);
   });
 
@@ -164,7 +165,7 @@ describe('mode registry', () => {
     expect(MODE_DEFINITIONS.development).toMatchObject({
       isNew: false,
       maturity: 'experimental',
-      curation: 'collection',
+      curation: 'featured',
     });
   });
 
@@ -207,8 +208,7 @@ describe('mode registry', () => {
 
   it('folds non-featured modes into a distinct collection', () => {
     expect(collectionModes().map((mode) => mode.id)).toEqual([
-      'development',
-      'sunline',
+      'historical-echoes',
     ]);
   });
 

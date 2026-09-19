@@ -82,12 +82,15 @@ export const useAppStore = create<AppState>((set) => ({
   hasMeaningfulInteraction: false,
   sunlinePlaying: false,
   selectMode: (activeMode) =>
-    set({
-      activeMode,
-      previewMode: null,
-      hoveredCountry: null,
-      cameraFocusIntent: { side: 'free', target: null },
-      sunlinePlaying: false,
+    set((state) => {
+      if (!isAvailableMode(activeMode)) return state;
+      return {
+        activeMode,
+        previewMode: null,
+        hoveredCountry: null,
+        cameraFocusIntent: { side: 'free', target: null },
+        sunlinePlaying: false,
+      };
     }),
   openModePreview: (previewMode) => set({ previewMode }),
   closeModePreview: () => set({ previewMode: null }),

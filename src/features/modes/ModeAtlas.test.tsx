@@ -27,11 +27,12 @@ describe('ModeAtlas', () => {
     }
   });
 
-  it('lists the two featured modes by default', () => {
+  it('lists the three featured modes by default', () => {
     renderAtlas();
-    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    expect(screen.getAllByRole('listitem')).toHaveLength(3);
     expect(screen.getByText('Other Side')).toBeVisible();
-    expect(screen.getByText('Historical Echoes')).toBeVisible();
+    expect(screen.getByText('Development, Unpacked')).toBeVisible();
+    expect(screen.getByText('Sunline')).toBeVisible();
   });
 
   it('shows an empty archived view', () => {
@@ -40,12 +41,13 @@ describe('ModeAtlas', () => {
     expect(screen.getByText('No matching observations.')).toBeVisible();
   });
 
-  it('lists Development and Sunline under Other modes', () => {
+  it('lists coming-soon modes under Other modes', () => {
     renderAtlas();
     fireEvent.click(screen.getByRole('tab', { name: 'Other modes' }));
-    expect(screen.getAllByRole('listitem')).toHaveLength(2);
-    expect(screen.getByText('Development, Unpacked')).toBeVisible();
-    expect(screen.getByText('Sunline')).toBeVisible();
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+    expect(screen.getByText('Historical Echoes')).toBeVisible();
+    expect(screen.queryByText('Development, Unpacked')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sunline')).not.toBeInTheDocument();
     expect(screen.queryByText('Other Side')).not.toBeInTheDocument();
   });
 
@@ -79,12 +81,12 @@ describe('ModeAtlas', () => {
   it('marks the active mode as viewing and disables it', () => {
     renderAtlas('antipodes');
     expect(screen.getByRole('button', { name: 'Viewing' })).toBeDisabled();
-    expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(2);
   });
 
   it('offers a preview for every mode when in the lobby', () => {
     renderAtlas(null);
-    expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(3);
     expect(
       screen.queryByRole('button', { name: 'Viewing' }),
     ).not.toBeInTheDocument();
