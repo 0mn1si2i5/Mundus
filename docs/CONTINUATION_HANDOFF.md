@@ -309,11 +309,17 @@ It must:
 
 Recommended investigation order:
 
-1. complete the Historical Echoes real-data reproducibility and audit gate,
-   then integrate its manifest and runtime contract without enabling the mode;
-2. align tracked handoff and data documentation with the verified state;
-3. run the post-integration desktop/mobile and artifact gates;
-4. decide whether to close, defer, or formally reopen GHSL before any unrelated
+1. complete the continuation assessment packet and decide whether Historical
+   Echoes is `Should Build`, `Should Delay`, `Should Reject`, or `Need More
+Context`;
+2. obtain product-owner approval and a bounded implementation packet before
+   any data regeneration or runtime integration;
+3. if approved, complete the Historical Echoes real-data reproducibility and
+   audit gate, then integrate its manifest and runtime contract without
+   enabling the mode;
+4. align tracked handoff and data documentation with the verified state;
+5. run the post-integration desktop/mobile and artifact gates;
+6. decide whether to close, defer, or formally reopen GHSL before any unrelated
    product direction.
 
 ## 9. Migration Evidence

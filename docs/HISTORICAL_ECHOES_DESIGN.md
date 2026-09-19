@@ -94,7 +94,15 @@ another mode.
 The first release uses a reproducibly derived, fixed snapshot with this scope:
 
 - Wikidata entity dump dated 2026-08-10;
-- place records selected through the reviewed Historical Echoes type closure;
+- place records selected through the fixed current type closure: the four seed
+  roots `Q811979`, `Q486972`, `Q56061`, and `Q839954`, plus every transitive
+  `P279` subclass reachable from those roots in the dump. Deprecated `P279`
+  statements are ignored. The denylist roots `Q5`, `Q43229`, `Q1190554`, and
+  `Q838948` are barriers and are not included with their descendants. Each
+  retained class records its nearest seed root; equal-distance ties use the
+  seed order listed above. A class reached through a seed root remains eligible
+  even if it also has a denylisted ancestor. This rule is the `current` profile
+  in the extraction script and is fingerprinted in metadata;
 - `P571` and `P580` start properties only;
 - a valid Earth `P625` coordinate with finite latitude/longitude;
 - interpretable Wikidata time precision 6 through 11;
