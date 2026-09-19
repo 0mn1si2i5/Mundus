@@ -125,7 +125,6 @@ async function main() {
     distDir: process.env.MUNDUS_LITERAL_DIST_DIR ?? defaultDistDir,
     port,
   });
-  process.stdout.write(`Serving unchanged dist at ${server.url}\n`);
 
   let closing = false;
   const shutdown = async () => {
@@ -135,6 +134,7 @@ async function main() {
   };
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
+  process.stdout.write(`Serving unchanged dist at ${server.url}\n`);
 }
 
 if (
