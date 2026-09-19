@@ -20,9 +20,9 @@ describe('ModeAtlas', () => {
     return { onSelectMode, onClose, ...utils };
   }
 
-  it('offers Featured, New, All, and Archived views', () => {
+  it('offers Featured, New, Other modes, All, and Archived views', () => {
     renderAtlas();
-    for (const name of ['Featured', 'New', 'All', 'Archived']) {
+    for (const name of ['Featured', 'New', 'Other modes', 'All', 'Archived']) {
       expect(screen.getByRole('tab', { name })).toBeVisible();
     }
   });
@@ -41,15 +41,26 @@ describe('ModeAtlas', () => {
     expect(screen.getByText('No matching observations.')).toBeVisible();
   });
 
-  it('shows an honest empty new-observations view', () => {
+  it('lists coming-soon modes under Other modes', () => {
+    renderAtlas();
+    fireEvent.click(screen.getByRole('tab', { name: 'Other modes' }));
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+    expect(screen.getByText('Historical Echoes')).toBeVisible();
+    expect(screen.queryByText('Development, Unpacked')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sunline')).not.toBeInTheDocument();
+    expect(screen.queryByText('Other Side')).not.toBeInTheDocument();
+  });
+
+  it('shows the new observations view with Historical Echoes', () => {
     renderAtlas();
     fireEvent.click(screen.getByRole('tab', { name: 'New' }));
-    expect(screen.getByText('No new observations yet.')).toBeVisible();
+    expect(screen.getByText('Historical Echoes')).toBeVisible();
     expect(screen.queryByText(/Other Side/)).not.toBeInTheDocument();
   });
 
   it('filters the list by search text', () => {
     renderAtlas();
+    fireEvent.click(screen.getByRole('tab', { name: 'All' }));
     fireEvent.change(
       screen.getByRole('searchbox', { name: 'Search observations' }),
       { target: { value: 'Sunline' } },
@@ -60,8 +71,10 @@ describe('ModeAtlas', () => {
 
   it('filters the list by tag', () => {
     renderAtlas();
+    fireEvent.click(screen.getByRole('tab', { name: 'All' }));
     fireEvent.click(screen.getByRole('button', { name: 'Time' }));
     expect(screen.getByText('Sunline')).toBeVisible();
+    expect(screen.getByText('Historical Echoes')).toBeVisible();
     expect(screen.queryByText('Other Side')).not.toBeInTheDocument();
   });
 

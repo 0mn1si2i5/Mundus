@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -90,9 +91,10 @@ function resetStore() {
   });
 }
 
-function enterModeFromLobby(modeTitle: RegExp) {
-  fireEvent.click(screen.getByRole('button', { name: modeTitle }));
-  fireEvent.click(screen.getByRole('button', { name: '进入观察' }));
+function enterMode(mode: 'development' | 'sunline') {
+  act(() => {
+    useAppStore.getState().selectMode(mode);
+  });
 }
 
 function headerReturnButton() {
@@ -120,7 +122,7 @@ describe('App mode failure isolation', () => {
   it('contains a data-calculation failure while keeping the shell, canvas, and healthy modes', async () => {
     failure.dataCalc = true;
     render(<App />);
-    enterModeFromLobby(/发展的不同侧面/);
+    enterMode('development');
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(headerReturnButton()).toBeEnabled();
@@ -135,7 +137,7 @@ describe('App mode failure isolation', () => {
     ).toBeInTheDocument();
 
     failure.dataCalc = false;
-    enterModeFromLobby(/日照线/);
+    enterMode('sunline');
     expect(screen.getByRole('heading', { name: '日照线' })).toBeInTheDocument();
     expect(await screen.findByTestId('globe-canvas')).toBeInTheDocument();
   });
@@ -143,7 +145,7 @@ describe('App mode failure isolation', () => {
   it('contains a ModeResult render failure while keeping the shell, canvas, and healthy modes', async () => {
     failure.modeResultMode = 'development';
     render(<App />);
-    enterModeFromLobby(/发展的不同侧面/);
+    enterMode('development');
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(headerReturnButton()).toBeEnabled();
@@ -156,7 +158,7 @@ describe('App mode failure isolation', () => {
     ).toBeInTheDocument();
 
     failure.modeResultMode = null;
-    enterModeFromLobby(/日照线/);
+    enterMode('sunline');
     expect(screen.getByRole('heading', { name: '日照线' })).toBeInTheDocument();
     expect(await screen.findByTestId('globe-canvas')).toBeInTheDocument();
   });
@@ -164,7 +166,7 @@ describe('App mode failure isolation', () => {
   it('contains a ModeControls render failure while keeping the shell, canvas, and healthy modes', async () => {
     failure.modeControlsMode = 'development';
     render(<App />);
-    enterModeFromLobby(/发展的不同侧面/);
+    enterMode('development');
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(headerReturnButton()).toBeEnabled();
@@ -177,7 +179,7 @@ describe('App mode failure isolation', () => {
     ).toBeInTheDocument();
 
     failure.modeControlsMode = null;
-    enterModeFromLobby(/日照线/);
+    enterMode('sunline');
     expect(screen.getByRole('heading', { name: '日照线' })).toBeInTheDocument();
     expect(await screen.findByTestId('globe-canvas')).toBeInTheDocument();
   });
@@ -185,9 +187,16 @@ describe('App mode failure isolation', () => {
   it('does not unmount the shared canvas when a mode fails', async () => {
     failure.modeResultMode = 'sunline';
     render(<App />);
-    enterModeFromLobby(/日照线/);
+    enterMode('sunline');
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(await screen.findByTestId('globe-canvas')).toBeInTheDocument();
+  });
+
+  it('shows a coming-soon notice for an unreleased mode URL', () => {
+    window.history.replaceState(null, '', '?v=2&mode=historical-echoes');
+    useAppStore.setState({ locale: 'en', navigationNotice: 'coming-soon' });
+    render(<App />);
+    expect(screen.getByRole('status')).toHaveTextContent('coming soon');
   });
 });

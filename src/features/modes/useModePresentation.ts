@@ -149,6 +149,9 @@ export function useModePresentation(): ModePresentation | null {
         // activeMode === 'sunline' guarantees a non-null sun.
         sun: sun!,
       };
+    case 'historical-echoes':
+      // Coming-soon; 运行时层永不激活（URL schema 不收录 + store 守卫）。
+      return null;
     default:
       return assertNever(activeMode);
   }

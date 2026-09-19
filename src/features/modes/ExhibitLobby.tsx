@@ -48,6 +48,9 @@ export function ExhibitLobby({
                   {String(index + 1).padStart(2, '0')}
                 </span>
                 <span className={styles.title}>{mode.title[locale]}</span>
+                {mode.isNew ? (
+                  <span className={styles.newBadge}>{t.newBadge}</span>
+                ) : null}
               </button>
             </li>
           );

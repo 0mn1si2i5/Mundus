@@ -86,6 +86,16 @@
   letter-spacing: 0.02em;
 }
 
+.newBadge {
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--color-accent);
+  border-radius: 999px;
+  color: var(--color-accent);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 :global(html:lang(zh-CN)) .title {
   font-family: var(--font-cjk-sans);
 }

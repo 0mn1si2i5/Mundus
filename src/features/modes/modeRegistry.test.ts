@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   archivedModes,
+  collectionModes,
   defaultVisibleModes,
   featuredModes,
   filterModesByTags,
+  isAvailableMode,
+  isCatalogModeId,
+  isComingSoon,
   MODE_DEFINITIONS,
   MODE_ORDER,
   modeIndex,
@@ -22,7 +26,7 @@ describe('mode registry', () => {
   });
 
   it('provides one explicit product order with unique identifiers', () => {
-    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2]);
+    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2, 3]);
     expect(new Set(MODE_ORDER).size).toBe(MODE_ORDER.length);
   });
 
@@ -36,6 +40,10 @@ describe('mode registry', () => {
       '不同侧面',
     ]);
     expect(MODE_DEFINITIONS.sunline.titlePhrases.zh).toEqual(['日照线']);
+    expect(MODE_DEFINITIONS['historical-echoes'].titlePhrases.zh).toEqual([
+      '历史',
+      '回响',
+    ]);
 
     for (const mode of Object.values(MODE_DEFINITIONS)) {
       expect(mode.titlePhrases.zh.join('')).toBe(mode.title.zh);
@@ -123,14 +131,18 @@ describe('mode registry', () => {
     const all = defaultVisibleModes();
     expect(filterModesByTags(all, ['place']).map((mode) => mode.id)).toEqual([
       'antipodes',
+      'historical-echoes',
     ]);
     expect(filterModesByTags(all, ['time']).map((mode) => mode.id)).toEqual([
       'sunline',
+      'historical-echoes',
     ]);
     expect(
       filterModesByTags(all, ['time', 'nature']).map((mode) => mode.id),
     ).toEqual(['sunline']);
-    expect(filterModesByTags(all, ['place', 'time'])).toHaveLength(0);
+    expect(
+      filterModesByTags(all, ['place', 'time']).map((mode) => mode.id),
+    ).toEqual(['historical-echoes']);
   });
 
   it('separates archived modes from default browsing', () => {
@@ -144,9 +156,7 @@ describe('mode registry', () => {
   });
 
   it('keeps recency independent of maturity and curation', () => {
-    const modes = Object.values(MODE_DEFINITIONS);
-    expect(modes.every((mode) => mode.isNew === false)).toBe(true);
-    expect(newModes()).toHaveLength(0);
+    expect(newModes().map((mode) => mode.id)).toEqual(['historical-echoes']);
     expect(MODE_DEFINITIONS.antipodes).toMatchObject({
       isNew: false,
       maturity: 'stable',
@@ -194,5 +204,40 @@ describe('mode registry', () => {
         clockMode: 'playing',
       }).success,
     ).toBe(false);
+  });
+
+  it('folds non-featured modes into a distinct collection', () => {
+    expect(collectionModes().map((mode) => mode.id)).toEqual([
+      'historical-echoes',
+    ]);
+  });
+
+  it('marks Historical Echoes as coming soon while others are available', () => {
+    expect(MODE_DEFINITIONS['historical-echoes'].availability).toBe(
+      'coming-soon',
+    );
+    expect(isComingSoon('historical-echoes')).toBe(true);
+    expect(isAvailableMode('historical-echoes')).toBe(false);
+    expect(isCatalogModeId('historical-echoes')).toBe(true);
+    expect(isCatalogModeId('bogus')).toBe(false);
+    for (const id of ['antipodes', 'development', 'sunline'] as const) {
+      expect(MODE_DEFINITIONS[id].availability).toBe('available');
+      expect(isComingSoon(id)).toBe(false);
+    }
+  });
+
+  it('searches Historical Echoes across localized title', () => {
+    expect(searchModes('Echoes', 'en').map((mode) => mode.id)).toEqual([
+      'historical-echoes',
+    ]);
+    expect(searchModes('回响', 'zh').map((mode) => mode.id)).toContain(
+      'historical-echoes',
+    );
+  });
+
+  it('exposes an empty, no-mode-local-state schema for Historical Echoes', () => {
+    expect(
+      MODE_DEFINITIONS['historical-echoes'].stateSchema.safeParse({}).success,
+    ).toBe(true);
   });
 });
