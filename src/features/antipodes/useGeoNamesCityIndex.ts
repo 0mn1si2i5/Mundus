@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import {
   configureGeoNamesCityImporter,
   loadGeoNamesCityIndex,
   type GeoNamesCity,
 } from './geonamesCities';
+import { createResourceStore } from '../../state/resourceStore';
 
-configureGeoNamesCityImporter(async () => {
+configureGeoNamesCityImporter(async (signal) => {
   const response = await fetch(
     new URL('../../data/generated/geonames-major-cities.json', import.meta.url),
+    { signal },
   );
   if (!response.ok)
     throw new Error(`GeoNames city index failed: ${response.status}`);
@@ -20,32 +22,31 @@ export type GeoNamesCityLoadState =
   | { status: 'ready'; data: readonly GeoNamesCity[] }
   | { status: 'error'; data: null; retry: () => void };
 
+/**
+ * One shared GeoNames city-index load. The globe presentation and the mode
+ * experience both subscribe to the same store, so a retry from either surface
+ * restores both, and the underlying fetch is really aborted only when the last
+ * enabled consumer leaves while the request is still pending.
+ */
+const store = createResourceStore<readonly GeoNamesCity[]>((signal) =>
+  loadGeoNamesCityIndex(signal),
+);
+
+export function resetGeoNamesCityIndexStore() {
+  store.reset();
+}
+
 export function useGeoNamesCityIndex(enabled: boolean): GeoNamesCityLoadState {
-  const [attempt, setAttempt] = useState(0);
-  const [state, setState] = useState<GeoNamesCityLoadState>({
-    status: 'loading',
-    data: null,
-  });
-  const retry = useCallback(() => {
-    setState({ status: 'loading', data: null });
-    setAttempt((current) => current + 1);
-  }, []);
-  const load = useCallback(() => setAttempt((current) => current + 1), []);
+  const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
 
   useEffect(() => {
-    if (!enabled && attempt === 0) return;
-    let active = true;
-    void loadGeoNamesCityIndex()
-      .then((data) => {
-        if (active) setState({ status: 'ready', data });
-      })
-      .catch(() => {
-        if (active) setState({ status: 'error', data: null, retry });
-      });
-    return () => {
-      active = false;
-    };
-  }, [attempt, enabled, retry]);
+    if (!enabled) return;
+    store.register();
+    return () => store.unregister();
+  }, [enabled]);
 
-  return enabled || attempt > 0 ? state : { status: 'idle', data: null, load };
+  if (!enabled || snapshot.status === 'idle') {
+    return { status: 'idle', data: null, load: store.load };
+  }
+  return snapshot;
 }

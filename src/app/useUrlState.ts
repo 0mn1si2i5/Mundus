@@ -1,6 +1,10 @@
 import { useEffect } from 'react';
 import { useAppStore } from '../state/appStore';
-import { parseUrlState, serializeUrlState } from '../state/urlState';
+import {
+  parseNavigationNotice,
+  parseUrlState,
+  serializeUrlState,
+} from '../state/urlState';
 
 export function useUrlState() {
   useEffect(() => {
@@ -46,6 +50,8 @@ export function useUrlState() {
       applyingHistory = true;
       useAppStore.setState({
         ...parseUrlState(window.location.search),
+        previewMode: null,
+        navigationNotice: parseNavigationNotice(window.location.search),
         hoveredCountry: null,
         cameraFocusIntent: { side: 'origin', target: null },
         sunlinePlaying: false,

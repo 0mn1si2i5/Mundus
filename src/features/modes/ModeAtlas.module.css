@@ -135,6 +135,75 @@
   }
 }
 
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+}
+
+.tabs button {
+  min-height: 2.75rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--color-line);
+  color: var(--color-muted);
+  background: transparent;
+  font: inherit;
+  font-size: 0.72rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tabs button.tabActive {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.search {
+  min-height: 2.75rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--color-line);
+  color: var(--color-text);
+  background: var(--color-control);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tags button {
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  color: var(--color-muted);
+  background: transparent;
+  font: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.tags button.tagActive {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.empty {
+  padding: 1.5rem 0;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dialog {
     scroll-behavior: auto;

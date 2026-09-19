@@ -36,6 +36,24 @@ This file is the required starting point for an agent entering this repository
 with no previous context. Read it completely before changing files or remote
 state.
 
+## Current continuation assignment
+
+For work after the published V1.1 product, read
+`docs/CONTINUATION_HANDOFF.md` immediately after this file, then follow its
+current-state refresh and first-assignment workflow. The continuing agent acts
+as both Mundus's technical product lead and its primary developer: first
+understand and challenge the next direction, then implement only an accepted,
+bounded product packet.
+
+Do not begin feature implementation merely because an older plan or migration
+snapshot contains executable steps. The first continuation deliverable is a
+current product-and-repository assessment, a decision on the roadmap fork, and
+a proposed next requirements packet for product-owner review. The active status
+and stop conditions remain `docs/ROADMAP_HANDOFF.md` and
+`docs/GHSL_EXECUTION_HANDOFF.md`; this continuation entry does not authorize
+GHSL restart, release metadata changes, migration restoration, or remote-state
+mutation.
+
 ## Frozen V1 release history below
 
 Sections 1–13 below preserve the completed V1.0.0 execution contract and must

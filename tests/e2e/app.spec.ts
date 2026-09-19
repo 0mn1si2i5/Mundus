@@ -111,6 +111,19 @@ async function expectAntipodeRelationReady(page: Page) {
   await expect(globe).toHaveAttribute('data-antipode-relation-arc-count', '2');
 }
 
+async function switchModeFromAtlas(page: Page, modeTitle: string) {
+  await page.getByRole('button', { name: '模式图鉴', exact: true }).click();
+  await page
+    .getByRole('listitem')
+    .filter({ hasText: modeTitle })
+    .getByRole('button', { name: '预览' })
+    .click();
+  await page.getByRole('button', { name: '进入观察' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: modeTitle }),
+  ).toBeVisible();
+}
+
 async function pinchGlobe(page: Page, scale: 'in' | 'out') {
   const center = await globeCenter(page);
   const session = await page.context().newCDPSession(page);
@@ -145,7 +158,7 @@ test('loads only the quality-selected vector resolution and hides raster after r
       vectorRequests.push(request.url());
     }
   });
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const detail = testInfo.project.name === 'mobile' ? '110m' : '50m';
   await expectVectorReady(page, detail);
   expect(vectorRequests).toHaveLength(1);
@@ -191,7 +204,7 @@ test('vector drag shell becomes transparent while the hit sphere remains active'
   page,
 }, testInfo) => {
   await useHighConcurrencyProfile(page);
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   await expectVectorReady(
     page,
     test.info().project.name === 'mobile' ? '110m' : '50m',
@@ -237,7 +250,7 @@ test('keeps the raster globe when the selected vector asset fails', async ({
   await page.route('**/natural-earth-vector-globe-*.mvg', (route) =>
     route.abort(),
   );
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const globe = globeRegion(page);
   await expect(globe).toHaveAttribute('data-vector-state', 'error');
   await expect(globe).toHaveAttribute(
@@ -259,7 +272,7 @@ test('keeps the raster globe when a vector response has same-length corruption',
     bytes[bytes.byteLength - 1]! ^= 1;
     await route.fulfill({ response, body: bytes });
   });
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const globe = globeRegion(page);
   await expect(globe).toHaveAttribute('data-vector-state', 'error');
   await expect(globe).toHaveAttribute(
@@ -273,7 +286,7 @@ test('uses low 110m quality on a landscape Pixel 7-class viewport', async ({
 }) => {
   await page.setViewportSize({ width: 915, height: 412 });
   await useHighConcurrencyProfile(page);
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const globe = globeRegion(page);
   await expect(globe).toHaveAttribute('data-quality', 'low');
   await expectVectorReady(page, '110m');
@@ -359,7 +372,7 @@ async function dispatchTouch(
 test('wires the mounted shell materials and picking sphere to the rendering contract', async ({
   page,
 }) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const globe = globeRegion(page);
   await expect(globe).toHaveAttribute(
     'data-antipode-outer-material',
@@ -389,7 +402,7 @@ test('uses real desktop mouse input for threshold activation and preserves picki
 }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Desktop mouse coverage');
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const globe = globeRegion(page);
   await page.getByLabel('搜索全球主要城市').fill('Tokyo');
   await localizedCityOption(page, '东京').click();
@@ -474,7 +487,7 @@ test('uses real mobile touch input for tap and drag threshold behavior', async (
   page,
 }) => {
   test.skip(test.info().project.name !== 'mobile', 'Mobile touch coverage');
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const globe = globeRegion(page);
   const center = await globeCenter(page);
   await page.touchscreen.tap(center.x, center.y);
@@ -502,7 +515,7 @@ test('tracks real multi-touch until final release and cancel', async ({
     test.info().project.name !== 'mobile',
     'Mobile multi-touch coverage',
   );
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const globe = globeRegion(page);
   const center = await globeCenter(page);
   const session = await page.context().newCDPSession(page);
@@ -531,7 +544,7 @@ test('tracks real multi-touch until final release and cancel', async ({
 test('activates the Other Side section only beyond mouse and touch drag thresholds', async ({
   page,
 }) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const globe = globeRegion(page);
   await expectAntipodeDragInactive(page);
   await dispatchGlobePointer(page, 'pointerdown', {
@@ -596,7 +609,7 @@ test('activates the Other Side section only beyond mouse and touch drag threshol
 test('ignores click, wheel, and keyboard and clears every drag lifecycle exit', async ({
   page,
 }) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const globe = globeRegion(page);
   await dispatchGlobePointer(page, 'pointerdown', {
     clientX: 100,
@@ -637,7 +650,7 @@ test('ignores click, wheel, and keyboard and clears every drag lifecycle exit', 
 test('keeps drag active until the final active pointer ends and clears on mode exit', async ({
   page,
 }) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const globe = globeRegion(page);
   for (const pointerId of [1, 2]) {
     await dispatchGlobePointer(page, 'pointerdown', {
@@ -660,8 +673,8 @@ test('keeps drag active until the final active pointer ends and clears on mode e
     clientY: 100,
   });
   await expect(globe).toHaveAttribute('data-antipode-drag-state', 'active');
-  await page.getByRole('button', { name: /发展的不同侧面/ }).click();
-  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await switchModeFromAtlas(page, '发展的不同侧面');
+  await switchModeFromAtlas(page, '地球另一端');
   await expectAntipodeDragInactive(page);
 
   await page.goto('./?mode=sunline&v=1');
@@ -674,7 +687,7 @@ test('uses static reduced-motion glow and deterministic active-only flicker', as
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('./?dragDiagnostics=1');
+  await page.goto('./?mode=antipodes&dragDiagnostics=1&v=2');
   const globe = globeRegion(page);
   await dispatchGlobePointer(page, 'pointerdown', {
     clientX: 100,
@@ -734,7 +747,9 @@ test('uses static reduced-motion glow and deterministic active-only flicker', as
 });
 
 test('reports and clears WebGL context interruption', async ({ page }) => {
-  await page.goto('./?benchmark=1&benchmarkWarmup=100&benchmarkDuration=300');
+  await page.goto(
+    './?mode=antipodes&benchmark=1&benchmarkWarmup=100&benchmarkDuration=300&v=2',
+  );
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
   const benchmark = page.locator('output[data-phase="complete"]');
@@ -802,7 +817,7 @@ test('keeps country semantics when WebGL2 is unavailable', async ({ page }) => {
 });
 
 test('loads the laboratory shell and switches language', async ({ page }) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   await expect(page.getByRole('heading', { name: '地球另一端' })).toBeVisible();
   await page.getByRole('button', { name: '切换为英文' }).click();
   await expect(page.getByRole('heading', { name: 'Other Side' })).toBeVisible();
@@ -811,7 +826,7 @@ test('loads the laboratory shell and switches language', async ({ page }) => {
 test('explains the opaque through-Earth cross-section in both languages', async ({
   page,
 }, testInfo) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
@@ -830,7 +845,7 @@ test('keeps exact marker roles and center dots legible across the zoom range', a
   page,
 }, testInfo) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const globe = page.getByRole('region', { name: '交互式三维地球' });
   await expect(globe).toHaveAttribute('data-marker-role-count', '4');
   await expect(globe).toHaveAttribute(
@@ -1047,7 +1062,7 @@ test('keeps exact marker roles and center dots legible across the zoom range', a
 test('clears marker diagnostics by mode and refreshes them for point focus', async ({
   page,
 }, testInfo) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const globe = page.getByRole('region', { name: '交互式三维地球' });
   await expect(globe).toHaveAttribute(
     'data-marker-diagnostic-revision',
@@ -1058,7 +1073,7 @@ test('clears marker diagnostics by mode and refreshes them for point focus', asy
     '31.2304,121.4737',
   );
 
-  await page.getByRole('button', { name: /发展的不同侧面/ }).click();
+  await switchModeFromAtlas(page, '发展的不同侧面');
   await expect(globe).not.toHaveAttribute('data-antipode-relation-arc-count');
   await expect(globe).not.toHaveAttribute(
     'data-marker-origin-city-actual-css-diameter',
@@ -1079,7 +1094,7 @@ test('clears marker diagnostics by mode and refreshes them for point focus', asy
     /.+/,
   );
 
-  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await switchModeFromAtlas(page, '地球另一端');
   await expect(globe).toHaveAttribute(
     'data-marker-diagnostic-revision',
     /[1-9]\d*/,
@@ -1230,13 +1245,13 @@ test('keeps overlapping selected and subsolar roles visible and depth-occluded',
     'selected>solar>highlight>mask',
   );
 
-  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await switchModeFromAtlas(page, '地球另一端');
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
   await page.getByRole('button', { name: '翻到对跖点' }).click();
   await expectCameraCenter(page, 0.15, -178.02);
-  await page.getByRole('button', { name: /日照线/ }).click();
+  await switchModeFromAtlas(page, '日照线');
   await expect(globe).toHaveAttribute(
     'data-sunline-selected-front-facing',
     'false',
@@ -1417,14 +1432,14 @@ test('selects reviewed night-side land through the Sunline mask with a real poin
   await page.goto('./?mode=sunline&time=2024-03-20T12%3A00Z&v=1');
   await expect(page).not.toHaveURL(/point=/);
 
-  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await switchModeFromAtlas(page, '地球另一端');
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
   await page.getByLabel('搜索全球主要城市').fill('Tokyo');
   await localizedCityOption(page, '东京').click();
   await expectCameraCenter(page, 35.6895, 139.69171);
-  await page.getByRole('button', { name: /日照线/ }).click();
+  await switchModeFromAtlas(page, '日照线');
 
   const globe = page.getByRole('region', { name: '交互式三维地球' });
   const canvas = page.locator('canvas');
@@ -1522,7 +1537,7 @@ test('selects reviewed night-side land through the Sunline mask with a real poin
 test('dismisses the first-interaction hint after real globe use', async ({
   page,
 }) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const hint = page.getByTestId('first-interaction-hint');
   await expect(hint).toBeVisible();
   expect(
@@ -1556,7 +1571,7 @@ test('dismisses the first-interaction hint after real globe use', async ({
 test('keeps the hint for incidental pointing and accepts wheel use', async ({
   page,
 }) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const hint = page.getByTestId('first-interaction-hint');
   const canvas = page.locator('canvas');
   await expect(hint).toBeVisible();
@@ -1579,7 +1594,7 @@ test('opens the mode atlas and restores keyboard focus', async ({ page }) => {
   await opener.focus();
   await opener.click();
 
-  const atlas = page.getByRole('dialog', { name: '三种观察地球的方式' });
+  const atlas = page.getByRole('dialog', { name: '观察地球的方式' });
   await expect(atlas).toBeVisible();
   await expect(atlas.getByRole('heading', { level: 3 })).toHaveCount(3);
   await expect(page.locator('#root')).toHaveAttribute('inert', '');
@@ -1589,7 +1604,7 @@ test('opens the mode atlas and restores keyboard focus', async ({ page }) => {
 
   await page.keyboard.press('Shift+Tab');
   await expect(
-    atlas.getByRole('button', { name: '用这种方式观察' }).last(),
+    atlas.getByRole('button', { name: '预览' }).last(),
   ).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(atlas).toBeHidden();
@@ -1605,9 +1620,8 @@ test('selects a mode from the atlas without moving the selected place', async ({
   const developmentEntry = page
     .getByRole('listitem')
     .filter({ hasText: '发展的不同侧面' });
-  await developmentEntry
-    .getByRole('button', { name: '用这种方式观察' })
-    .click();
+  await developmentEntry.getByRole('button', { name: '预览' }).click();
+  await page.getByRole('button', { name: '进入观察' }).click();
 
   await expect(page.getByRole('dialog')).toBeHidden();
   await expect(
@@ -1630,7 +1644,7 @@ test('selects a mode from the atlas without moving the selected place', async ({
 
 test('keeps the English mode atlas usable at 320px', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   await page.getByRole('button', { name: '切换为英文' }).click();
 
   const opener = page.getByRole('button', { name: 'Mode atlas', exact: true });
@@ -1645,7 +1659,7 @@ test('keeps the English mode atlas usable at 320px', async ({ page }) => {
 
   await opener.click();
   const atlas = page.getByRole('dialog', {
-    name: 'Three ways of seeing Earth',
+    name: 'Ways of seeing Earth',
   });
   await expect(atlas).toBeVisible();
   expect(
@@ -1664,6 +1678,137 @@ test('keeps the English mode atlas usable at 320px', async ({ page }) => {
   }
 });
 
+async function expectHeaderActionsContained(
+  page: Page,
+  viewport: { width: number; height: number },
+) {
+  const header = page.locator('header').first();
+  const buttons = header.getByRole('button');
+  const count = await buttons.count();
+  expect(count).toBeGreaterThan(0);
+  for (let index = 0; index < count; index += 1) {
+    const button = buttons.nth(index);
+    const box = await button.boundingBox();
+    expect(box, `header action ${index} has a bounding box`).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(-0.5);
+    expect(box!.y).toBeGreaterThanOrEqual(-0.5);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width + 0.5);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height + 0.5);
+    expect(box!.width).toBeGreaterThan(0);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    const hit = await page.evaluate(
+      (point) => document.elementFromPoint(point.x, point.y)?.closest('button'),
+      { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 },
+    );
+    expect(hit).not.toBeNull();
+  }
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+}
+
+test('keeps every lobby and active header action inside compact viewports', async ({
+  page,
+}) => {
+  const compactViewports = [
+    { width: 320, height: 568 },
+    { width: 390, height: 844 },
+    { width: 412, height: 915 },
+  ];
+  for (const viewport of compactViewports) {
+    await page.setViewportSize(viewport);
+
+    await page.goto('./');
+    for (let language = 0; language < 2; language += 1) {
+      if (language === 1) {
+        await page.getByRole('button', { name: '切换为英文' }).click();
+      }
+      await expectHeaderActionsContained(page, viewport);
+      const header = page.locator('header').first();
+      const heading = page.getByRole('heading', { level: 1 });
+      await expect(heading).toBeVisible();
+      const headerBox = await header.boundingBox();
+      const headingBox = await heading.boundingBox();
+      const verticalOverlap =
+        headerBox &&
+        headingBox &&
+        headerBox.y + headerBox.height > headingBox.y &&
+        headingBox.y + headingBox.height > headerBox.y;
+      expect(
+        verticalOverlap,
+        `lobby heading overlaps the header at ${viewport.width}px`,
+      ).toBe(false);
+      if (language === 0) {
+        const strip = page.locator(
+          'section[aria-labelledby="lobby-heading"] ul',
+        );
+        const stripScroll = await strip.evaluate((element) => ({
+          overflowX: getComputedStyle(element).overflowX,
+          scrollWidth: element.scrollWidth,
+          clientWidth: element.clientWidth,
+        }));
+        expect(stripScroll.overflowX).toBe('auto');
+        expect(stripScroll.scrollWidth).toBeGreaterThanOrEqual(
+          stripScroll.clientWidth,
+        );
+      }
+    }
+
+    await page.goto('./?mode=antipodes&v=2');
+    await expectHeaderActionsContained(page, viewport);
+    await page.getByRole('button', { name: '切换为英文' }).click();
+    await expectHeaderActionsContained(page, viewport);
+  }
+});
+
+test('returns lobby focus to the originating label and falls back to the heading', async ({
+  page,
+}) => {
+  await page.goto('./');
+  const otherSideLabel = page
+    .locator('section[aria-labelledby="lobby-heading"]')
+    .getByRole('button', { name: /地球另一端/ });
+  await otherSideLabel.click();
+  await page.getByRole('button', { name: '进入观察' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '地球另一端' }),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: '返回展厅' }).click();
+  await expect(otherSideLabel).toBeFocused();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '选择一种观察' }),
+  ).toBeVisible();
+
+  await otherSideLabel.click();
+  await page.getByRole('button', { name: '进入观察' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '地球另一端' }),
+  ).toBeVisible();
+  await page.goBack();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '选择一种观察' }),
+  ).toBeVisible();
+});
+
+test('uses the stable lobby heading when a mode was opened by a direct V2 URL', async ({
+  page,
+}) => {
+  await page.goto('./?mode=sunline&v=2');
+  await expect(
+    page.getByRole('heading', { level: 1, name: '日照线' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: '返回展厅' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '选择一种观察' }),
+  ).toBeVisible();
+  await expect(page.locator('#lobby-heading')).toBeFocused();
+});
+
 test('keeps compact result, collapsed controls, and mode navigation separate', async ({
   page,
 }) => {
@@ -1673,24 +1818,20 @@ test('keeps compact result, collapsed controls, and mode navigation separate', a
     { width: 760, height: 844 },
   ];
   await page.setViewportSize(compactViewports[0]);
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
 
   const stage = page.getByTestId('app-stage');
   const result = page.getByRole('complementary', { name: '结果' });
   const panel = page.locator('[data-mode-panel="place-controls"]');
-  const navigation = page.getByRole('navigation', { name: '观察模式' });
   await expect(stage).toBeVisible();
   await expect(result).toBeVisible();
   await expect(panel).toBeVisible();
   await expect(panel).toHaveAttribute('data-expanded', 'false');
-  await expect(navigation).toBeVisible();
 
   for (const viewport of compactViewports) {
     await page.setViewportSize(viewport);
     const rectangles = await Promise.all(
-      [stage, result, panel, navigation].map((surface) =>
-        surface.boundingBox(),
-      ),
+      [stage, result, panel].map((surface) => surface.boundingBox()),
     );
     for (const rectangle of rectangles) {
       expect(rectangle).not.toBeNull();
@@ -1721,11 +1862,10 @@ test('keeps compact result, collapsed controls, and mode navigation separate', a
   await expect(title).toBeVisible();
   await expect(result).toHaveCSS('position', 'absolute');
   await expect(panel).toHaveCSS('position', 'absolute');
-  await expect(navigation).toHaveCSS('position', 'absolute');
   const desktopRectangles = await Promise.all(
-    [title, result, panel, navigation].map((surface) => surface.boundingBox()),
+    [title, result, panel].map((surface) => surface.boundingBox()),
   );
-  const desktopSurfaceNames = ['title', 'result', 'controls', 'navigation'];
+  const desktopSurfaceNames = ['title', 'result', 'controls'];
   for (const rectangle of desktopRectangles) {
     expect(rectangle).not.toBeNull();
     expect(rectangle!.x).toBeGreaterThanOrEqual(0);
@@ -1759,7 +1899,7 @@ test('contains compact mode introductions above result surfaces', async ({
   const scenarios = [
     {
       name: 'Other Side',
-      path: './',
+      path: './?mode=antipodes&v=2',
       panel: 'place-controls',
       result: '结果',
       ready: '康科迪亚',
@@ -1811,7 +1951,6 @@ test('contains compact mode introductions above result surfaces', async ({
         ? page.getByRole('complementary', { name: scenario.result })
         : null;
       const controls = page.locator(`[data-mode-panel="${scenario.panel}"]`);
-      const navigation = page.getByRole('navigation', { name: '观察模式' });
       await expect(globe.locator('canvas')).toBeVisible();
       if (scenario.globeAttribute) {
         await expect(globe).toHaveAttribute(
@@ -1828,7 +1967,6 @@ test('contains compact mode introductions above result surfaces', async ({
         result: result ? await result.boundingBox() : null,
         globe: await globe.boundingBox(),
         controls: await controls.boundingBox(),
-        navigation: await navigation.boundingBox(),
       };
       for (const [name, rectangle] of Object.entries(rectangles)) {
         if (name === 'result' && !result) continue;
@@ -1870,7 +2008,7 @@ test('protects landscape desktop poster edges with safe-area-aware base rules', 
 }) => {
   const viewport = { width: 844, height: 390 };
   await page.setViewportSize(viewport);
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
 
   const baseRules = await page.evaluate(() => {
     function collectRules(rules: CSSRuleList): {
@@ -1928,9 +2066,8 @@ test('protects landscape desktop poster edges with safe-area-aware base rules', 
   const title = page.getByRole('heading', { name: '地球另一端' });
   const result = page.getByRole('complementary', { name: '结果' });
   const panel = page.locator('[data-mode-panel="place-controls"]');
-  const navigation = page.getByRole('navigation', { name: '观察模式' });
-  const surfaces = [title, result, panel, navigation];
-  const surfaceNames = ['title', 'result', 'controls', 'navigation'];
+  const surfaces = [title, result, panel];
+  const surfaceNames = ['title', 'result', 'controls'];
   await Promise.all(surfaces.map((surface) => expect(surface).toBeVisible()));
   const rectangles = await Promise.all(
     surfaces.map((surface) => surface.boundingBox()),
@@ -1970,15 +2107,8 @@ test('protects landscape desktop poster edges with safe-area-aware base rules', 
   const developmentPanel = page.locator(
     '[data-mode-panel="development-controls"]',
   );
-  const developmentNavigation = page.getByRole('navigation', {
-    name: '观察模式',
-  });
-  const developmentSurfaces = [
-    developmentTitle,
-    developmentPanel,
-    developmentNavigation,
-  ];
-  const developmentSurfaceNames = ['title', 'controls', 'navigation'];
+  const developmentSurfaces = [developmentTitle, developmentPanel];
+  const developmentSurfaceNames = ['title', 'controls'];
   await Promise.all(
     developmentSurfaces.map((surface) => expect(surface).toBeVisible()),
   );
@@ -2025,7 +2155,7 @@ test('contains expanded desktop modes by height without changing the normal post
   const scenarios = [
     {
       name: 'Other Side',
-      path: './',
+      path: './?mode=antipodes&v=2',
       title: '地球另一端',
       panel: 'place-controls',
       result: '结果',
@@ -2062,16 +2192,13 @@ test('contains expanded desktop modes by height without changing the normal post
 
       const title = page.getByRole('heading', { name: scenario.title });
       const panel = page.locator(`[data-mode-panel="${scenario.panel}"]`);
-      const navigation = page.getByRole('navigation', { name: '观察模式' });
       const result = scenario.result
         ? page.getByRole('complementary', { name: scenario.result })
         : null;
-      const surfaces = result
-        ? [title, result, panel, navigation]
-        : [title, panel, navigation];
+      const surfaces = result ? [title, result, panel] : [title, panel];
       const surfaceNames = result
-        ? ['title', 'result', 'controls', 'navigation']
-        : ['title', 'controls', 'navigation'];
+        ? ['title', 'result', 'controls']
+        : ['title', 'controls'];
       await Promise.all(
         surfaces.map((surface) => expect(surface).toBeVisible()),
       );
@@ -2109,7 +2236,7 @@ test('contains expanded desktop modes by height without changing the normal post
   }
 
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const normalPanel = page.locator('[data-mode-panel="place-controls"]');
   const normalResult = page.getByRole('complementary', { name: '结果' });
   await expect(normalPanel).toHaveCSS('max-height', 'none');
@@ -2123,7 +2250,7 @@ test('keeps every expanded compact drawer and navigation reachable', async ({
   const viewportMeta = page.locator('meta[name="viewport"]');
   const scenarios = [
     {
-      path: './',
+      path: './?mode=antipodes&v=2',
       panel: 'place-controls',
       expand: '展开地点控件',
       primary: () => page.getByLabel('搜索全球主要城市'),
@@ -2149,7 +2276,7 @@ test('keeps every expanded compact drawer and navigation reachable', async ({
   ];
 
   await page.setViewportSize({ width: 320, height: 568 });
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   await expect(viewportMeta).toHaveAttribute('content', /viewport-fit=cover/);
 
   for (const viewport of [
@@ -2167,12 +2294,10 @@ test('keeps every expanded compact drawer and navigation reachable', async ({
       const panelHeader = panel.locator(':scope > div').first();
       const panelBody = panel.locator(':scope > div').nth(1);
       const stage = page.getByTestId('app-stage');
-      const navigation = page.getByRole('navigation', { name: '观察模式' });
       const result = scenario.result();
       await expect(panel).toHaveAttribute('data-expanded', 'true');
       await expect(panel).toBeVisible();
       await expect(panelBody).toHaveCSS('overflow-y', 'auto');
-      await expect(navigation).toBeVisible();
 
       const panelLayout = await panel.evaluate((element) => {
         const header = element.children[0] as HTMLElement;
@@ -2210,9 +2335,7 @@ test('keeps every expanded compact drawer and navigation reachable', async ({
       expect(stageRectangle).not.toBeNull();
       expect(stageRectangle!.height).toBeGreaterThanOrEqual(64);
 
-      const surfaces = result
-        ? [result, panel, navigation]
-        : [panel, navigation];
+      const surfaces = result ? [result, panel] : [panel];
       const rectangles = await Promise.all(
         surfaces.map((surface) => surface.boundingBox()),
       );
@@ -2228,12 +2351,6 @@ test('keeps every expanded compact drawer and navigation reachable', async ({
         );
       }
       const panelRectangle = await panel.boundingBox();
-      const navigationRectangle = await navigation.boundingBox();
-      expect(
-        overlaps(panelRectangle, navigationRectangle),
-        `${scenario.panel} overlaps navigation at ${viewport.width}x${viewport.height}`,
-      ).toBe(false);
-
       const primary = scenario.primary();
       await primary.scrollIntoViewIfNeeded();
       await expect(primary).toBeVisible();
@@ -2278,9 +2395,6 @@ test('keeps every expanded compact drawer and navigation reachable', async ({
         ).toBeLessThanOrEqual(
           visibleBodyRectangle!.y + visibleBodyRectangle!.height + 0.5,
         );
-        expect(
-          finalControlRectangle!.y + finalControlRectangle!.height,
-        ).toBeLessThanOrEqual(navigationRectangle!.y);
       }
     }
   }
@@ -2401,23 +2515,23 @@ test('matches the document language to an English browser', async ({
 }) => {
   const context = await browser.newContext({ locale: 'en-US' });
   const page = await context.newPage();
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page).toHaveTitle(/Interactive terrestrial laboratory/);
   await context.close();
 });
 
-test('keeps all observation modes keyboard accessible', async ({ page }) => {
+test('keeps observation mode entry keyboard accessible', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('button', { name: /发展的不同侧面/ }).focus();
   await page.keyboard.press('Enter');
   await expect(
-    page.getByRole('heading', { name: '发展的不同侧面' }),
+    page.getByRole('dialog', { name: '发展的不同侧面' }),
   ).toBeVisible();
 });
 
 test('rotates and selects the globe from the keyboard', async ({ page }) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const globe = page.getByRole('region', { name: '交互式三维地球' });
   await globe.focus();
   await page.keyboard.press('ArrowRight');
@@ -2430,7 +2544,7 @@ test('rotates and selects the globe from the keyboard', async ({ page }) => {
 test('toggles bilateral camera focus and frees it after manual movement', async ({
   page,
 }, testInfo) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
@@ -2471,7 +2585,7 @@ test('toggles bilateral camera focus and frees it after manual movement', async 
 test('resets bilateral focus for new points and mode round trips', async ({
   page,
 }, testInfo) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
@@ -2479,9 +2593,9 @@ test('resets bilateral focus for new points and mode round trips', async ({
   await expect(page.getByRole('button', { name: '返回起点' })).toBeVisible();
   await expectCameraCenter(page, -31.2304, -58.5263);
 
-  await page.getByRole('button', { name: /发展的不同侧面/ }).click();
+  await switchModeFromAtlas(page, '发展的不同侧面');
   await expectCameraDiagnosticCleared(page);
-  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await switchModeFromAtlas(page, '地球另一端');
 
   const citySearch = page.getByLabel('搜索全球主要城市');
   if (testInfo.project.name === 'mobile' && !(await citySearch.isVisible())) {
@@ -2492,8 +2606,8 @@ test('resets bilateral focus for new points and mode round trips', async ({
   await expect(page.getByRole('button', { name: '翻到对跖点' })).toBeVisible();
 
   await page.getByRole('button', { name: '翻到对跖点' }).click();
-  await page.getByRole('button', { name: /发展的不同侧面/ }).click();
-  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await switchModeFromAtlas(page, '发展的不同侧面');
+  await switchModeFromAtlas(page, '地球另一端');
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
@@ -2503,7 +2617,7 @@ test('resets bilateral focus for new points and mode round trips', async ({
 test('focuses a represented major city without changing the exact relation or URL', async ({
   page,
 }) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   await expectAntipodeRelationReady(page);
   const result = page.getByRole('complementary', { name: '位置结果' });
   const city = page.getByRole('button', { name: /康科迪亚 查看城市/ });
@@ -2527,7 +2641,7 @@ test('focuses a represented major city without changing the exact relation or UR
 test('restarts the same represented-city animation after manual cancellation', async ({
   page,
 }) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   await expectAntipodeRelationReady(page);
   const globe = globeRegion(page);
   const city = page.getByRole('button', { name: /康科迪亚 查看城市/ });
@@ -2566,7 +2680,7 @@ test('restarts the same represented-city animation after manual cancellation', a
 });
 
 test('uses exact bilateral labels in English', async ({ page }, testInfo) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   await page.getByRole('button', { name: '切换为英文' }).click();
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: 'Expand place controls' }).click();
@@ -2582,7 +2696,7 @@ test('focuses bilateral targets immediately with reduced motion', async ({
   page,
 }, testInfo) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
@@ -2625,7 +2739,7 @@ test('restores shareable state and browser history', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
   await expect(page).toHaveURL(/point=0%2C-140/);
 
-  await page.getByRole('button', { name: /发展的不同侧面/ }).click();
+  await switchModeFromAtlas(page, '发展的不同侧面');
   await expect(page).toHaveURL(/mode=development/);
   await page.goBack();
   await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
@@ -2682,7 +2796,7 @@ test('replaces continuous timeline changes instead of flooding history', async (
 test('selects a major city and validates coordinate input', async ({
   page,
 }, testInfo) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
@@ -2726,9 +2840,8 @@ test('keeps controls reachable after crossing the mobile breakpoint', async ({
   const developmentEntry = page
     .getByRole('listitem')
     .filter({ hasText: '发展的不同侧面' });
-  await developmentEntry
-    .getByRole('button', { name: '用这种方式观察' })
-    .click();
+  await developmentEntry.getByRole('button', { name: '预览' }).click();
+  await page.getByRole('button', { name: '进入观察' }).click();
   await expect(
     page.getByRole('heading', { name: '发展的不同侧面' }),
   ).toBeFocused();
@@ -2745,7 +2858,6 @@ test('keeps the Development title visible on a short desktop stage', async ({
 
   const intro = page.locator('section[data-mode="development"]');
   const panel = page.locator('[data-mode-panel="development-controls"]');
-  const navigation = page.getByRole('navigation', { name: '观察模式' });
   const title = page.getByRole('heading', { name: '发展的不同侧面' });
   await expect(title).toBeVisible();
   const introLayout = await intro.evaluate((element) => ({
@@ -2759,9 +2871,6 @@ test('keeps the Development title visible on a short desktop stage', async ({
   expect(overlaps(await title.boundingBox(), await panel.boundingBox())).toBe(
     false,
   );
-  expect(
-    overlaps(await title.boundingBox(), await navigation.boundingBox()),
-  ).toBe(false);
 });
 
 test('loads one bilateral GeoNames major-city relation and its canvas layer', async ({
@@ -2770,7 +2879,7 @@ test('loads one bilateral GeoNames major-city relation and its canvas layer', as
   await page.goto('./?mode=sunline&v=1');
   await expect(page.getByText('起点侧最近的收录主要城市')).toBeHidden();
 
-  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await switchModeFromAtlas(page, '地球另一端');
   const result = page.getByRole('complementary', { name: '位置结果' });
   await expect(result).toContainText('31.2304°, 121.4737°');
   await expect(result).toContainText('-31.2304°, -58.5263°');
@@ -2802,7 +2911,7 @@ test('loads one bilateral GeoNames major-city relation and its canvas layer', as
 test('shows the Other Side method and Natural Earth attribution', async ({
   page,
 }, testInfo) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
@@ -2853,7 +2962,6 @@ test('keeps development map, controls, URL and table synchronized', async ({
     for (const surface of [
       page.locator('header').first(),
       page.locator('section[data-mode="development"]'),
-      page.getByRole('navigation', { name: '观察模式' }),
     ]) {
       expect(
         overlaps(await panel.boundingBox(), await surface.boundingBox()),
@@ -2866,12 +2974,6 @@ test('keeps development map, controls, URL and table synchronized', async ({
       ),
     ).toBe(true);
   } else {
-    expect(
-      overlaps(
-        await panel.boundingBox(),
-        await page.getByRole('navigation', { name: '观察模式' }).boundingBox(),
-      ),
-    ).toBe(false);
     const panelBody = panel.locator(':scope > div').nth(1);
     expect(
       await panelBody.evaluate(
@@ -3013,15 +3115,15 @@ test('keeps Development data lazy and cached across mode switches', async ({
   );
   const requests: string[] = [];
   page.on('request', (request) => requests.push(request.url()));
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   await expect(page.locator('canvas')).toBeVisible();
   expect(requests.some((url) => url.includes('undp-hdr'))).toBe(false);
 
-  await page.getByRole('button', { name: /发展的不同侧面/ }).click();
+  await switchModeFromAtlas(page, '发展的不同侧面');
   await expect(page.getByText('全球中位数', { exact: true })).toBeVisible();
   expect(requests.filter((url) => url.includes('undp-hdr'))).toHaveLength(1);
-  await page.getByRole('button', { name: /地球另一端/ }).click();
-  await page.getByRole('button', { name: /发展的不同侧面/ }).click();
+  await switchModeFromAtlas(page, '地球另一端');
+  await switchModeFromAtlas(page, '发展的不同侧面');
   await expect(page.getByText('全球中位数', { exact: true })).toBeVisible();
   expect(requests.filter((url) => url.includes('undp-hdr'))).toHaveLength(1);
 });
@@ -3050,7 +3152,7 @@ test('loads GeoNames only for Other Side and reuses one lazy asset', async ({
     requests.filter((url) => url.includes('geonames-major-cities')),
   ).toHaveLength(0);
 
-  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await switchModeFromAtlas(page, '地球另一端');
   await expect(
     page.getByRole('combobox', { name: '搜索全球主要城市' }),
   ).toBeVisible();
@@ -3061,9 +3163,17 @@ test('loads GeoNames only for Other Side and reuses one lazy asset', async ({
     )
     .toBe(1);
   expect(requests.some((url) => url.includes('geonames.org'))).toBe(false);
+  // The asset lifecycle now aborts an in-flight request when the last Other
+  // Side consumer leaves, so let the load finish before the mode round trip to
+  // prove the cached index is reused without a second request.
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-antipode-relation-state',
+    'ready',
+    { timeout: 15000 },
+  );
 
-  await page.getByRole('button', { name: /日照线/ }).click();
-  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await switchModeFromAtlas(page, '日照线');
+  await switchModeFromAtlas(page, '地球另一端');
   const citySearch = page.getByRole('combobox', { name: '搜索全球主要城市' });
   await citySearch.fill('北京');
   await expect(localizedCityOption(page, '北京')).toBeVisible();
@@ -3083,9 +3193,9 @@ test('reopens mobile place controls before city search after a mode round trip',
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile', 'Responsive panel coverage');
-  await page.goto('./');
-  await page.getByRole('button', { name: /日照线/ }).click();
-  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await page.goto('./?mode=antipodes&v=2');
+  await switchModeFromAtlas(page, '日照线');
+  await switchModeFromAtlas(page, '地球另一端');
   await page.getByRole('button', { name: '展开地点控件' }).click();
   const search = page.getByRole('combobox', { name: '搜索全球主要城市' });
   await expect(search).toBeVisible();
@@ -3100,7 +3210,7 @@ test('searches bilingual source aliases by keyboard without mutating URL before 
     testInfo.project.name === 'mobile',
     'Desktop keyboard and fixture coverage',
   );
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const input = page.getByRole('combobox', { name: '搜索全球主要城市' });
   const initialUrl = page.url();
 
@@ -3147,7 +3257,7 @@ test('keeps warmed major-city search responsive in Pixel emulation', async ({
     testInfo.project.name !== 'mobile',
     'Pixel emulation performance coverage',
   );
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   await page.getByRole('button', { name: '展开地点控件' }).click();
   const input = page.getByRole('combobox', { name: '搜索全球主要城市' });
   const durations: number[] = [];
@@ -3184,7 +3294,7 @@ test('announces a GeoNames load failure and retries the same lazy asset', async 
     }
   });
   await page.goto('./?mode=sunline&v=1');
-  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await switchModeFromAtlas(page, '地球另一端');
   await expect(page.getByText('31.2304°, 121.4737°')).toBeVisible();
   await expect(page.getByText('-31.2304°, -58.5263°')).toBeVisible();
   await expect(page.getByTestId('antipode-relation-status')).toContainText(
@@ -3337,14 +3447,9 @@ test('keeps mode lifecycle stable across repeated switching', async ({
   page.on('pageerror', (error) => pageErrors.push(error.message));
   await page.goto('./?mode=sunline&time=2024-03-20T12%3A00Z&v=1');
 
-  for (let index = 0; index < 20; index += 1) {
-    const name =
-      index % 3 === 0
-        ? /地球另一端/
-        : index % 3 === 1
-          ? /发展的不同侧面/
-          : /日照线/;
-    await page.getByRole('button', { name }).click();
+  const modeTitles = ['地球另一端', '发展的不同侧面', '日照线'];
+  for (let index = 0; index < 6; index += 1) {
+    await switchModeFromAtlas(page, modeTitles[index % 3]);
   }
 
   await expect(page.locator('canvas')).toBeVisible();
@@ -3449,7 +3554,7 @@ test('isolates Share, traps focus, closes cleanly, and preserves URL state', asy
 
 test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
 
   const placeToggle = page.getByRole('button', { name: '展开地点控件' });
   await expectMinimumHeight(placeToggle, 44);
@@ -3467,7 +3572,7 @@ test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
     await expectMinimumHeight(control, 44);
   }
 
-  await page.getByRole('button', { name: /发展的不同侧面/ }).click();
+  await switchModeFromAtlas(page, '发展的不同侧面');
   const developmentToggle = page.getByRole('button', { name: '展开发展控件' });
   await expectMinimumHeight(developmentToggle, 44);
   await developmentToggle.click();
@@ -3481,7 +3586,7 @@ test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
     );
   }
 
-  await page.getByRole('button', { name: /日照线/ }).click();
+  await switchModeFromAtlas(page, '日照线');
   const sunlineToggle = page.getByRole('button', { name: '展开日照线控件' });
   await expectMinimumHeight(sunlineToggle, 44);
   await sunlineToggle.click();
@@ -3534,7 +3639,7 @@ test('keeps the flip-to-antipode target at least 44px tall at compact widths', a
     { width: 320, height: 568 },
   ]) {
     await page.setViewportSize(viewport);
-    await page.goto('./');
+    await page.goto('./?mode=antipodes&v=2');
     await page.getByRole('button', { name: '展开地点控件' }).click();
     await expectMinimumHeight(
       page.getByRole('button', { name: '翻到对跖点' }),
@@ -3551,7 +3656,7 @@ test('keeps both major-city focus targets at least 44px tall at compact widths',
     { width: 320, height: 568 },
   ]) {
     await page.setViewportSize(viewport);
-    await page.goto('./');
+    await page.goto('./?mode=antipodes&v=2');
     await expectMinimumHeight(
       page.getByRole('button', { name: /黄浦 查看城市/ }),
       44,
@@ -3567,7 +3672,7 @@ test('gives a major-city relation hover and active feedback without layout shift
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const place = page.getByRole('button', { name: /康科迪亚 查看城市/ });
   const before = await place.boundingBox();
   const resting = await place.evaluate(
@@ -3592,7 +3697,7 @@ test('uses the accent focus ring for keyboard form and disclosure controls only'
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   const toggle = page.getByRole('button', { name: '展开地点控件' });
   await toggle.click();
   const panel = page.locator('[data-mode-panel="place-controls"]');
@@ -3625,7 +3730,11 @@ test('uses the bright parchment atlas contract across modes', async ({
   page,
 }) => {
   const scenarios = [
-    { path: './', panel: 'place-controls', expand: '展开地点控件' },
+    {
+      path: './?mode=antipodes&v=2',
+      panel: 'place-controls',
+      expand: '展开地点控件',
+    },
     {
       path: './?mode=development&indicator=hdi&year=2023&v=1',
       panel: 'development-controls',
@@ -3695,15 +3804,13 @@ test('uses the bright parchment atlas contract across modes', async ({
 test('uses the bright parchment atlas contract across modal surfaces', async ({
   page,
 }) => {
-  await page.goto('./');
+  await page.goto('./?mode=antipodes&v=2');
   await page.getByRole('button', { name: '分享', exact: true }).click();
   const share = page.getByRole('dialog', { name: '分享这一视角' });
   await expectPaperModal(share);
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '模式图鉴', exact: true }).click();
-  await expectPaperModal(
-    page.getByRole('dialog', { name: '三种观察地球的方式' }),
-  );
+  await expectPaperModal(page.getByRole('dialog', { name: '观察地球的方式' }));
 });
 
 async function expectMinimumHeight(
@@ -3757,3 +3864,269 @@ function overlaps(
     second.y + second.height <= first.y
   );
 }
+
+test('opens the neutral lobby on the bare address and after a hard refresh', async ({
+  page,
+}) => {
+  await page.goto('./');
+  await expect(
+    page.getByRole('heading', { name: '选择一种观察' }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('转动地球，选择地点，再进入一种观察方式。'),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '地球另一端' }),
+  ).not.toBeVisible();
+  await expect(
+    page.getByRole('combobox', { name: '搜索全球主要城市' }),
+  ).not.toBeVisible();
+
+  await page.reload();
+  await expect(
+    page.getByRole('heading', { name: '选择一种观察' }),
+  ).toBeVisible();
+});
+
+test('presents the three featured modes as one semantic lobby list', async ({
+  page,
+}) => {
+  await page.goto('./');
+  const list = page.getByRole('list', { name: '观察模式' });
+  await expect(list.getByRole('listitem')).toHaveCount(3);
+  await expect(list.getByRole('button', { name: /地球另一端/ })).toBeVisible();
+  await expect(
+    list.getByRole('button', { name: /发展的不同侧面/ }),
+  ).toBeVisible();
+  await expect(list.getByRole('button', { name: /日照线/ })).toBeVisible();
+});
+
+test('opens a preview without changing the URL or loading mode resources', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === 'mobile',
+    'One request trace is sufficient',
+  );
+  const requests: string[] = [];
+  page.on('request', (request) => requests.push(request.url()));
+  await page.goto('./');
+  await expect(
+    page.getByRole('heading', { name: '选择一种观察' }),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await expect(page.getByRole('dialog', { name: '地球另一端' })).toBeVisible();
+  expect(page.url()).not.toContain('mode=antipodes');
+  expect(
+    requests.filter((url) => url.includes('geonames-major-cities')),
+  ).toHaveLength(0);
+  expect(requests.filter((url) => url.includes('undp-hdr'))).toHaveLength(0);
+});
+
+test('enters a mode from its preview and then loads its lazy resources', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === 'mobile',
+    'One request trace is sufficient',
+  );
+  const requests: string[] = [];
+  page.on('request', (request) => requests.push(request.url()));
+  await page.goto('./');
+
+  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await expect(page.getByRole('dialog', { name: '地球另一端' })).toBeVisible();
+  await page.getByRole('button', { name: '进入观察' }).click();
+
+  await expect(page.getByRole('heading', { name: '地球另一端' })).toBeVisible();
+  await expect(
+    page.getByRole('combobox', { name: '搜索全球主要城市' }),
+  ).toBeVisible();
+  await expect
+    .poll(
+      () =>
+        requests.filter((url) => url.includes('geonames-major-cities')).length,
+    )
+    .toBe(1);
+});
+
+test('exiting returns to the lobby and preserves the selected point', async ({
+  page,
+}) => {
+  await page.goto('./?mode=antipodes&point=30.25%2C120.75&v=2');
+  await expect(page.getByRole('heading', { name: '地球另一端' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Mundus home' }).click();
+  await expect(
+    page.getByRole('heading', { name: '选择一种观察' }),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: '分享' }).click();
+  await expect(page.getByRole('textbox', { name: '分享链接' })).toHaveValue(
+    /point=30\.25/,
+  );
+});
+
+test('opens every existing mode directly from a V2 URL', async ({ page }) => {
+  await page.goto('./?mode=development&v=2');
+  await expect(
+    page.getByRole('heading', { name: '发展的不同侧面' }),
+  ).toBeVisible();
+  await page.goto('./?mode=sunline&v=2');
+  await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
+  await page.goto('./?mode=antipodes&v=2');
+  await expect(page.getByRole('heading', { name: '地球另一端' })).toBeVisible();
+});
+
+test('preserves legacy V1 and unversioned point URLs as Other Side', async ({
+  page,
+}) => {
+  await page.goto('./?point=30.25%2C120.75&v=1');
+  await expect(page.getByRole('heading', { name: '地球另一端' })).toBeVisible();
+  await page.goto('./?point=30.25%2C120.75');
+  await expect(page.getByRole('heading', { name: '地球另一端' })).toBeVisible();
+});
+
+test('falls back to the lobby with a dismissible notice for an unknown V2 mode', async ({
+  page,
+}) => {
+  await page.goto('./?v=2&mode=bogus');
+  await expect(
+    page.getByRole('heading', { name: '选择一种观察' }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('这个观察方式暂时不可用，已回到展厅。'),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: '关闭提示' }).click();
+  await expect(
+    page.getByText('这个观察方式暂时不可用，已回到展厅。'),
+  ).not.toBeVisible();
+});
+
+test('produces a V2 point link from the lobby share dialog', async ({
+  page,
+}) => {
+  await page.goto('./?v=2&point=30.25%2C120.75');
+  await expect(
+    page.getByRole('heading', { name: '选择一种观察' }),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: '分享' }).click();
+  await expect(page.getByRole('textbox', { name: '分享链接' })).toHaveValue(
+    /point=30\.25%2C120\.75&v=2/,
+  );
+});
+
+test('keeps the mobile lobby heading clear of the header', async ({ page }) => {
+  await page.setViewportSize({ width: 412, height: 839 });
+  await page.goto('./');
+  await expect(
+    page.getByRole('heading', { name: '选择一种观察' }),
+  ).toBeVisible();
+
+  const headerBox = await page.locator('header').first().boundingBox();
+  const headingBox = await page
+    .getByRole('heading', { name: '选择一种观察' })
+    .boundingBox();
+  expect(headerBox).not.toBeNull();
+  expect(headingBox).not.toBeNull();
+  expect(headingBox!.y).toBeGreaterThanOrEqual(
+    headerBox!.y + headerBox!.height,
+  );
+});
+
+test('removes the direct three-column mode switcher from active modes', async ({
+  page,
+}) => {
+  await page.goto('./?mode=antipodes&v=2');
+  await expect(page.getByRole('heading', { name: '地球另一端' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: '观察模式' })).toHaveCount(
+    0,
+  );
+  await expect(page.getByRole('button', { name: '返回展厅' })).toBeVisible();
+});
+
+test('returns to the lobby with the explicit return action', async ({
+  page,
+}) => {
+  await page.goto('./?mode=antipodes&point=30.25%2C120.75&v=2');
+  await expect(page.getByRole('heading', { name: '地球另一端' })).toBeVisible();
+
+  await page.getByRole('button', { name: '返回展厅' }).click();
+  await expect(
+    page.getByRole('heading', { name: '选择一种观察' }),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: '分享' }).click();
+  await expect(page.getByRole('textbox', { name: '分享链接' })).toHaveValue(
+    /point=30\.25/,
+  );
+});
+
+test('keeps the same canvas across lobby, enter, and exit', async ({
+  page,
+}) => {
+  await page.goto('./');
+  await expect(page.locator('canvas')).toBeVisible();
+  await page.evaluate(() => {
+    (window as unknown as { __canvasRef: unknown }).__canvasRef =
+      document.querySelector('canvas');
+  });
+
+  await page.getByRole('button', { name: /地球另一端/ }).click();
+  await page.getByRole('button', { name: '进入观察' }).click();
+  await expect(page.getByRole('heading', { name: '地球另一端' })).toBeVisible();
+
+  await page.getByRole('button', { name: '返回展厅' }).click();
+  await expect(
+    page.getByRole('heading', { name: '选择一种观察' }),
+  ).toBeVisible();
+
+  const same = await page.evaluate(
+    () =>
+      document.querySelector('canvas') ===
+      (window as unknown as { __canvasRef: unknown }).__canvasRef,
+  );
+  expect(same).toBe(true);
+});
+
+test('restores focus to the lobby label after closing its preview', async ({
+  page,
+}) => {
+  await page.goto('./');
+  const label = page.getByRole('button', { name: /地球另一端/ });
+  await label.focus();
+  await label.click();
+  await expect(page.getByRole('dialog', { name: '地球另一端' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: '地球另一端' })).toBeHidden();
+  await expect(label).toBeFocused();
+});
+
+test('restores focus to the atlas opener after closing an atlas preview', async ({
+  page,
+}) => {
+  await page.goto('./?mode=antipodes&v=2');
+  const opener = page.getByRole('button', { name: '模式图鉴', exact: true });
+  await opener.click();
+  await expect(
+    page.getByRole('dialog', { name: '观察地球的方式' }),
+  ).toBeVisible();
+
+  await page
+    .getByRole('listitem')
+    .filter({ hasText: '发展的不同侧面' })
+    .getByRole('button', { name: '预览' })
+    .click();
+  await expect(
+    page.getByRole('dialog', { name: '发展的不同侧面' }),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: '关闭预览' }).click();
+  await expect(
+    page.getByRole('dialog', { name: '发展的不同侧面' }),
+  ).toBeHidden();
+  await expect(opener).toBeFocused();
+});

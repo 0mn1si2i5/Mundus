@@ -5,6 +5,7 @@ import {
   type ErrorInfo,
   type ReactNode,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -14,9 +15,10 @@ import {
   type ModeId,
 } from '../features/modes/modeRegistry';
 import { ModeAtlas } from '../features/modes/ModeAtlas';
-import { ModeControls } from '../features/modes/ModeControls';
-import { ModeResult } from '../features/modes/ModeResult';
-import { useModePresentation } from '../features/modes/useModePresentation';
+import { ModeExperience } from '../features/modes/ModeExperience';
+import { useGlobePresentation } from '../features/modes/useModePresentation';
+import { ExhibitLobby } from '../features/modes/ExhibitLobby';
+import { ModePreview } from '../features/modes/ModePreview';
 import { FirstInteractionHint } from '../features/discovery/FirstInteractionHint';
 import { ShareDialog } from '../features/share/ShareDialog';
 import { useAppStore } from '../state/appStore';
@@ -69,22 +71,63 @@ export function App() {
   const [atlasOpen, setAtlasOpen] = useState(false);
   const locale = useAppStore((state) => state.locale);
   const activeMode = useAppStore((state) => state.activeMode);
+  const previewMode = useAppStore((state) => state.previewMode);
   const point = useAppStore((state) => state.point);
   const hoveredCountry = useAppStore((state) => state.hoveredCountry);
-  const selectMode = useAppStore((state) => state.selectMode);
+  const openModePreview = useAppStore((state) => state.openModePreview);
+  const closeModePreview = useAppStore((state) => state.closeModePreview);
+  const enterPreviewMode = useAppStore((state) => state.enterPreviewMode);
+  const exitMode = useAppStore((state) => state.exitMode);
+  const navigationNotice = useAppStore((state) => state.navigationNotice);
+  const dismissNavigationNotice = useAppStore(
+    (state) => state.dismissNavigationNotice,
+  );
   const requestCameraFocus = useAppStore((state) => state.requestCameraFocus);
   const setLocale = useAppStore((state) => state.setLocale);
   const t = messages[locale];
-  const mode = MODE_DEFINITIONS[activeMode];
-  const presentation = useModePresentation();
+  const globe = useGlobePresentation();
+  const atlasButtonRef = useRef<HTMLButtonElement>(null);
+  const previewRestoreRef = useRef<HTMLElement | null>(null);
+  // The mode the user entered through an explicit preview. A direct V2 URL
+  // entry leaves this null so exiting falls back to the stable lobby heading.
+  const lobbyEntryModeRef = useRef<ModeId | null>(null);
   useUrlState();
   useCountrySelection();
 
-  function chooseModeFromAtlas(selectedMode: ModeId) {
-    selectMode(selectedMode);
+  function previewFromLobby(selectedMode: ModeId) {
+    previewRestoreRef.current = null;
+    openModePreview(selectedMode);
+  }
+
+  function previewFromAtlas(selectedMode: ModeId) {
+    previewRestoreRef.current = atlasButtonRef.current;
+    openModePreview(selectedMode);
     setAtlasOpen(false);
+  }
+
+  function enterFromPreview() {
+    lobbyEntryModeRef.current = previewMode;
+    enterPreviewMode();
     window.requestAnimationFrame(() => {
       document.getElementById('mode-title')?.focus();
+    });
+  }
+
+  function returnToLobby() {
+    const entryMode = lobbyEntryModeRef.current;
+    lobbyEntryModeRef.current = null;
+    exitMode();
+    window.requestAnimationFrame(() => {
+      if (entryMode) {
+        const label = document.querySelector<HTMLElement>(
+          `[data-lobby-mode="${entryMode}"]`,
+        );
+        if (label?.isConnected) {
+          label.focus();
+          return;
+        }
+      }
+      document.getElementById('lobby-heading')?.focus();
     });
   }
 
@@ -106,16 +149,48 @@ export function App() {
 
   return (
     <main className={styles.shell}>
+      {navigationNotice ? (
+        <div className={styles.notice} role="status">
+          <p>{t.unknownModeNotice}</p>
+          <button
+            type="button"
+            onClick={dismissNavigationNotice}
+            aria-label={t.dismissNotice}
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
       <div className={styles.stage} data-testid="app-stage">
         <header className={styles.header}>
           <div>
-            <a className={styles.brand} href="./" aria-label="Mundus home">
+            <a
+              className={styles.brand}
+              href="./"
+              aria-label="Mundus home"
+              onClick={(event) => {
+                if (activeMode !== null) {
+                  event.preventDefault();
+                  returnToLobby();
+                }
+              }}
+            >
               MUNDUS
             </a>
             <p className={styles.eyebrow}>{t.laboratory}</p>
           </div>
           <div className={styles.actions}>
+            {activeMode !== null ? (
+              <button
+                className={styles.textButton}
+                type="button"
+                onClick={returnToLobby}
+              >
+                {t.returnToLobby}
+              </button>
+            ) : null}
             <button
+              ref={atlasButtonRef}
               className={styles.textButton}
               type="button"
               onClick={() => {
@@ -146,32 +221,38 @@ export function App() {
           </div>
         </header>
 
-        <section
-          key={activeMode}
-          className={styles.intro}
-          data-mode={activeMode}
-          aria-labelledby="mode-title"
-        >
-          <p className={styles.index}>
-            0{modeIndex(activeMode) + 1} / 0{MODE_ORDER.length}
-          </p>
-          <h1 id="mode-title" tabIndex={-1}>
-            {locale === 'zh'
-              ? mode.titlePhrases.zh.map((phrase, index) => (
-                  <span key={phrase}>
-                    {index > 0 ? <wbr /> : null}
-                    <span className={styles.titlePhrase} data-title-phrase>
-                      {phrase}
-                    </span>
-                  </span>
-                ))
-              : mode.title.en}
-          </h1>
-          <p>{mode.question[locale]}</p>
-        </section>
+        {activeMode === null ? (
+          <ExhibitLobby locale={locale} onSelectPreview={previewFromLobby} />
+        ) : (
+          <section
+            key={activeMode}
+            className={styles.intro}
+            data-mode={activeMode}
+            aria-labelledby="mode-title"
+          >
+            <p className={styles.index}>
+              0{modeIndex(activeMode) + 1} / 0{MODE_ORDER.length}
+            </p>
+            <h1 id="mode-title" tabIndex={-1}>
+              {locale === 'zh'
+                ? MODE_DEFINITIONS[activeMode].titlePhrases.zh.map(
+                    (phrase, index) => (
+                      <span key={phrase}>
+                        {index > 0 ? <wbr /> : null}
+                        <span className={styles.titlePhrase} data-title-phrase>
+                          {phrase}
+                        </span>
+                      </span>
+                    ),
+                  )
+                : MODE_DEFINITIONS[activeMode].title.en}
+            </h1>
+            <p>{MODE_DEFINITIONS[activeMode].question[locale]}</p>
+          </section>
+        )}
 
         <ErrorBoundary
-          resetKey={activeMode}
+          resetKey={activeMode ?? 'lobby'}
           scope="Globe viewport"
           fallback={
             <RecoverableFallback
@@ -183,7 +264,7 @@ export function App() {
         >
           <Suspense fallback={<GlobeFallback label={t.loadingGlobe} />}>
             <GlobeViewport
-              diagnosticResetKey={`${activeMode}:${point.latitude},${point.longitude}`}
+              diagnosticResetKey={`${activeMode ?? 'lobby'}:${point.latitude},${point.longitude}`}
               fallbackLabel={t.fallback}
               contextLostLabel={t.contextLost}
               ariaLabel={t.globeLabel}
@@ -191,46 +272,37 @@ export function App() {
               keyboardMovedLabel={t.globeMoved}
               keyboardZoomedLabel={t.globeZoomed}
               keyboardSelectedLabel={t.globeSelected}
-              countryFills={presentation.globe.countryFills}
-              showAntipodes={presentation.globe.showAntipodes}
-              sunline={presentation.globe.sunline}
-              antipodeRelation={presentation.globe.antipodeRelation}
+              countryFills={globe.countryFills}
+              showAntipodes={globe.showAntipodes}
+              sunline={globe.sunline}
+              antipodeRelation={globe.antipodeRelation}
             />
           </Suspense>
         </ErrorBoundary>
       </div>
 
-      <ModeResult
-        locale={locale}
-        presentation={presentation}
-        onCameraFocus={requestCameraFocus}
-      />
+      {activeMode !== null &&
+      MODE_DEFINITIONS[activeMode].curation === 'archived' ? (
+        <div className={styles.notice} role="status">
+          <p>{t.archiveNotice}</p>
+        </div>
+      ) : null}
+
+      {activeMode !== null ? (
+        <ModeBoundary
+          mode={activeMode}
+          label={t.componentFailed}
+          retry={t.retry}
+          returnLabel={t.returnToLobby}
+          onReturnToLobby={returnToLobby}
+        >
+          <ModeExperience locale={locale} onCameraFocus={requestCameraFocus} />
+        </ModeBoundary>
+      ) : null}
 
       {hoveredCountry ? (
         <p className={styles.hoverLabel}>{hoveredCountry.name}</p>
       ) : null}
-
-      <ModeBoundary mode={activeMode} label={t.componentFailed} retry={t.retry}>
-        <ModeControls locale={locale} presentation={presentation} />
-      </ModeBoundary>
-
-      <nav className={styles.modeNav} aria-label={t.modes}>
-        {MODE_ORDER.map((modeId, index) => {
-          const item = MODE_DEFINITIONS[modeId];
-          return (
-            <button
-              key={item.id}
-              className={item.id === activeMode ? styles.activeMode : undefined}
-              type="button"
-              onClick={() => selectMode(item.id)}
-              aria-current={item.id === activeMode ? 'page' : undefined}
-            >
-              <span className={styles.modeNavIndex}>0{index + 1}</span>
-              <span className={styles.modeNavTitle}>{item.title[locale]}</span>
-            </button>
-          );
-        })}
-      </nav>
 
       <FirstInteractionHint locale={locale} />
       {shareOpen ? (
@@ -240,8 +312,17 @@ export function App() {
         <ModeAtlas
           locale={locale}
           activeMode={activeMode}
-          onSelectMode={chooseModeFromAtlas}
+          onSelectMode={previewFromAtlas}
           onClose={() => setAtlasOpen(false)}
+        />
+      ) : null}
+      {previewMode ? (
+        <ModePreview
+          locale={locale}
+          modeId={previewMode}
+          restoreFocusRef={previewRestoreRef}
+          onClose={closeModePreview}
+          onEnter={enterFromPreview}
         />
       ) : null}
     </main>
@@ -261,18 +342,29 @@ function ModeBoundary({
   mode,
   label,
   retry,
+  returnLabel,
+  onReturnToLobby,
   children,
 }: {
   mode: string;
   label: string;
   retry: string;
+  returnLabel: string;
+  onReturnToLobby: () => void;
   children: ReactNode;
 }) {
   return (
     <ErrorBoundary
       resetKey={mode}
-      scope={`${mode} controls`}
-      fallback={<RecoverableFallback label={label} retryLabel={retry} />}
+      scope={`${mode} experience`}
+      fallback={
+        <RecoverableFallback
+          label={label}
+          retryLabel={retry}
+          returnLabel={returnLabel}
+          onReturnToLobby={onReturnToLobby}
+        />
+      }
     >
       {children}
     </ErrorBoundary>
@@ -282,10 +374,14 @@ function ModeBoundary({
 function RecoverableFallback({
   label,
   retryLabel,
+  returnLabel,
+  onReturnToLobby,
   globe = false,
 }: {
   label: string;
   retryLabel: string;
+  returnLabel?: string;
+  onReturnToLobby?: () => void;
   globe?: boolean;
 }) {
   return (
@@ -297,6 +393,11 @@ function RecoverableFallback({
       <button type="button" onClick={() => window.location.reload()}>
         {retryLabel}
       </button>
+      {!globe && returnLabel && onReturnToLobby ? (
+        <button type="button" onClick={onReturnToLobby}>
+          {returnLabel}
+        </button>
+      ) : null}
     </section>
   );
 }

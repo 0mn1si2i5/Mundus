@@ -10,6 +10,8 @@ const COPY = {
     title: '分享这一视角',
     description:
       '分享链接会编码并恢复当前所选位置与观察方式；复制前请确认你愿意分享这一位置。',
+    lobbyDescription:
+      '分享链接会编码并恢复当前所选位置；复制前请确认你愿意分享这一位置。',
     sunlineDescription:
       '分享链接会编码并恢复当前所选位置与观察方式，并固定当前显示的 UTC 时间；复制前请确认你愿意分享这一位置与时间。',
     fieldLabel: '分享链接',
@@ -22,6 +24,8 @@ const COPY = {
     title: 'Share this view',
     description:
       'The share link encodes and restores the selected location and observation mode. Before copying, confirm that you are willing to share this location.',
+    lobbyDescription:
+      'The share link encodes and restores the selected location. Before copying, confirm that you are willing to share this location.',
     sunlineDescription:
       'The share link encodes and restores the selected location and observation mode, and fixes the displayed UTC time. Before copying, confirm that you are willing to share this location and time.',
     fieldLabel: 'Share link',
@@ -60,9 +64,11 @@ export function ShareDialog({
   const linkField = useRef<HTMLInputElement>(null);
   const copy = COPY[locale];
   const description =
-    snapshot.activeMode === 'sunline'
-      ? copy.sunlineDescription
-      : copy.description;
+    snapshot.activeMode === null
+      ? copy.lobbyDescription
+      : snapshot.activeMode === 'sunline'
+        ? copy.sunlineDescription
+        : copy.description;
 
   useEffect(() => {
     const restoreFocus = document.activeElement;

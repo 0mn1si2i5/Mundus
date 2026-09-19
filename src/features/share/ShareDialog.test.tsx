@@ -65,7 +65,7 @@ describe('ShareDialog', () => {
 
     const field = screen.getByRole('textbox', { name: 'Share link' });
     expect(field).toHaveValue(
-      'http://localhost:3000/exhibit?point=30.1235%2C120.9877&v=1',
+      'http://localhost:3000/exhibit?mode=antipodes&point=30.1235%2C120.9877&v=2',
     );
     expect(
       screen.getByRole('button', { name: 'Copy share link' }),
@@ -138,7 +138,7 @@ describe('ShareDialog', () => {
     render(<ShareDialog locale="en" onClose={vi.fn()} />);
 
     expect(screen.getByRole('textbox', { name: 'Share link' })).toHaveValue(
-      'http://localhost:3000/exhibit?mode=development&indicator=income&year=2010&v=1',
+      'http://localhost:3000/exhibit?mode=development&indicator=income&year=2010&v=2',
     );
   });
 

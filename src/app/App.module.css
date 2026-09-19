@@ -161,6 +161,35 @@
   pointer-events: none;
 }
 
+.notice {
+  position: absolute;
+  z-index: 12;
+  top: 5.5rem;
+  left: 50%;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--color-line);
+  color: var(--color-subtle);
+  background: var(--color-panel);
+  box-shadow: var(--shadow-paper);
+  font-size: 0.75rem;
+  transform: translateX(-50%);
+}
+
+.notice p {
+  margin: 0;
+}
+
+.notice button {
+  border: 0;
+  color: var(--color-text);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
 .modeNav {
   --mode-nav-bottom: 2rem;
   --mode-nav-inline: 2.5rem;
@@ -295,6 +324,7 @@
   .stage {
     position: relative;
     display: grid;
+    min-width: 0;
     min-height: 0;
     overflow: hidden;
     grid-template-rows: auto minmax(0, 1fr);
@@ -306,13 +336,22 @@
     --header-padding-inline: 1.25rem;
 
     position: relative;
+    min-width: 0;
+    flex-wrap: wrap;
+    row-gap: 0.4rem;
+  }
+
+  .header > div {
+    min-width: 0;
   }
 
   .actions {
     gap: 0.25rem;
+    flex-wrap: nowrap;
   }
 
   .textButton {
+    flex: 0 1 auto;
     padding-inline: 0.3rem;
     font-size: 0.78rem;
   }
@@ -324,6 +363,7 @@
     top: auto;
     left: auto;
     align-self: start;
+    min-width: 0;
     width: auto;
     margin: 0 calc(var(--intro-inline) + env(safe-area-inset-right)) 0
       calc(var(--intro-inline) + env(safe-area-inset-left));

@@ -13,6 +13,20 @@ V1.1 的候选期验收、测试、审阅与发布边界见
 [2026-08-01 候选证据](2026-08-01-v1.1-parchment-atlas-candidate.md)和
 [publication packet](2026-08-01-v1.1-publication-packet.md)。
 
+## Exhibit Shell V2：中立展厅壳层
+
+本地实现候选位于 `codex/exhibit-shell-v2` 分支。以下条目均为本地验证结果，
+尚未经过产品所有者独立验收，未发布、未合并到 `main`。
+
+- [x] `activeMode: ModeId | null` 与 `previewMode` 状态；`null` 代表中立展厅
+- [x] 裸地址与硬刷新进入展厅；历史无版本与 `v=1` 链接保持 Other Side/V1 语义；`v=2` 活动模式始终显式携带 `mode`
+- [x] 纯元数据目录（curation lifecycle、maturity、tags、featuredRank、双语 sourceScope）与纯 selector
+- [x] 桌面精选轨道与移动水平展签带共享同一语义列表；reduced motion 下完全静止
+- [x] ModePreview 仅读取目录元数据，显式进入前不加载任何模式 chunk 或数据
+- [x] Mode Atlas 支持 Featured/New/All/Archived、搜索、多标签过滤与 archive notice
+- [x] 返回展厅保留点位与同一 Canvas 相机上下文；unknown V2 mode 回退展厅并给出可关闭说明
+- [x] 三个现有模式（Other Side/Development/Sunline）科学、数据与交互语义保持不变
+
 ## Natural Earth 完整矢量球面
 
 - [x] 110m/50m 固定源文件、SHA-256、许可与可复现离线转换

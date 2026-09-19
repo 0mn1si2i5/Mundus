@@ -7,6 +7,15 @@ It defines which planning documents are authoritative, what may be executed,
 and where an agent must stop for product-owner review. It is an index and
 governance contract, not a detailed implementation plan.
 
+The next accepted product architecture is
+[`docs/EXHIBIT_SHELL_V2.md`](EXHIBIT_SHELL_V2.md): a mode-neutral globe lobby,
+curated featured orbit, scalable Mode Atlas, explicit mode previews, and
+versioned URL compatibility for a growing observation collection. Its design
+is accepted. An implementation candidate exists on the local
+`codex/exhibit-shell-v2` branch and is awaiting product-owner review; it is
+not published, merged, tagged, or released. This direction does not reopen
+GHSL or authorize a new mode.
+
 ## 1. Three Planning Layers
 
 Mundus uses three planning layers. Never treat them as interchangeable.

@@ -2,45 +2,61 @@ import { describe, expect, it } from 'vitest';
 import { createShareUrl } from './shareUrl';
 
 describe('createShareUrl', () => {
-  const state = {
-    activeMode: 'antipodes' as const,
+  const nowMs = Date.parse('2026-07-14T09:37:00Z');
+  const base = {
     point: { latitude: 31.2304, longitude: 121.4737 },
     developmentIndicator: 'hdi' as const,
     developmentYear: 2023,
-    sunlineTimeMs: Date.parse('2026-07-14T09:37:00Z'),
+    sunlineTimeMs: nowMs,
     sunlineClockMode: 'live' as const,
   };
 
-  it('omits the default point and removes stale query and hash state', () => {
+  it('serializes a default lobby to a bare URL', () => {
     expect(
-      createShareUrl('https://example.com/path?old=1#section', state),
+      createShareUrl('https://example.com/path?old=1#section', {
+        ...base,
+        activeMode: null,
+      }),
     ).toBe('https://example.com/path');
   });
 
-  it('serializes selected coordinates canonically to at most four decimals', () => {
+  it('serializes a lobby point canonically to at most four decimals', () => {
     expect(
       createShareUrl('https://example.com/path', {
-        ...state,
+        ...base,
+        activeMode: null,
         point: { latitude: 30.12346, longitude: 120.98765 },
       }),
-    ).toContain('point=30.1235%2C120.9877');
+    ).toBe('https://example.com/path?point=30.1235%2C120.9877&v=2');
+  });
+
+  it('serializes an active mode with an explicit mode id', () => {
+    expect(
+      createShareUrl('https://example.com/path', {
+        ...base,
+        activeMode: 'antipodes',
+        point: { latitude: 30.12346, longitude: 120.98765 },
+      }),
+    ).toBe(
+      'https://example.com/path?mode=antipodes&point=30.1235%2C120.9877&v=2',
+    );
   });
 
   it('preserves the selected development indicator and year', () => {
     const url = createShareUrl('https://example.com/path', {
-      ...state,
+      ...base,
       activeMode: 'development',
       developmentIndicator: 'income',
       developmentYear: 2010,
     });
-    expect(url).toContain('mode=development');
-    expect(url).toContain('indicator=income');
-    expect(url).toContain('year=2010');
+    expect(url).toBe(
+      'https://example.com/path?mode=development&indicator=income&year=2010&v=2',
+    );
   });
 
   it('materializes live Sunline time into a reproducible share URL', () => {
     const url = createShareUrl('https://example.com/path?mode=sunline', {
-      ...state,
+      ...base,
       activeMode: 'sunline',
     });
     expect(url).toContain('time=2026-07-14T09%3A37Z');
