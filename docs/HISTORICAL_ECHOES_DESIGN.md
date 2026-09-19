@@ -96,6 +96,7 @@ The first release uses a reproducibly derived, fixed snapshot with this scope:
 - Wikidata entity dump dated 2026-08-10;
 - place records selected through the reviewed Historical Echoes type closure;
 - `P571` and `P580` start properties only;
+- a valid Earth `P625` coordinate with finite latitude/longitude;
 - interpretable Wikidata time precision 6 through 11;
 - start date earlier than 1500;
 - at least one English or Chinese label;
@@ -138,6 +139,11 @@ its original precision. The formal data gate must freeze and test these rules:
 4. select deterministically by the accepted rank rule, date, property,
    precision, and stable statement identity;
 5. preserve BCE values and coarse precision without inventing a finer date.
+
+Coordinate selection must also exclude deprecated or non-Earth claims, prefer
+preferred-rank claims over normal-rank claims, reject out-of-range values, and
+break remaining ties deterministically. Records without a valid `P625` cannot
+participate in the fixed-radius query or the rendered record field.
 
 Year, month, and day precision may be presented at year granularity. Decade,
 century, and millennium precision must be described as approximate at their
@@ -244,6 +250,8 @@ release candidate must then satisfy all of the following:
 
 - the production labeled artifact is reproducible, checksum-pinned, licensed,
   registered, and fail-closed;
+- every retained record has a valid deterministic Earth coordinate and the
+  audit reports missing, invalid, and non-Earth coordinate claims;
 - count, radius, nearest distance, date selection, rank handling, BCE/coarse
   formatting, and distribution buckets have deterministic tests;
 - Chinese and English preserve the same meaning in zero, non-zero, coarse-date,
