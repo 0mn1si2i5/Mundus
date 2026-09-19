@@ -4018,6 +4018,31 @@ test('falls back to the lobby with a dismissible notice for an unknown V2 mode',
   ).not.toBeVisible();
 });
 
+test('falls back for a direct coming-soon mode URL without loading mode resources', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === 'mobile',
+    'One direct URL request trace is sufficient',
+  );
+  const requests: string[] = [];
+  page.on('request', (request) => requests.push(request.url()));
+
+  await page.goto('./?v=2&mode=historical-echoes');
+  await expect(
+    page.getByRole('heading', { name: '选择一种观察' }),
+  ).toBeVisible();
+  await expect(page.getByText('这项观察即将上线，已回到展厅。')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '历史回响' }),
+  ).not.toBeVisible();
+
+  const historicalEchoesRequests = requests.filter((url) =>
+    /historical-echoes/u.test(new URL(url).pathname),
+  );
+  expect(historicalEchoesRequests).toEqual([]);
+});
+
 test('produces a V2 point link from the lobby share dialog', async ({
   page,
 }) => {
