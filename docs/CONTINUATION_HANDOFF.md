@@ -2,7 +2,7 @@
 
 Status: active zero-context entry point for post-V1.1 product and development
 
-Verified snapshot: 2026-08-14, Asia/Shanghai
+Verified snapshot: 2026-09-19, Asia/Shanghai
 
 ## 1. Mission
 
@@ -55,12 +55,14 @@ This snapshot helps detect drift; refresh it before relying on it.
 
 - Public repository: <https://github.com/0mn1si2i5/Mundus>
 - Public product: <https://0mn1si2i5.github.io/Mundus/>
-- Local and remote `main` at verification:
-  `378fe528ca1c8f83f0280f83383b5e785e851285`
-- Latest merged product correction: PR #8, “Improve Mundus globe interaction
-  clarity.”
-- Latest same-SHA CI and Pages runs passed, including Pages artifact, complete
-  desktop/mobile E2E, deployment, and live smoke.
+- Remote `main` at verification:
+  `1c6beb9f8b3b92149e847d1840825a6eadb7a4bd`
+- PR #9, “Exhibit Shell V2: mode-neutral lobby, curated orbit, scalable Mode
+  Atlas,” PR #11, “Align live smoke with the Exhibit Shell lobby,” and PR #10,
+  “Curate the shell for Historical Echoes,” are merged. PR #10 entered `main`
+  as `1c6beb9f8b3b92149e847d1840825a6eadb7a4bd` after its quality,
+  browser-smoke, vector-data-full, and Pages artifact checks passed and both
+  review conversations were resolved.
 - `main` requires strict `quality`, `browser-smoke`, and `pages-artifact`
   checks; private vulnerability reporting is enabled.
 - The only tag and GitHub Release are `v1.0.0`, targeting
@@ -294,7 +296,7 @@ It must:
 
 1. refresh the local, remote, Pages, release, protection, and live state;
 2. inspect and preserve every local change;
-3. verify the shipped product identity and document any drift after PR #8;
+3. verify the shipped product identity and document any drift after PR #11;
 4. separate current deployment identity from V1.0/V1.1 tag and Release metadata;
 5. recommend how to resolve release-identity debt without making the remote
    change;
@@ -307,13 +309,18 @@ It must:
 
 Recommended investigation order:
 
-1. release and documentation identity alignment;
-2. lightweight real-user validation of the existing three-mode loop, without
-   adding telemetry infrastructure;
-3. owner decision on closing, deferring, or formally reopening GHSL;
-4. if GHSL stays closed, a focused cultural-observation design and licensing
-   spike after roadmap authority is updated;
-5. only then an approved implementation plan.
+1. complete the continuation assessment packet and decide whether Historical
+   Echoes is `Should Build`, `Should Delay`, `Should Reject`, or `Need More
+Context`;
+2. obtain product-owner approval and a bounded implementation packet before
+   any data regeneration or runtime integration;
+3. if approved, complete the Historical Echoes real-data reproducibility and
+   audit gate, then integrate its manifest and runtime contract without
+   enabling the mode;
+4. align tracked handoff and data documentation with the verified state;
+5. run the post-integration desktop/mobile and artifact gates;
+6. decide whether to close, defer, or formally reopen GHSL before any unrelated
+   product direction.
 
 ## 9. Migration Evidence
 
