@@ -32,6 +32,12 @@ official GitHub and pnpm actions. Production source maps are prohibited. The
 artifact must include the code license, conservative production dependency
 inventory, and exact bundled dependency notices.
 
+The local `test:release-server` suite validates the optional literal-mount
+rehearsal server and is kept outside the routine source gate because Pages is
+served by GitHub's deployment action. Run it when exercising that local
+`/Mundus/` rehearsal; it does not substitute for artifact verification or live
+smoke.
+
 ## Private rehearsal
 
 Before public visibility, a successful pull-request `pages-artifact` job is the
