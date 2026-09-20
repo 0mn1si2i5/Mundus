@@ -16,7 +16,7 @@ Mundus 是一颗长期维护的个人数字地球，用不同科学视角观察�
 
 ## 本地运行
 
-需要 Node.js 22 或更高版本，以及 pnpm 11.7.0。
+可复现的数据与发布门禁使用 Node.js 22.23.1，以及 pnpm 11.7.0。
 
 ```bash
 pnpm install --frozen-lockfile
