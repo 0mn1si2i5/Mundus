@@ -1,0 +1,46 @@
+{
+  "id": "wikidata-historical-echoes-2026-08-10",
+  "sourceName": "Wikidata structured data",
+  "sourceUrl": "https://www.wikidata.org/",
+  "distributionUrl": "https://dumps.wikimedia.org/wikidatawiki/entities/20260810/wikidata-20260810-all.json.gz",
+  "licenseName": "CC0 1.0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "version": "Wikidata entity dump 2026-08-10",
+  "retrievedAt": "2026-08-18",
+  "sourceSnapshot": {
+    "snapshot": "2026-08-10",
+    "fileName": "wikidata-20260810-all.json.gz",
+    "distributionUrl": "https://dumps.wikimedia.org/wikidatawiki/entities/20260810/wikidata-20260810-all.json.gz",
+    "bytes": 155457882747,
+    "md5": "88a9a7d75846374f6c3c4ae142bcdbd0",
+    "sha1": "0deaac8823b5fa722c8dc577941393cdbaae7bc5",
+    "sha256": "3d9c0999deafc6bcf00e0ec993b32539f9b384003872e5a3117dcf9eb2ca3618"
+  },
+  "derivedAsset": {
+    "path": "src/data/generated/historical-echoes.json",
+    "sha256": "7ce314e0b8ed3a5f0c8376bc57fd5e9ce8dd64cfa63fd656ad76cc6ab24a25cd",
+    "rawBytes": 30907296
+  },
+  "auditMetadata": {
+    "path": "src/data/generated/historical-echoes.metadata.json",
+    "sha256": "09aaf7877c1e8103195ac2df5480d92605c49a0aa0f4572717aebcfc8a9ad663",
+    "rawBytes": 2631065,
+    "schemaVersion": 1,
+    "profile": "current",
+    "closureFingerprint": "ca6d6d9bea9ca02205208dcbbc4cee837ff4cf518288ad6688bacca7b8029f5c"
+  },
+  "attribution": "Contains data from Wikidata, licensed under the CC0 1.0 public domain dedication; filtered and transformed by Mundus.",
+  "redistribution": "allowed",
+  "transformations": [
+    "Stream the complete pinned Wikidata -all- dump offline and reject compressed-source identity drift",
+    "Keep item records with a valid Earth P625 coordinate, an English or Chinese label, and a deterministic non-deprecated P571 or P580 start statement",
+    "Keep interpretable time precision 6 through 11 and reference years before 1500 without converting coarse dates into finer precision",
+    "Classify P31 values through the current four-root transitive P279 closure, ignoring deprecated P279 statements and applying the reviewed denylist barriers",
+    "Select preferred-rank values before normal-rank values and use stable statement identities for deterministic ties",
+    "Sort records by numeric Wikidata QID and retain source provenance for type, start, coordinate, and label selection"
+  ],
+  "missingValuePolicy": "Records without a valid Earth coordinate, an English or Chinese label, a qualifying type, or an interpretable pre-1500 start statement are excluded; missing values are never imputed.",
+  "boundaryPolicy": "A fixed 150 km observation around a selected point reports snapshot record coverage. The artifact is not a complete historical gazetteer, a list of nearby attractions, or a claim about the amount or continuity of local history.",
+  "recordCount": 43059,
+  "rawBytes": 30907296
+}

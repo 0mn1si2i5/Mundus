@@ -11,12 +11,52 @@ describe('data registry', () => {
       'natural-earth-vector-globe',
       'undp-hdr-2025-development',
       'geonames-major-cities',
+      'wikidata-historical-echoes-2026-08-10',
     ]);
     expect(
       DATA_MANIFESTS.every(
         (manifest) => dataManifestSchema.safeParse(manifest).success,
       ),
     ).toBe(true);
+  });
+
+  it('pins the audited Historical Echoes source, artifact, and closure', () => {
+    const manifest = DATA_MANIFESTS.find(
+      (candidate) => candidate.id === 'wikidata-historical-echoes-2026-08-10',
+    );
+
+    expect(manifest).toMatchObject({
+      licenseName: 'CC0 1.0',
+      redistribution: 'allowed',
+      sourceSnapshot: {
+        snapshot: '2026-08-10',
+        fileName: 'wikidata-20260810-all.json.gz',
+        distributionUrl:
+          'https://dumps.wikimedia.org/wikidatawiki/entities/20260810/wikidata-20260810-all.json.gz',
+        bytes: 155457882747,
+        md5: '88a9a7d75846374f6c3c4ae142bcdbd0',
+        sha1: '0deaac8823b5fa722c8dc577941393cdbaae7bc5',
+        sha256:
+          '3d9c0999deafc6bcf00e0ec993b32539f9b384003872e5a3117dcf9eb2ca3618',
+      },
+      derivedAsset: {
+        path: 'src/data/generated/historical-echoes.json',
+        sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+        rawBytes: expect.any(Number),
+      },
+      auditMetadata: {
+        path: 'src/data/generated/historical-echoes.metadata.json',
+        sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+        rawBytes: expect.any(Number),
+        schemaVersion: 1,
+        profile: 'current',
+        closureFingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
+      },
+      recordCount: expect.any(Number),
+    });
+    expect(manifest?.recordCount).toBeGreaterThan(0);
+    expect(manifest?.derivedAsset?.rawBytes).toBeGreaterThan(0);
+    expect(manifest?.auditMetadata?.rawBytes).toBeGreaterThan(0);
   });
 
   it('pins both vector resolutions and their transfer and GPU budgets', () => {

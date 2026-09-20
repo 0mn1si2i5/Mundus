@@ -117,6 +117,69 @@ and quality results are documented in `docs/data/undp-hdr-2025.md`. Small states
 without a Natural Earth 110m polygon remain in the semantic table but cannot be
 painted on the globe at this scale.
 
+## Wikidata Historical Echoes snapshot
+
+- Source: [Wikimedia dumps — Wikidata entity dumps](https://dumps.wikimedia.org/wikidatawiki/entities/20260810/)
+- Snapshot: `2026-08-10` dump run (`20260810`); the complete `-all-` entity dump
+  downloaded as `wikidata-20260810-all.json.gz`,
+  `155,457,882,747` bytes (≈ 155 GB)
+- Official checksums (Wikimedia publishes MD5 and SHA-1 only):
+  - MD5: `88a9a7d75846374f6c3c4ae142bcdbd0`
+  - SHA-1: `0deaac8823b5fa722c8dc577941393cdbaae7bc5`
+- Terms: [CC0](https://creativecommons.org/publicdomain/zero/1.0/) (public
+  domain dedication); redistribution allowed
+- Use: Historical Echoes observation — record coverage and earliest reach of
+  pre-1500 start records around a selected point
+
+The snapshot is the complete Wikidata `-all-` entity dump, streamed and filtered
+offline rather than queried live. Three reasons pin this choice:
+
+1. A SPARQL query against `query.wikidata.org` reads a live, moving database. It
+   cannot return a fixed `2026-08-10` snapshot and can never be reproduced
+   byte-for-byte across two runs, which the deterministic pipeline gate needs.
+2. Wikidata publishes no place-only subset dump, so a bounded geographic filter
+   must be derived from the complete dump.
+3. The dump must be `-all-` (not the truthy or `-BETA` variant): the rank rule
+   (`preferred > normal`, `deprecated` never selected) reads each statement's
+   real rank, which the truthy dump has already collapsed, so deterministic rank
+   selection is impossible from the truthy file.
+
+Download with resume support (`aria2c -c -x 4`; plain `curl -C -` is a
+single-connection equivalent), then verify the official MD5 and SHA-1 and record
+the local SHA-256 for the later manifest:
+
+```bash
+aria2c -c -x 4 \
+  -o wikidata-20260810-all.json.gz \
+  https://dumps.wikimedia.org/wikidatawiki/entities/20260810/wikidata-20260810-all.json.gz
+
+echo "88a9a7d75846374f6c3c4ae142bcdbd0  wikidata-20260810-all.json.gz" | md5sum -c -
+echo "0deaac8823b5fa722c8dc577941393cdbaae7bc5  wikidata-20260810-all.json.gz" | sha1sum -c -
+shasum -a 256 wikidata-20260810-all.json.gz
+```
+
+The captured file currently used for the local feasibility run is
+`155457882747` bytes with SHA-256
+`3d9c0999deafc6bcf00e0ec993b32539f9b384003872e5a3117dcf9eb2ca3618`.
+The tracked Historical Echoes manifest repeats this identity and binds it to the
+generated artifact and audit metadata hashes.
+
+The gzip form is preferred over the same-content `wikidata-20260810-all.json.bz2`
+because gzip decompresses several times faster when streaming. Both compress the
+identical `-all-` entity data; only the container differs.
+
+The filtering contract (P571/P580 start records, valid Earth P625 coordinates,
+precision 6–11, type closure, and rank selection) is defined by the Historical
+Echoes design and is not changed here; this section pins only the snapshot
+identity and the download-and-verify path.
+
+The current extraction profile and its reproducibility/count review are recorded
+in [`docs/data/historical-echoes.md`](docs/data/historical-echoes.md). The data
+gates require Node.js `22.23.1` and pnpm `11.7.0`; run `pnpm toolchain:verify`
+before `pnpm data:verify`. Node/zlib implementations can produce different
+compressed byte counts for the existing GeoNames asset, so another local Node
+version must not be used to rewrite a manifest.
+
 ## Solar calculations
 
 - Method source: [NOAA Solar Calculator calculation details](https://gml.noaa.gov/grad/solcalc/calcdetails.html)

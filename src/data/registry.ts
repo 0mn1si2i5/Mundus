@@ -3,6 +3,7 @@ import naturalEarthManifest from './manifests/natural-earth-110m.json';
 import undpDevelopmentManifest from './manifests/undp-hdr-2025-development.json';
 import geoNamesMajorCitiesManifest from './manifests/geonames-major-cities.json';
 import naturalEarthVectorManifest from './manifests/natural-earth-vector-globe.json';
+import historicalEchoesManifest from './manifests/wikidata-historical-echoes-2026-08-10.json';
 
 const auxiliarySourceSchema = z.object({
   sourceName: z.string().min(1),
@@ -26,6 +27,27 @@ const trackedAssetIdentitySchema = z.object({
   path: z.string().min(1),
   sha256: z.string().regex(/^[a-f0-9]{64}$/),
   rawBytes: z.number().int().positive(),
+});
+
+const historicalSourceSnapshotSchema = z.object({
+  snapshot: z.literal('2026-08-10'),
+  fileName: z.literal('wikidata-20260810-all.json.gz'),
+  distributionUrl: z.literal(
+    'https://dumps.wikimedia.org/wikidatawiki/entities/20260810/wikidata-20260810-all.json.gz',
+  ),
+  bytes: z.number().int().positive(),
+  md5: z.string().regex(/^[a-f0-9]{32}$/),
+  sha1: z.string().regex(/^[a-f0-9]{40}$/),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+});
+
+const historicalAuditMetadataSchema = z.object({
+  path: z.string().min(1),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  rawBytes: z.number().int().positive(),
+  schemaVersion: z.literal(1),
+  profile: z.literal('current'),
+  closureFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
 });
 
 const dataManifestObjectSchema = z.object({
@@ -58,6 +80,8 @@ const dataManifestObjectSchema = z.object({
   derivedAsset: trackedAssetIdentitySchema
     .extend({ formatVersion: z.number().int().optional() })
     .optional(),
+  sourceSnapshot: historicalSourceSnapshotSchema.optional(),
+  auditMetadata: historicalAuditMetadataSchema.optional(),
   attribution: z.string().min(1),
   redistribution: z.enum(['allowed', 'restricted', 'unknown']),
   transformations: z.array(z.string().min(1)).min(1),
@@ -144,6 +168,34 @@ export const dataManifestSchema = dataManifestObjectSchema.superRefine(
         message: 'GeoNames derived asset requires runtime format version 2',
       });
     }
+    if (manifest.id === 'wikidata-historical-echoes-2026-08-10') {
+      if (!manifest.sourceSnapshot) {
+        context.addIssue({
+          code: 'custom',
+          path: ['sourceSnapshot'],
+          message: 'Historical Echoes manifest requires pinned source identity',
+        });
+      }
+      if (!manifest.auditMetadata) {
+        context.addIssue({
+          code: 'custom',
+          path: ['auditMetadata'],
+          message:
+            'Historical Echoes manifest requires audit metadata identity',
+        });
+      }
+      if (
+        manifest.derivedAsset?.path !==
+        'src/data/generated/historical-echoes.json'
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['derivedAsset', 'path'],
+          message:
+            'Historical Echoes manifest requires the reviewed artifact path',
+        });
+      }
+    }
   },
 );
 
@@ -154,4 +206,5 @@ export const DATA_MANIFESTS: readonly DataManifest[] = [
   dataManifestSchema.parse(naturalEarthVectorManifest),
   dataManifestSchema.parse(undpDevelopmentManifest),
   dataManifestSchema.parse(geoNamesMajorCitiesManifest),
+  dataManifestSchema.parse(historicalEchoesManifest),
 ];
