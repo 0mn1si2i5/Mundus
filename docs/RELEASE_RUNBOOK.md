@@ -11,11 +11,12 @@ product-owner gate in `MVP_RELEASE_PLAN.md`.
 ## Build and deploy
 
 - Pull requests run the required CI source and full-vector checks in parallel.
-  The Pages `pages-artifact` job then performs the production build, artifact
-  verification, complete desktop/mobile Playwright suite, and upload of `dist/`
-  only. It does not repeat the source or full-vector suites. The browser suite
-  reuses the `dist/` produced by that build, so the production build runs once
-  in the Pages job. Pull requests cannot deploy.
+  The Pages `pages-artifact` job independently runs `pnpm check` so the exact
+  `dist/` it uploads has passed source, data, build, and artifact gates in the
+  same job. It then runs the complete desktop/mobile Playwright suite against
+  that `dist` and uploads it; pull requests cannot deploy. The source and
+  vector checks therefore run in both workflows by design: GitHub required
+  checks remain independent, while the Pages artifact remains self-verified.
 - The separate CI `browser-smoke` job runs three `@smoke` Chromium cases for a
   fast signal. It does not replace the complete desktop/mobile suite in the
   Pages artifact job.
