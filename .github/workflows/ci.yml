@@ -9,14 +9,9 @@ permissions:
   contents: read
 
 jobs:
-  quality:
-    needs: vector-data-full
-    if: ${{ always() }}
+  source-quality:
     runs-on: ubuntu-latest
     steps:
-      - name: Require complete vector-data validation
-        if: ${{ needs.vector-data-full.result != 'success' }}
-        run: exit 1
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
         with:
@@ -42,6 +37,15 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:data-vector-globe:full
+
+  quality:
+    needs: [source-quality, vector-data-full]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require source and vector validation
+        if: ${{ needs.source-quality.result != 'success' || needs.vector-data-full.result != 'success' }}
+        run: exit 1
 
   browser-smoke:
     runs-on: ubuntu-latest
