@@ -12,7 +12,9 @@ product-owner gate in `MVP_RELEASE_PLAN.md`.
 
 - Pull requests run the Pages `pages-artifact` job, including `pnpm check`, the
   complete desktop/mobile Playwright suite, artifact inspection, and upload of
-  `dist/` only. Pull requests cannot deploy.
+  `dist/` only. The browser suite reuses the `dist/` produced by `pnpm check`,
+  so the production build and artifact verification each run once in that job.
+  Pull requests cannot deploy.
 - A push to protected `main` repeats the same gate, uploads the exact artifact,
   and deploys it through the `github-pages` environment.
 - The deployment job alone receives `pages: write` and `id-token: write`.

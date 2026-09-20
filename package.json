@@ -33,6 +33,7 @@
     "measure:publication-candidate:compare": "node scripts/measure-publication-candidate.mjs --compare",
     "test:watch": "vitest",
     "test:e2e": "node scripts/run-playwright-e2e.mjs",
+    "test:e2e:smoke": "node scripts/run-playwright-e2e.mjs --project=chromium --grep @smoke",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm data:verify && pnpm test:data-cities && pnpm test:data-vector-globe && pnpm test && pnpm test:release && pnpm test:release-server && pnpm build && pnpm release:verify"
   },
   "dependencies": {
