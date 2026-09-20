@@ -15,6 +15,9 @@ product-owner gate in `MVP_RELEASE_PLAN.md`.
   `dist/` only. The browser suite reuses the `dist/` produced by `pnpm check`,
   so the production build and artifact verification each run once in that job.
   Pull requests cannot deploy.
+- The separate CI `browser-smoke` job runs three `@smoke` Chromium cases for a
+  fast signal. It does not replace the complete desktop/mobile suite in the
+  Pages artifact job.
 - A push to protected `main` repeats the same gate, uploads the exact artifact,
   and deploys it through the `github-pages` environment.
 - The deployment job alone receives `pages: write` and `id-token: write`.
