@@ -4,8 +4,8 @@ import type { CountryFeature } from './countryData';
 import type { GeoPoint } from './geo';
 
 const RAD_TO_DEG = 180 / Math.PI;
-const GRID_STEPS = 24;
-const EDGE_SAMPLES = 4;
+const GRID_STEPS = 12;
+const EDGE_SAMPLES = 2;
 
 export interface CountryLabelAnchor {
   point: GeoPoint;
