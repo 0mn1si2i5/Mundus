@@ -6,7 +6,7 @@ const localFormSchema = z.object({
 });
 
 const surnameRecordSchema = z.object({
-  rank: z.number().int().positive(),
+  rank: z.number().int().positive().nullable(),
   localForms: z.array(localFormSchema),
   romanizedForms: z.array(z.string().min(1)),
   zhDisplay: z.string().min(1).nullable(),
@@ -39,7 +39,7 @@ export interface SurnameLocalForm {
 }
 
 export interface SurnameRecord {
-  rank: number;
+  rank: number | null;
   localForms: readonly SurnameLocalForm[];
   romanizedForms: readonly string[];
   zhDisplay: string | null;
@@ -64,6 +64,12 @@ export interface SurnameDataset {
   coverageNote: string;
   countries: readonly SurnameCountry[];
   countriesById: ReadonlyMap<string, SurnameCountry>;
+}
+
+export interface SurnameMapLabel {
+  countryId: string;
+  countryName: string;
+  record: SurnameRecord;
 }
 
 let datasetPromise: Promise<SurnameDataset> | undefined;

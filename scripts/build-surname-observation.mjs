@@ -132,9 +132,20 @@ const countryInfoBytes = await loadBytes(
 const countryCodes = parseCountryInfo(countryInfoBytes.toString('utf8'));
 const parsedRows = parseCsv(csvBytes.toString('utf8'));
 const sourceCountryCodes = new Set(parsedRows.map((row) => row.Country));
+const rankedCountries = new Set(
+  parsedRows.filter((row) => row.Rank === 1).map((row) => row.Country),
+);
 const rows = parsedRows
-  .filter((row) => row.Rank === 1)
-  .sort((a, b) => a.Country.localeCompare(b.Country) || a.Index - b.Index);
+  .filter(
+    (row) => row.Rank === 1 || (!row.Rank && !rankedCountries.has(row.Country)),
+  )
+  .sort(
+    (a, b) =>
+      a.Country.localeCompare(b.Country) ||
+      (a.Rank || Number.MAX_SAFE_INTEGER) -
+        (b.Rank || Number.MAX_SAFE_INTEGER) ||
+      a.Index - b.Index,
+  );
 const byCountry = new Map();
 for (const row of rows) {
   const country = byCountry.get(row.Country) ?? [];
@@ -144,7 +155,7 @@ for (const row of rows) {
   if (!record) {
     record = {
       key,
-      rank: row.Rank,
+      rank: row.Rank > 0 ? row.Rank : null,
       localForms: [],
       romanizedForms: [],
       count: parseNumber(row.Count),
@@ -204,7 +215,7 @@ const output = {
   license:
     'Dataset repository CC0; upstream Wikipedia list pages are generally CC BY-SA 4.0.',
   coverageNote:
-    'Community-compiled source-listed records, not a unified official global ranking. Rank-one records are absent for some countries in this snapshot.',
+    'Community-compiled source-listed records, not a unified official global ranking. Numeric rank-one records are absent for some countries; their unranked source lists remain visible without an inferred rank.',
   countries,
 };
 
@@ -214,7 +225,7 @@ await mkdir(join(outputPath, '..'), { recursive: true });
 await writeFile(outputPath, `${JSON.stringify(output)}\n`);
 console.log(`wrote ${outputPath}`);
 console.log(
-  `countries=${Object.keys(countries).length} rankOneRows=${rows.length}`,
+  `countries=${Object.keys(countries).length} rankOneRows=${rows.filter((row) => row.Rank === 1).length} unrankedRows=${rows.filter((row) => !row.Rank).length}`,
 );
 
 async function loadBytes(path, url, expectedSha256, fallbackPath) {

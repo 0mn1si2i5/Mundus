@@ -21,6 +21,7 @@ describe('useGlobePresentation', () => {
       showAntipodes: false,
       sunline: null,
       antipodeRelation: null,
+      surnameMapLabel: null,
     });
   });
 

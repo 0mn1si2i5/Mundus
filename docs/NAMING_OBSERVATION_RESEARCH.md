@@ -49,8 +49,10 @@ blindly treating the CSV as an authoritative global table.
 
 ## Data Contract
 
-The first reviewed asset should retain all community rows but present rank-one
-records as the primary finding. It should use a schema equivalent to:
+The reviewed asset retains rank-one records as the primary finding and keeps
+source-listed rows without a numeric rank only for countries that have no
+rank-one record. Those rows are explicitly unranked rather than promoted to a
+global ranking. It uses a schema equivalent to:
 
 ```text
 countryIso: string
@@ -70,7 +72,8 @@ coverageNote: string
 confidence: "reviewed" | "source-only" | "missing"
 ```
 
-`rank=1` is an array of records, not a single string. `count`, `share`,
+`rank=1` is an array of records, not a single string; an unranked source list
+uses `rank: null`. `count`, `share`,
 `statYear`, `zhDisplay`, and transliteration remain nullable. Missing values
 must not become zero, and a missing rank-one record must not be filled by
 guessing from another source.
@@ -127,10 +130,13 @@ part of the packet.
 ## Implementation packet
 
 The bounded implementation uses `src/data/generated/surnames-by-country.json`
-and `src/features/surnames/`. It contains 75 country entries and 72 rank-one
-records, is 16,662 bytes before compression, and is loaded only when the mode is
-active. The manifest pins the CSV and ISO mapping hashes. Five Chinese
+and `src/features/surnames/`. It contains 75 country entries, 72 rank-one
+records, and 93 unranked source records, is 41,130 bytes before compression,
+and is loaded only when the mode is active. The manifest pins the CSV and ISO
+mapping hashes. Five Chinese
 presentations are manually reviewed (`CN`, `TW`, `KR`, `JP`, and `VN`); all
 other countries show an explicit missing state. The app preserves alternate
-local and romanized forms within a rank-one source group and does not infer a
-statistical year from the 2023 collection snapshot.
+local and romanized forms within a source group, does not infer a statistical
+year from the 2023 collection snapshot, and renders only the selected
+country's compact local/Chinese/Latin label on the globe so labels cannot cover
+neighbouring countries.

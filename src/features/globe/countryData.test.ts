@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import { geoContains } from 'd3-geo';
+import surnameDataset from '../../data/generated/surnames-by-country.json';
 import {
   getBoundedTextureAnisotropy,
   getCountryDataset,
   getCountryHighlightTextureWidth,
   getCountryTextureStyle,
 } from './countryData';
+import {
+  getCountryLabelAnchor,
+  getFallbackCountryLabelAnchor,
+} from './countryLabel';
 
 describe('country dataset', () => {
   const dataset = getCountryDataset();
@@ -27,6 +33,45 @@ describe('country dataset', () => {
       dataset.findCountry({ latitude: 40.7128, longitude: -74.006 })?.name,
     ).toBe('United States of America');
     expect(dataset.findCountry({ latitude: 0, longitude: -140 })).toBeNull();
+  });
+
+  it('keeps surname label anchors inside their country geometry', () => {
+    for (const [countryId, surnameCountry] of Object.entries(
+      surnameDataset.countries,
+    )) {
+      const country = dataset.countries.features.find(
+        (candidate) => candidate.properties.countryId === countryId,
+      );
+      if (!country) {
+        expect(
+          getFallbackCountryLabelAnchor(countryId),
+          countryId,
+        ).not.toBeNull();
+        continue;
+      }
+      const anchor = getCountryLabelAnchor(country!);
+      const firstRecord = surnameCountry.records[0];
+      if (!firstRecord) continue;
+      expect(anchor, countryId).not.toBeNull();
+      expect(
+        geoContains(country!, [
+          anchor!.point.longitude,
+          anchor!.point.latitude,
+        ]),
+        countryId,
+      ).toBe(true);
+      expect(anchor!.clearanceDegrees, countryId).toBeGreaterThan(0);
+    }
+  });
+
+  it('keeps verified small-country label fallbacks finite', () => {
+    for (const countryId of ['ne-234', 'ne-470']) {
+      const anchor = getFallbackCountryLabelAnchor(countryId);
+      expect(anchor, countryId).not.toBeNull();
+      expect(Number.isFinite(anchor!.point.latitude)).toBe(true);
+      expect(Number.isFinite(anchor!.point.longitude)).toBe(true);
+      expect(anchor!.clearanceDegrees).toBeGreaterThan(0);
+    }
   });
 });
 
