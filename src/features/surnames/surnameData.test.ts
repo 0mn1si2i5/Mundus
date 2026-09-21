@@ -5,7 +5,7 @@ import { decodeSurnameDataset, getRankOneSurnameRecord } from './surnameData';
 describe('surname observation data', () => {
   it('keeps exact Natural Earth country joins and explicit source coverage', () => {
     const decoded = decodeSurnameDataset(dataset);
-    expect(decoded.countries).toHaveLength(75);
+    expect(decoded.countries).toHaveLength(76);
     expect(decoded.countriesById.get('ne-156')?.countryIso2).toBe('CN');
     expect(decoded.countriesById.get('ne-008')?.records[0]).toMatchObject({
       rank: null,
@@ -15,6 +15,12 @@ describe('surname observation data', () => {
       'https://en.wikipedia.org/wiki/List_of_most_common_surnames_in_Asian_countries',
     ]);
     expect(decoded.countriesById.get('ne-x-kosovo')?.countryIso2).toBe('XK');
+    expect(decoded.countriesById.get('ne-364')?.records[0]).toMatchObject({
+      rank: 1,
+      localForms: [{ value: 'محمدی', script: 'Arabic' }],
+      romanizedForms: ['Mohammadi'],
+      share: 0.0085581142730807,
+    });
   });
 
   it('keeps rank-one variants together without inventing missing values', () => {

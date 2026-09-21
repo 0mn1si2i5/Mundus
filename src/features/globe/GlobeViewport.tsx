@@ -85,6 +85,12 @@ import {
   getCountryLabelWorldWidth,
   type CountryLabelAnchor,
 } from './countryLabel';
+import {
+  computeSurnameLabelLayout,
+  type SurnameLabelObstacle,
+  type SurnameLabelHiddenReason,
+  type SurnameLabelScreenRect,
+} from './surnameLabelLayout';
 import type { SurnameMapLabel } from '../surnames/surnameData';
 import {
   CAMERA_FOCUS_DURATION_MS,
@@ -162,6 +168,7 @@ export function GlobeViewport({
   const [surnameLabelLayout, setSurnameLabelLayout] = useState({
     visibleCount: 0,
     collisionCount: 0,
+    selectedHiddenReason: null as SurnameLabelHiddenReason | null,
   });
   const [vectorRenderEvidence, setVectorRenderEvidence] = useState<{
     vectorDraws: number;
@@ -675,6 +682,11 @@ export function GlobeViewport({
           ? String(surnameLabelLayout.collisionCount)
           : undefined
       }
+      data-surname-map-label-hidden-reason={
+        selectedSurnameMapLabel
+          ? (surnameLabelLayout.selectedHiddenReason ?? undefined)
+          : undefined
+      }
       data-sunline-selected-marker-role={
         sunline ? SUNLINE_RENDERING.selectedMarker.role : undefined
       }
@@ -793,6 +805,7 @@ interface GlobeSceneProps {
   onSurnameLabelLayoutChange: (layout: {
     visibleCount: number;
     collisionCount: number;
+    selectedHiddenReason: SurnameLabelHiddenReason | null;
   }) => void;
   onCameraFocusStart: () => void;
   onCameraFocusAnimationStart: (timestamp: number) => void;
@@ -918,6 +931,7 @@ function GlobeScene({
     startedAt: number;
   } | null>(null);
   const surnameFocusKey = useRef('');
+  const surnameFocusAttempt = useRef({ countryId: '', nextOffsetIndex: 0 });
   const markerDiagnostic = useRef<MarkerDiagnosticHandle>(null);
   const antipodeRelationDiagnostic =
     useRef<AntipodeRelationDiagnosticHandle>(null);
@@ -985,6 +999,7 @@ function GlobeScene({
   useEffect(() => {
     if (activeMode !== 'surnames') {
       surnameFocusKey.current = '';
+      surnameFocusAttempt.current = { countryId: '', nextOffsetIndex: 0 };
       return;
     }
     if (
@@ -996,13 +1011,47 @@ function GlobeScene({
       return;
     }
     surnameFocusKey.current = selectedSurnameMapLabel.countryId;
-    requestCameraFocus(getSurnameCameraFocusPoint(surnameAnchor.point));
+    surnameFocusAttempt.current = {
+      countryId: selectedSurnameMapLabel.countryId,
+      nextOffsetIndex: 1,
+    };
+    requestCameraFocus(
+      getSurnameCameraFocusPoint(
+        surnameAnchor.point,
+        SURNAME_MOBILE_FOCUS_OFFSETS[0],
+      ),
+    );
   }, [
     activeMode,
     hasInteracted,
     requestCameraFocus,
     surnameAnchor,
     selectedSurnameMapLabel,
+  ]);
+  const handleSelectedSurnameLabelBlocked = useCallback(() => {
+    if (
+      activeMode !== 'surnames' ||
+      hasInteracted ||
+      !selectedSurnameMapLabel ||
+      !surnameAnchor ||
+      typeof window === 'undefined' ||
+      window.innerWidth > 760
+    ) {
+      return;
+    }
+    const attempt = surnameFocusAttempt.current;
+    if (attempt.countryId !== selectedSurnameMapLabel.countryId) return;
+    const offset =
+      SURNAME_MOBILE_FOCUS_OFFSETS[attempt.nextOffsetIndex] ?? null;
+    if (offset === null) return;
+    attempt.nextOffsetIndex += 1;
+    requestCameraFocus(getSurnameCameraFocusPoint(surnameAnchor.point, offset));
+  }, [
+    activeMode,
+    hasInteracted,
+    requestCameraFocus,
+    selectedSurnameMapLabel,
+    surnameAnchor,
   ]);
   const rasterCountryFills = vectorReady ? null : countryFills;
   const texture = useMemo(
@@ -1401,6 +1450,7 @@ function GlobeScene({
             selectedCountryId={selectedCountry?.countryId ?? null}
             onVisibilityChange={onSurnameLabelVisibilityChange}
             onLayoutChange={onSurnameLabelLayoutChange}
+            onSelectedLabelBlocked={handleSelectedSurnameLabelBlocked}
           />
         ) : null}
         <mesh
@@ -1735,18 +1785,12 @@ interface SurnameLabelEntry {
   anchor: CountryLabelAnchor;
 }
 
-interface SurnameLabelRect {
-  id: string;
-  sprite: Sprite;
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
-  frontFacing: boolean;
-  selected: boolean;
-}
+const SURNAME_MOBILE_FOCUS_OFFSETS = [14, 22, 28, 32] as const;
 
-function getSurnameCameraFocusPoint(point: GeoPoint): GeoPoint {
+function getSurnameCameraFocusPoint(
+  point: GeoPoint,
+  mobileOffset: number = SURNAME_MOBILE_FOCUS_OFFSETS[0],
+): GeoPoint {
   if (typeof window === 'undefined' || window.innerWidth > 760) {
     return point;
   }
@@ -1755,7 +1799,7 @@ function getSurnameCameraFocusPoint(point: GeoPoint): GeoPoint {
   // north of the label so the selected country remains in the unobstructed
   // lower portion of the globe while preserving the same geographic view.
   return {
-    latitude: Math.min(75, point.latitude + 14),
+    latitude: Math.min(75, point.latitude + mobileOffset),
     longitude: point.longitude,
   };
 }
@@ -1765,6 +1809,7 @@ function SurnameMapLabelLayer({
   selectedCountryId,
   onVisibilityChange,
   onLayoutChange,
+  onSelectedLabelBlocked,
 }: {
   entries: readonly SurnameLabelEntry[];
   selectedCountryId: string | null;
@@ -1772,7 +1817,9 @@ function SurnameMapLabelLayer({
   onLayoutChange: (layout: {
     visibleCount: number;
     collisionCount: number;
+    selectedHiddenReason: SurnameLabelHiddenReason | null;
   }) => void;
+  onSelectedLabelBlocked: (reason: SurnameLabelHiddenReason) => void;
 }) {
   const sprites = useRef(new Map<string, Sprite>());
   const previousEvidence = useRef('');
@@ -1794,7 +1841,7 @@ function SurnameMapLabelLayer({
     const corner = new Vector3();
     const projected = new Vector3();
     const canvasRect = gl.domElement.getBoundingClientRect();
-    const obstacles = Array.from(
+    const obstacles: SurnameLabelObstacle[] = Array.from(
       document.querySelectorAll<HTMLElement>('[data-surname-label-obstacle]'),
     )
       .map((element) => {
@@ -1807,7 +1854,7 @@ function SurnameMapLabelLayer({
         };
       })
       .filter((rect) => rect.right > rect.left && rect.bottom > rect.top);
-    const rectangles: SurnameLabelRect[] = [];
+    const rectangles: (SurnameLabelScreenRect & { sprite: Sprite })[] = [];
 
     for (const entry of entries) {
       const sprite = sprites.current.get(entry.label.countryId);
@@ -1850,54 +1897,28 @@ function SurnameMapLabelLayer({
       });
     }
 
-    rectangles.sort(
-      (a, b) =>
-        Number(b.selected) - Number(a.selected) || a.id.localeCompare(b.id),
-    );
-    const accepted: SurnameLabelRect[] = [];
-    let visibleCount = 0;
-    let collisionCount = 0;
-    let selectedVisible = false;
+    const layout = computeSurnameLabelLayout(rectangles, obstacles, {
+      width: size.width,
+      height: size.height,
+    });
     for (const rectangle of rectangles) {
-      const inViewport =
-        rectangle.left >= 0 &&
-        rectangle.right <= size.width &&
-        rectangle.top >= 0 &&
-        rectangle.bottom <= size.height;
-      const overlaps = accepted.some(
-        (other) =>
-          rectangle.left < other.right &&
-          rectangle.right > other.left &&
-          rectangle.top < other.bottom &&
-          rectangle.bottom > other.top,
-      );
-      const hitsObstacle = obstacles.some(
-        (obstacle) =>
-          rectangle.left < obstacle.right &&
-          rectangle.right > obstacle.left &&
-          rectangle.top < obstacle.bottom &&
-          rectangle.bottom > obstacle.top,
-      );
-      const visible =
-        rectangle.frontFacing && inViewport && !overlaps && !hitsObstacle;
-      rectangle.sprite.visible = visible;
-      if (visible) {
-        accepted.push(rectangle);
-        visibleCount += 1;
-        if (rectangle.selected) selectedVisible = true;
-      } else if (
-        rectangle.frontFacing &&
-        inViewport &&
-        (overlaps || hitsObstacle)
-      ) {
-        collisionCount += 1;
-      }
+      rectangle.sprite.visible = layout.visibleIds.has(rectangle.id);
     }
-    const evidence = `${visibleCount}:${collisionCount}:${selectedVisible}`;
+    const selectedHiddenReason = selectedCountryId
+      ? (layout.hiddenReasons.get(selectedCountryId) ?? null)
+      : null;
+    const evidence = `${layout.visibleCount}:${layout.collisionCount}:${layout.selectedVisible}:${selectedHiddenReason ?? ''}`;
     if (previousEvidence.current !== evidence) {
       previousEvidence.current = evidence;
-      onVisibilityChange(selectedVisible);
-      onLayoutChange({ visibleCount, collisionCount });
+      onVisibilityChange(layout.selectedVisible);
+      onLayoutChange({
+        visibleCount: layout.visibleCount,
+        collisionCount: layout.collisionCount,
+        selectedHiddenReason,
+      });
+      if (selectedHiddenReason) {
+        onSelectedLabelBlocked(selectedHiddenReason);
+      }
     }
   });
 

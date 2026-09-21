@@ -150,13 +150,13 @@ describe('data registry', () => {
     );
     expect(manifest).toMatchObject({
       version: expect.stringContaining('v1.2'),
-      licenseName: expect.stringContaining('CC0'),
+      licenseName: expect.stringMatching(/CC0.*Apache-2\.0/u),
       derivedAssetSha256:
-        '8fff58f7004fedb719502fa99e74d1246e0e3b03f2f92972f4409f071b2363be',
-      recordCount: 165,
-      rawBytes: 41130,
-      gzipBytes: 3741,
-      staticDecodedBytesEstimate: 164520,
+        '4b640ca026aacc59fd8b481df56c7a58f517087a3b3a08bf76cfb974842f9580',
+      recordCount: 166,
+      rawBytes: 41867,
+      gzipBytes: 4049,
+      staticDecodedBytesEstimate: 167468,
     });
     expect(manifest?.rawBytes).toBeLessThan(200 * 1024);
     expect(manifest?.runtimeDecodedBytesEstimate).toBeLessThan(2 * 1024 * 1024);
