@@ -45,7 +45,11 @@ export function FirstInteractionHint({ locale }: { locale: Locale }) {
   if (dismissed || completed) return null;
 
   return (
-    <aside className={styles.hint} data-testid="first-interaction-hint">
+    <aside
+      className={styles.hint}
+      data-testid="first-interaction-hint"
+      data-surname-label-obstacle
+    >
       <p>{copy.text}</p>
       <button
         type="button"

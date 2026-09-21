@@ -72,6 +72,13 @@ export interface SurnameMapLabel {
   record: SurnameRecord;
 }
 
+/** Only an explicit numeric rank can support the map's "most common" claim. */
+export function getRankOneSurnameRecord(
+  country: SurnameCountry | undefined,
+): SurnameRecord | null {
+  return country?.records.find((record) => record.rank === 1) ?? null;
+}
+
 let datasetPromise: Promise<SurnameDataset> | undefined;
 
 export function decodeSurnameDataset(input: unknown): SurnameDataset {

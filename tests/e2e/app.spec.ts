@@ -233,6 +233,20 @@ test('Surname Atlas preserves local, Latin, Chinese, and missing states', async 
   );
 });
 
+test('Surname Atlas keeps unranked source lists off the map', async ({
+  page,
+}) => {
+  await page.goto('./?mode=surnames&point=37.9838%2C23.7275&v=2');
+  const globe = globeRegion(page);
+  await expect(globe).toHaveAttribute('data-vector-state', 'ready');
+  await expect(globe).toHaveAttribute('data-surname-map-label-count', '72');
+  await expect(globe).not.toHaveAttribute('data-surname-map-label');
+  await expect(globe).toHaveAttribute(
+    'data-surname-map-label-collision-count',
+    /\d+/,
+  );
+});
+
 test('vector drag shell becomes transparent while the hit sphere remains active', async ({
   page,
 }, testInfo) => {

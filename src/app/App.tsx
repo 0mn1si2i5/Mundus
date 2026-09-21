@@ -162,7 +162,7 @@ export function App() {
         </div>
       ) : null}
       <div className={styles.stage} data-testid="app-stage">
-        <header className={styles.header}>
+        <header className={styles.header} data-surname-label-obstacle>
           <div>
             <a
               className={styles.brand}
@@ -228,6 +228,7 @@ export function App() {
             key={activeMode}
             className={styles.intro}
             data-mode={activeMode}
+            data-surname-label-obstacle
             aria-labelledby="mode-title"
           >
             <p className={styles.index}>
@@ -276,7 +277,7 @@ export function App() {
               showAntipodes={globe.showAntipodes}
               sunline={globe.sunline}
               antipodeRelation={globe.antipodeRelation}
-              surnameMapLabel={globe.surnameMapLabel}
+              surnameMapLabels={globe.surnameMapLabels}
             />
           </Suspense>
         </ErrorBoundary>

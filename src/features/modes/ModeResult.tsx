@@ -165,6 +165,7 @@ export function ModeResult({
           aria-live="polite"
           aria-label={t.surnameResult}
           data-testid="surname-result"
+          data-surname-label-obstacle
         >
           <span>{t.selectedCountryLabel}</span>
           <em>{country?.name ?? t.surnameChooseCountry}</em>
