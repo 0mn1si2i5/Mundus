@@ -149,6 +149,118 @@ export function ModeResult({
           </div>
         </aside>
       );
+    case 'surnames': {
+      const country = presentation.selectedCountry;
+      const loadState = presentation.surnameData;
+      const countryData =
+        country && loadState.status === 'ready'
+          ? loadState.data.countriesById.get(country.countryId)
+          : null;
+      const numberFormatter = new Intl.NumberFormat(
+        locale === 'zh' ? 'zh-CN' : 'en-US',
+      );
+      return (
+        <aside
+          className={`${styles.result} ${styles.surnameResult}`}
+          aria-live="polite"
+          aria-label={t.surnameResult}
+          data-testid="surname-result"
+        >
+          <span>{t.selectedCountryLabel}</span>
+          <em>{country?.name ?? t.surnameChooseCountry}</em>
+          {!country ? (
+            <strong>{t.surnameSelectOnGlobe}</strong>
+          ) : loadState.status === 'loading' ? (
+            <strong>{t.surnameLoading}</strong>
+          ) : loadState.status === 'error' ? (
+            <>
+              <strong>{t.surnameUnavailable}</strong>
+              <button
+                className={styles.surnameRetry}
+                type="button"
+                onClick={loadState.retry}
+              >
+                {t.surnameRetry}
+              </button>
+            </>
+          ) : countryData?.records.length ? (
+            <div className={styles.surnameRecords}>
+              {countryData.records.map((record, index) => (
+                <section
+                  className={styles.surnameRecord}
+                  key={`${record.rank}-${index}`}
+                >
+                  <span>
+                    {t.surnameRank} {record.rank}
+                  </span>
+                  <strong>
+                    {record.localForms.length
+                      ? record.localForms.map((form) => form.value).join(' · ')
+                      : t.surnameMissing}
+                  </strong>
+                  <small>
+                    {t.surnameLocalForm}
+                    {record.localForms
+                      .map((form) => form.script)
+                      .filter(Boolean)
+                      .join(', ') || t.surnameMissing}
+                  </small>
+                  <small>
+                    {t.surnameRomanized}
+                    {record.romanizedForms.length
+                      ? record.romanizedForms.join(' · ')
+                      : t.surnameMissing}
+                  </small>
+                  <small>
+                    {t.surnameChinese}
+                    {record.zhDisplay ?? t.surnameMissing}
+                  </small>
+                  <small>
+                    {t.surnameCount} ·{' '}
+                    {record.count !== null
+                      ? numberFormatter.format(record.count)
+                      : t.surnameMissing}
+                  </small>
+                  <small>
+                    {t.surnameShare} ·{' '}
+                    {record.share !== null
+                      ? `${(record.share * 100).toFixed(2)}%`
+                      : t.surnameMissing}
+                  </small>
+                  <small>
+                    {t.surnameYear} · {record.statYear ?? t.surnameMissing}
+                  </small>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <strong>{t.surnameNoRecord}</strong>
+          )}
+          {loadState.status === 'ready' ? (
+            <div className={styles.surnameScope}>
+              <small>
+                {t.surnameSourceSnapshot}
+                {loadState.data.sourceSnapshot}
+              </small>
+              <small>
+                {t.surnameCoverage}
+                {loadState.data.coverageNote}
+              </small>
+              <small>
+                {t.surnameLicense}
+                {loadState.data.license}
+              </small>
+              <small>{t.surnameScope}</small>
+              {countryData?.sourceUrls.map((url) => (
+                <a href={url} key={url} rel="noreferrer" target="_blank">
+                  {t.surnameSourceLink}
+                </a>
+              ))}
+            </div>
+          ) : null}
+        </aside>
+      );
+    }
     default:
       return assertNever(presentation);
   }

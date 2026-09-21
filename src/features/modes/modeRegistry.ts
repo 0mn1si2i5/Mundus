@@ -2,7 +2,12 @@ import type { Locale } from '../../i18n/messages';
 import { z } from 'zod';
 import { SUNLINE_MAX_TIME_MS, SUNLINE_MIN_TIME_MS } from '../sunline/solar';
 
-export const MODE_ORDER = ['antipodes', 'development', 'sunline'] as const;
+export const MODE_ORDER = [
+  'antipodes',
+  'development',
+  'sunline',
+  'surnames',
+] as const;
 export type ModeId = (typeof MODE_ORDER)[number];
 
 export const CURATION_LIFECYCLES = [
@@ -135,6 +140,37 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
         .min(SUNLINE_MIN_TIME_MS)
         .max(SUNLINE_MAX_TIME_MS),
       clockMode: z.enum(['live', 'fixed']),
+    }),
+  },
+  surnames: {
+    id: 'surnames',
+    version: 1,
+    curation: 'featured',
+    maturity: 'experimental',
+    tags: ['humanity', 'place'],
+    featuredRank: 4,
+    isNew: true,
+    title: { zh: '姓氏观察', en: 'Surname Atlas' },
+    titlePhrases: { zh: ['姓氏观察'] },
+    question: {
+      zh: '这个国家有哪些来源列出的常见姓氏？',
+      en: 'Which common surname records are listed for this country?',
+    },
+    summary: {
+      zh: '并列查看当地文字、拉丁字母转写与人工审阅的中文呈现。',
+      en: 'Compare local forms, Latin transliterations, and reviewed Chinese presentations.',
+    },
+    sourceScope: {
+      zh: '社区整理的 2023 快照；不是统一官方全球排名，缺失字段保持未知。',
+      en: 'A community-compiled 2023 snapshot, not a unified official global ranking; missing fields stay unknown.',
+    },
+    cameraPolicy: 'preserve',
+    resources: ['natural-earth-countries-110m', 'surnames-by-country'],
+    stateSchema: z.object({
+      point: z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+      }),
     }),
   },
 };

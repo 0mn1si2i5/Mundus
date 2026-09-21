@@ -269,14 +269,16 @@ Plans 2–7 are frozen. Do not resume or reuse the incomplete builds, start
 runtime/UI/rendering work, loosen scientific rules, reduce global completeness,
 or reinterpret the evidence as a technical GO.
 
-### Candidate next direction
+### Accepted bounded next direction
 
-The tracked roadmap records a possible low-resource cultural or naming
-observation design and licensing spike using redistribution-safe community
-data. It is not designed or approved.
+The product owner accepted a bounded low-resource cultural observation using
+redistribution-safe community data. The accepted packet is the Surname Atlas:
+one static rank-one surname asset, explicit provenance and missing states, and
+no backend, crawler, runtime translation service, or new renderer. GHSL remains
+closed and its terminal evidence is unchanged.
 
-Because GHSL stopped, the product owner must choose one of these outcomes before
-new feature implementation:
+Before any further feature implementation, the product owner must choose one
+of these outcomes:
 
 1. close or indefinitely defer GHSL and revise the roadmap to permit a new
    direction;
@@ -284,6 +286,11 @@ new feature implementation:
 3. formally reopen GHSL with a new design/plan that addresses measured budgets;
 4. choose another bounded direction and first produce a separate design and
    approval packet.
+
+The Surname Atlas implementation is now tracked in `src/features/surnames/`,
+with its data contract and source decision recorded in
+`docs/NAMING_OBSERVATION_RESEARCH.md`. Release validation for this packet must
+still pass the normal protected-main, Pages artifact, and desktop/mobile gates.
 
 Do not silently choose on the owner's behalf.
 

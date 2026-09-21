@@ -39,6 +39,12 @@ const assets = [
     asset: 'src/data/generated/undp-hdr-2025-development.json',
     hashField: 'derivedAssetSha256',
   },
+  {
+    manifest: 'src/data/manifests/surnames-by-country.json',
+    asset: 'src/data/generated/surnames-by-country.json',
+    hashField: 'derivedAssetSha256',
+    budgets: true,
+  },
 ];
 
 let failed = false;
@@ -63,14 +69,18 @@ for (const entry of assets) {
   if (entry.budgets) {
     const parsed = JSON.parse(assetBytes.toString('utf8'));
     const measurements = {
-      recordCount: parsed.rows?.length,
+      recordCount:
+        parsed.rows?.length ??
+        Object.values(parsed.countries ?? {}).reduce(
+          (count, country) => count + (country.records?.length ?? 0),
+          0,
+        ),
       rawBytes: assetBytes.byteLength,
       gzipBytes: gzipSync(assetBytes, { level: 9, mtime: 0 }).byteLength,
       staticDecodedBytesEstimate: assetBytes.byteLength * 4,
-      runtimeDecodedBytesEstimate: estimateRuntimeDecodedBytes(
-        parsed,
-        assetBytes.byteLength,
-      ),
+      runtimeDecodedBytesEstimate: parsed.rows
+        ? estimateRuntimeDecodedBytes(parsed, assetBytes.byteLength)
+        : assetBytes.byteLength * 6,
     };
     for (const [field, actualValue] of Object.entries(measurements)) {
       if (actualValue !== manifest[field]) {
@@ -81,11 +91,17 @@ for (const entry of assets) {
       }
     }
     if (
-      measurements.recordCount > 10_000 ||
-      measurements.rawBytes > 1.5 * 1024 * 1024 ||
-      measurements.gzipBytes > 450 * 1024 ||
-      measurements.staticDecodedBytesEstimate > 6 * 1024 * 1024 ||
-      manifest.runtimeDecodedBytesEstimate > 8 * 1024 * 1024
+      manifest.id === 'surnames-by-country'
+        ? measurements.recordCount > 200 ||
+          measurements.rawBytes > 200 * 1024 ||
+          measurements.gzipBytes > 80 * 1024 ||
+          measurements.staticDecodedBytesEstimate > 800 * 1024 ||
+          manifest.runtimeDecodedBytesEstimate > 2 * 1024 * 1024
+        : measurements.recordCount > 10_000 ||
+          measurements.rawBytes > 1.5 * 1024 * 1024 ||
+          measurements.gzipBytes > 450 * 1024 ||
+          measurements.staticDecodedBytesEstimate > 6 * 1024 * 1024 ||
+          manifest.runtimeDecodedBytesEstimate > 8 * 1024 * 1024
     ) {
       failed = true;
       console.error(`${entry.asset}: GeoNames budget exceeded`);

@@ -23,7 +23,7 @@ describe('mode registry', () => {
   });
 
   it('provides one explicit product order with unique identifiers', () => {
-    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2]);
+    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2, 3]);
     expect(new Set(MODE_ORDER).size).toBe(MODE_ORDER.length);
   });
 
@@ -37,6 +37,7 @@ describe('mode registry', () => {
       '不同侧面',
     ]);
     expect(MODE_DEFINITIONS.sunline.titlePhrases.zh).toEqual(['日照线']);
+    expect(MODE_DEFINITIONS.surnames.titlePhrases.zh).toEqual(['姓氏观察']);
     for (const mode of Object.values(MODE_DEFINITIONS)) {
       expect(mode.titlePhrases.zh.join('')).toBe(mode.title.zh);
     }
@@ -63,6 +64,7 @@ describe('mode registry', () => {
       'antipodes',
       'development',
       'sunline',
+      'surnames',
     ]);
   });
 
@@ -116,6 +118,9 @@ describe('mode registry', () => {
     expect(searchModes('日照线', 'zh').map((mode) => mode.id)).toEqual([
       'sunline',
     ]);
+    expect(searchModes('姓氏', 'zh').map((mode) => mode.id)).toEqual([
+      'surnames',
+    ]);
     expect(searchModes('', 'en')).toHaveLength(MODE_ORDER.length);
   });
 
@@ -123,6 +128,7 @@ describe('mode registry', () => {
     const all = defaultVisibleModes();
     expect(filterModesByTags(all, ['place']).map((mode) => mode.id)).toEqual([
       'antipodes',
+      'surnames',
     ]);
     expect(filterModesByTags(all, ['time']).map((mode) => mode.id)).toEqual([
       'sunline',
@@ -144,7 +150,7 @@ describe('mode registry', () => {
   });
 
   it('keeps recency independent of maturity and curation', () => {
-    expect(newModes()).toEqual([]);
+    expect(newModes().map((mode) => mode.id)).toEqual(['surnames']);
     expect(MODE_DEFINITIONS.antipodes).toMatchObject({
       isNew: false,
       maturity: 'stable',
@@ -152,6 +158,11 @@ describe('mode registry', () => {
     });
     expect(MODE_DEFINITIONS.development).toMatchObject({
       isNew: false,
+      maturity: 'experimental',
+      curation: 'featured',
+    });
+    expect(MODE_DEFINITIONS.surnames).toMatchObject({
+      isNew: true,
       maturity: 'experimental',
       curation: 'featured',
     });
@@ -196,5 +207,16 @@ describe('mode registry', () => {
 
   it('folds non-featured modes into a distinct collection', () => {
     expect(collectionModes()).toEqual([]);
+  });
+
+  it('validates the surname point state', () => {
+    const schema = MODE_DEFINITIONS.surnames.stateSchema;
+    expect(
+      schema.safeParse({ point: { latitude: 31.2304, longitude: 121.4737 } })
+        .success,
+    ).toBe(true);
+    expect(
+      schema.safeParse({ point: { latitude: 91, longitude: 0 } }).success,
+    ).toBe(false);
   });
 });

@@ -20,6 +20,10 @@ import {
   useGeoNamesCityIndex,
   type GeoNamesCityLoadState,
 } from '../antipodes/useGeoNamesCityIndex';
+import {
+  useSurnameDataset,
+  type SurnameLoadState,
+} from '../surnames/useSurnameDataset';
 
 export interface GlobePresentation {
   countryFills: ReadonlyMap<string, string> | null;
@@ -56,6 +60,12 @@ export type ModePresentation =
         observation: ReturnType<typeof observeSun>;
         events: ReturnType<typeof solarEventsUtc>;
       };
+    }
+  | {
+      id: 'surnames';
+      globe: GlobePresentation;
+      selectedCountry: CountryRef | null;
+      surnameData: SurnameLoadState;
     };
 
 /**
@@ -73,6 +83,7 @@ export function useModePresentation(): ModePresentation | null {
   const sunlineTimeMs = useAppStore((state) => state.sunlineTimeMs);
   const developmentData = useDevelopmentDataset(activeMode === 'development');
   const cityIndex = useGeoNamesCityIndex(activeMode === 'antipodes');
+  const surnameData = useSurnameDataset(activeMode === 'surnames');
 
   const relation = useMemo(
     () =>
@@ -148,6 +159,18 @@ export function useModePresentation(): ModePresentation | null {
         selectedCountry,
         // activeMode === 'sunline' guarantees a non-null sun.
         sun: sun!,
+      };
+    case 'surnames':
+      return {
+        id: activeMode,
+        globe: {
+          countryFills: null,
+          showAntipodes: false,
+          sunline: null,
+          antipodeRelation: null,
+        },
+        selectedCountry,
+        surnameData,
       };
     default:
       return assertNever(activeMode);

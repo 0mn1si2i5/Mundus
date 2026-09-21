@@ -200,6 +200,33 @@ test('Development palette updates preserve vector geometry identity', async ({
     .toBeGreaterThan(renderRevision);
 });
 
+test('Surname Atlas preserves local, Latin, Chinese, and missing states', async ({
+  page,
+}) => {
+  await page.goto('./?mode=surnames&point=31.2304%2C121.4737&v=2');
+  const globe = globeRegion(page);
+  await expect(globe).toHaveAttribute('data-vector-state', 'ready');
+  await expect(globe).toHaveAttribute(
+    'data-vector-raster-fallback-visible',
+    'false',
+  );
+  const result = page.getByTestId('surname-result');
+  await expect(result).toContainText('China');
+  await expect(result).toContainText('王');
+  await expect(result).toContainText('Wáng');
+  await expect(result).toContainText('中文呈现');
+  await expect(result).toContainText('占比 · 缺失');
+  await expect(result).toContainText('统计年份 · 缺失');
+  await expect(result).toContainText('来源快照');
+  await expect(result).toContainText('社区整理');
+  await expect(
+    result.getByRole('link', { name: '查看来源页面' }),
+  ).toHaveAttribute(
+    'href',
+    'https://en.wikipedia.org/wiki/List_of_most_common_surnames_in_Asian_countries',
+  );
+});
+
 test('vector drag shell becomes transparent while the hit sphere remains active', async ({
   page,
 }, testInfo) => {
@@ -1596,7 +1623,7 @@ test('opens the mode atlas and restores keyboard focus', async ({ page }) => {
 
   const atlas = page.getByRole('dialog', { name: '观察地球的方式' });
   await expect(atlas).toBeVisible();
-  await expect(atlas.getByRole('heading', { level: 3 })).toHaveCount(3);
+  await expect(atlas.getByRole('heading', { level: 3 })).toHaveCount(4);
   await expect(page.locator('#root')).toHaveAttribute('inert', '');
   await expect(
     atlas.getByRole('button', { name: '关闭模式图鉴' }),
@@ -2597,12 +2624,14 @@ test('resets bilateral focus for new points and mode round trips', async ({
   await expectCameraDiagnosticCleared(page);
   await switchModeFromAtlas(page, '地球另一端');
 
-  const citySearch = page.getByLabel('搜索全球主要城市');
-  if (testInfo.project.name === 'mobile' && !(await citySearch.isVisible())) {
+  const latitude = page.getByLabel('纬度');
+  if (testInfo.project.name === 'mobile' && !(await latitude.isVisible())) {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
-  await citySearch.fill('Tokyo');
-  await localizedCityOption(page, '东京').click();
+  await latitude.fill('35.6762');
+  await page.getByLabel('经度').fill('139.6503');
+  await page.getByRole('button', { name: '前往' }).click();
+  await expectCameraCenter(page, 35.6762, 139.6503);
   await expect(page.getByRole('button', { name: '翻到对跖点' })).toBeVisible();
 
   await page.getByRole('button', { name: '翻到对跖点' }).click();
@@ -3888,12 +3917,12 @@ test('@smoke opens the neutral lobby on the bare address and after a hard refres
   ).toBeVisible();
 });
 
-test('presents the three featured modes as one semantic lobby list', async ({
+test('presents the four featured modes as one semantic lobby list', async ({
   page,
 }) => {
   await page.goto('./');
   const list = page.getByRole('list', { name: '观察模式' });
-  await expect(list.getByRole('listitem')).toHaveCount(3);
+  await expect(list.getByRole('listitem')).toHaveCount(4);
   await expect(list.getByRole('button', { name: /地球另一端/ })).toBeVisible();
   await expect(
     list.getByRole('button', { name: /发展的不同侧面/ }),

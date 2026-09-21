@@ -65,6 +65,9 @@ describe('URL state codec', () => {
       expect(parseUrlState('?v=2&mode=sunline', nowMs)).toMatchObject({
         activeMode: 'sunline',
       });
+      expect(parseUrlState('?v=2&mode=surnames', nowMs)).toMatchObject({
+        activeMode: 'surnames',
+      });
     });
 
     it('falls back to the lobby for an unknown v=2 mode', () => {
