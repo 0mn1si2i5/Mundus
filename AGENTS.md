@@ -24,8 +24,8 @@ The ignored V1.1 convergence plan and the tracked candidate/publication
 documents are historical execution evidence. Do not execute their pre-merge
 steps again or copy the ignored plan into Git.
 
-GHSL Human Morphology is a shared overlay, not a fourth mode. Reserve product
-identity **V1.2.0** for it only if Plans 1–7 and their approval gates complete.
+GHSL Human Morphology is a stopped research direction, not a fourth mode or a
+scheduled product identity.
 GHSL Plan 1 terminated with `STOP_GLOBAL_MORPHOLOGY` at
 `6e396d90ef215085a3d5bc8dbf602b6e4f239051`; Plans 2–7 are frozen. Its detailed
 recovery plan is historical evidence and does not authorize a restart. The
@@ -53,6 +53,37 @@ and stop conditions remain `docs/ROADMAP_HANDOFF.md` and
 `docs/GHSL_EXECUTION_HANDOFF.md`; this continuation entry does not authorize
 GHSL restart, release metadata changes, migration restoration, or remote-state
 mutation.
+
+## Local resource impact gate
+
+Every development batch should make a quick local-resource assessment before
+execution. Ordinary builds, unit tests, and small fixtures do not need a
+separate approval step. The warning gate is for work that could seriously
+interfere with normal workstation use, especially when it may do any of the
+following:
+
+- consume or download about `50 GiB` or more of local storage;
+- sustain near-total machine CPU usage (for example, about `100%` overall) for
+  more than several minutes, or create clear thermal/throttling risk;
+- create enough memory pressure to cause swapping or materially affect other
+  applications;
+- leave a large background process, worktree, generated cache, or resumable
+  download running after the command exits; or
+- have an unknown bound that could plausibly reach one of those conditions.
+
+Before starting a serious-resource action, report the expected peak, duration,
+storage location, retention period, cleanup command, and failure or resume
+behavior. Then choose a local, external-volume, or cloud path with the product
+owner; do not start a potentially disruptive local job silently. Prefer cloud
+or external-volume execution for complete raw dumps, global builds, and other
+work that exceeds these limits.
+
+When local execution is accepted, keep raw inputs and generated caches outside
+the repository worktree when possible, use an explicit bounded cache path, and
+make cleanup a separate command that cannot run accidentally from `pnpm check`
+or CI. Do not add serious-resource workloads to routine release gates. At the
+end of the batch, report measured peak or final usage, what was retained, what
+was removed, and whether another run would require a new download.
 
 ## Frozen V1 release history below
 
@@ -134,8 +165,9 @@ become stale. Run the refresh commands in Section 5 before acting.
 - Homepage URL: `https://0mn1si2i5.github.io/Mundus/`
 - Pages site: enabled with GitHub Actions and HTTPS at
   `https://0mn1si2i5.github.io/Mundus/`
-- `main` branch protection: enabled with strict `quality`, `browser-smoke`, and
-  `pages-artifact` checks plus resolved review conversations
+- `main` branch protection: enabled with strict `source-quality`,
+  `vector-data-full`, `browser-smoke`, and `pages-artifact` checks plus resolved
+  review conversations
 - Private vulnerability reporting: enabled
 - Tags/releases at this historical snapshot: no `v1.0.0` release was found;
   the current-authority section above records its later completion
@@ -148,7 +180,8 @@ become stale. Run the refresh commands in Section 5 before acting.
 - PR #3 URL: `https://github.com/0mn1si2i5/Mundus/pull/3`
 - PR #3 merge: `40c4ab2fdc7ff570924ff5f5c9ed6b024b7a1a77`
 - PR #3 remote results at the snapshot:
-  - `quality`: success;
+  - `source-quality`: success;
+  - `vector-data-full`: success;
   - `browser-smoke`: success;
   - `pages-artifact`: success;
   - `deploy-pages`: intentionally skipped on a pull request;
@@ -411,8 +444,10 @@ pnpm check
 4. Pages artifact verification against the generated `dist/`.
 
 The full vector-data suite runs separately as `pnpm test:data-vector-globe:full`
-in CI so the required `quality` check can aggregate source and complete vector
-validation without repeating the focused vector tests. The literal `/Mundus/`
+in CI so `source-quality` can keep its focused vector tests while
+`vector-data-full` provides the complete vector validation. Both checks are
+required directly by protected `main`; there is no pass-through aggregator
+job. The literal `/Mundus/`
 mount rehearsal (`pnpm test:release-server`) remains an explicit low-frequency
 release exercise and is not part of the routine source gate.
 
@@ -421,6 +456,12 @@ Complete local desktop/mobile browser gate:
 ```bash
 pnpm test:e2e
 ```
+
+Local cache inspection is intentionally separate from the release gates:
+`pnpm cache:status` reports known research and GHSL cache occupancy, while
+`pnpm cache:prune` removes only completed run folders, stale PID files, and
+logs. Source archives are never removed by the routine command. Never make
+cache cleanup part of `pnpm check` or CI.
 
 Artifact-only verification:
 
@@ -543,8 +584,9 @@ core requests, and frame sample; it does not close this broader checklist.
 ### Phase 2 — merge the final evidence PR
 
 PR #4, `codex/v1-release-evidence`, contains only durable release evidence and
-the verified live-site links. Review its final diff, require green `quality`,
-`browser-smoke`, and `pages-artifact`, resolve valid conversations, and merge
+the verified live-site links. Review its final diff, require green
+`source-quality`, `vector-data-full`, `browser-smoke`, and `pages-artifact`,
+resolve valid conversations, and merge
 through protected `main`. That merge creates the final candidate production
 SHA. Wait for its CI, Pages deployment, and live smoke to pass again.
 
@@ -652,14 +694,15 @@ release is incomplete and identify the exact blocker.
 ## 15. Deferred roadmap
 
 V1.1.0 Parchment Atlas is the current public Pages product. Human Morphology
-reserves V1.2.0 only after GHSL Plans 1–7 and their budget/release gates
-complete. The current sequence is in `docs/ROADMAP_HANDOFF.md`.
+remains a stopped research direction; it has no scheduled product version.
+The terminal evidence is in `docs/GHSL_EXECUTION_HANDOFF.md`.
 
 GHSL Plan 1 is terminal at `6e396d90ef215085a3d5bc8dbf602b6e4f239051`.
 Do not restart it or begin Plans 2–7 unless GHSL is separately reopened and
-approved. Do not restart the completed V1.1 convergence procedure. Also defer
-Pleiades/Wikidata cultural exploration, plugin marketplaces, street-level GIS,
-weather, time-zone layers, offline/PWA work, accounts, and backend services.
+approved. Do not restart the completed V1.1 convergence procedure. New cultural
+or naming observations require their own small data/licensing packet. Also defer
+plugin marketplaces, street-level GIS, weather, time-zone layers, offline/PWA
+work, accounts, and backend services.
 
 ## 16. Historical kickoff prompt
 

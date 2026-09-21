@@ -222,24 +222,9 @@ describe('shell mode state', () => {
     expect(useAppStore.getState().previewMode).toBeNull();
   });
 
-  it('refuses direct selection of a coming-soon mode', () => {
-    useAppStore.setState({ activeMode: 'development' });
-    useAppStore.getState().selectMode('historical-echoes');
-
-    expect(useAppStore.getState().activeMode).toBe('development');
-  });
-
   it('entering preview without a preview is a no-op', () => {
     useAppStore.getState().enterPreviewMode();
     expect(useAppStore.getState().activeMode).toBeNull();
-  });
-
-  it('refuses to enter a coming-soon mode preview', () => {
-    useAppStore.getState().openModePreview('historical-echoes');
-    useAppStore.getState().enterPreviewMode();
-
-    expect(useAppStore.getState().activeMode).toBeNull();
-    expect(useAppStore.getState().previewMode).toBe('historical-echoes');
   });
 
   it('enterPreviewMode stops Sunline playback', () => {

@@ -80,18 +80,6 @@ describe('URL state codec', () => {
       expect(parseNavigationNotice('?v=1&mode=bogus')).toBeNull();
     });
 
-    it('reports a coming-soon notice for a known-but-unreleased mode', () => {
-      expect(parseNavigationNotice('?v=2&mode=historical-echoes')).toBe(
-        'coming-soon',
-      );
-      expect(parseUrlState('?v=2&mode=historical-echoes', nowMs)).toMatchObject(
-        {
-          activeMode: null,
-        },
-      );
-      expect(parseNavigationNotice('?v=2&mode=bogus')).toBe('unknown-mode');
-    });
-
     it('keeps the legacy safe fallback for invalid V1 input', () => {
       expect(parseUrlState('?mode=nope&point=91,0', nowMs)).toMatchObject({
         activeMode: 'antipodes',

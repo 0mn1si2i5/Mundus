@@ -3,11 +3,7 @@ import {
   normalizeLongitude,
   type GeoPoint,
 } from '../features/antipodes/geography';
-import {
-  isCatalogModeId,
-  isComingSoon,
-  type ModeId,
-} from '../features/modes/modeRegistry';
+import { type ModeId } from '../features/modes/modeRegistry';
 import type { DevelopmentIndicator } from '../features/development/developmentData';
 import {
   clampSunlineTime,
@@ -21,8 +17,8 @@ export const DEFAULT_POINT: GeoPoint = {
 };
 
 /**
- * The V1 fallback mode. A legacy or unversioned URL that carries historical
- * mode state resolves to Other Side; this constant is not the V2 lobby default.
+ * The V1 fallback mode. A legacy or unversioned URL that carries mode state
+ * resolves to Other Side; this constant is not the V2 lobby default.
  */
 export const DEFAULT_MODE: ModeId = 'antipodes';
 export const DEFAULT_DEVELOPMENT_INDICATOR: DevelopmentIndicator = 'hdi';
@@ -39,7 +35,7 @@ export interface ShareableState {
   sunlineClockMode: SunlineClockMode;
 }
 
-export type NavigationNotice = 'unknown-mode' | 'coming-soon';
+export type NavigationNotice = 'unknown-mode';
 
 const modeSchema = z.enum(['antipodes', 'development', 'sunline']);
 const developmentIndicatorSchema = z.enum([
@@ -123,7 +119,6 @@ export function parseNavigationNotice(search: string): NavigationNotice | null {
   const modeRaw = params.get('mode');
   if (modeRaw === null) return null;
   if (modeSchema.safeParse(modeRaw).success) return null;
-  if (isCatalogModeId(modeRaw) && isComingSoon(modeRaw)) return 'coming-soon';
   return 'unknown-mode';
 }
 

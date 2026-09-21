@@ -151,11 +151,7 @@ export function App() {
     <main className={styles.shell}>
       {navigationNotice ? (
         <div className={styles.notice} role="status">
-          <p>
-            {navigationNotice === 'coming-soon'
-              ? t.comingSoonNotice
-              : t.unknownModeNotice}
-          </p>
+          <p>{t.unknownModeNotice}</p>
           <button
             type="button"
             onClick={dismissNavigationNotice}

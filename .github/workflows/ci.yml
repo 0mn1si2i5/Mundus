@@ -38,15 +38,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:data-vector-globe:full
 
-  quality:
-    needs: [source-quality, vector-data-full]
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Require source and vector validation
-        if: ${{ needs.source-quality.result != 'success' || needs.vector-data-full.result != 'success' }}
-        run: exit 1
-
   browser-smoke:
     runs-on: ubuntu-latest
     steps:

@@ -58,7 +58,7 @@ Selecting a label opens a mode preview. The preview states:
 - the question the mode answers;
 - a short bilingual description;
 - its data source and observation scope;
-- its maturity or relevant availability state;
+- its maturity;
 - an explicit action to enter the observation.
 
 The preview reads pure catalog metadata and must not load the mode runtime or
@@ -154,9 +154,8 @@ loading or calculating inactive-mode resources.
 ### 7.2 Deferred static runtime contract
 
 Do not invent a general runtime module abstraction during the shell migration.
-After Historical Echoes passes its data feasibility gate, use that fourth real
-mode together with the existing three to design and freeze a build-time static
-mode-module contract.
+When a future observation mode is accepted, use it together with the existing
+three to design and freeze a build-time static mode-module contract.
 
 That later contract may reduce the number of core dispatch edits required for
 new modes, but it must preserve:
@@ -246,9 +245,8 @@ timeouts merely to make the migration green.
 
 ## 11. Implementation Sequence
 
-The Shell V2 sequence was completed through merged PR #9, its live-smoke
-correction in PR #11, and the bounded Historical Echoes curation correction in
-PR #10. The current protected `main` is `8402112`; its CI, Pages deployment,
+The Shell V2 sequence was completed through merged PR #9 and its live-smoke
+correction in PR #11. The current protected `main` is `8402112`; its CI, Pages deployment,
 and live smoke passed on the same SHA.
 
 1. The continuation wording drift was corrected and this document remains the
@@ -261,14 +259,14 @@ and live smoke passed on the same SHA.
 5. All three existing modes retain their scientific and product semantics.
 6. Failure, cleanup, accessibility, performance, browser, artifact, and
    documentation gates passed for the merged shell path.
-7. Historical Echoes remains at its separate data-feasibility gate before any
-   runtime integration or generalized static runtime contract.
+7. Future modes require a separate product, data, and resource feasibility gate
+   before runtime integration or changes to the static mode contract.
 
 ## 12. Non-Goals
 
 Shell V2 does not:
 
-- implement Historical Echoes or another new observation mode;
+- implement another new observation mode;
 - restart GHSL or restore the large migration snapshot;
 - redesign the scientific meaning of Other Side, Development, or Sunline;
 - introduce accounts, backend services, telemetry, cloud state, PWA/offline

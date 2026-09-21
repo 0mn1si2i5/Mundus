@@ -58,13 +58,14 @@ This snapshot helps detect drift; refresh it before relying on it.
 - Remote `main` at verification:
   `1c6beb9f8b3b92149e847d1840825a6eadb7a4bd`
 - PR #9, “Exhibit Shell V2: mode-neutral lobby, curated orbit, scalable Mode
-  Atlas,” PR #11, “Align live smoke with the Exhibit Shell lobby,” and PR #10,
-  “Curate the shell for Historical Echoes,” are merged. PR #10 entered `main`
-  as `1c6beb9f8b3b92149e847d1840825a6eadb7a4bd` after its quality,
+  Atlas,” and PR #11, “Align live smoke with the Exhibit Shell lobby,” are
+  merged. No unreleased observation remains in the current product. The public
+  shell entered `main` at `1c6beb9f8b3b92149e847d1840825a6eadb7a4bd` after its
+  quality,
   browser-smoke, vector-data-full, and Pages artifact checks passed and both
   review conversations were resolved.
-- `main` requires strict `quality`, `browser-smoke`, and `pages-artifact`
-  checks; private vulnerability reporting is enabled.
+- `main` requires strict `source-quality`, `vector-data-full`, `browser-smoke`,
+  and `pages-artifact` checks; private vulnerability reporting is enabled.
 - The only tag and GitHub Release are `v1.0.0`, targeting
   `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`.
 - The public product is described as V1.1.0 Parchment Atlas, but no V1.1 tag or
@@ -270,10 +271,9 @@ or reinterpret the evidence as a technical GO.
 
 ### Candidate next direction
 
-The tracked roadmap records a possible cultural-historical observation design
-and licensing spike using redistribution-safe Wikidata and/or Pleiades data.
-It is not designed or approved, and the roadmap currently places it after a
-globally complete GHSL release.
+The tracked roadmap records a possible low-resource cultural or naming
+observation design and licensing spike using redistribution-safe community
+data. It is not designed or approved.
 
 Because GHSL stopped, the product owner must choose one of these outcomes before
 new feature implementation:
@@ -309,18 +309,13 @@ It must:
 
 Recommended investigation order:
 
-1. complete the continuation assessment packet and decide whether Historical
-   Echoes is `Should Build`, `Should Delay`, `Should Reject`, or `Need More
-Context`;
-2. obtain product-owner approval and a bounded implementation packet before
-   any data regeneration or runtime integration;
-3. if approved, complete the Historical Echoes real-data reproducibility and
-   audit gate, then integrate its manifest and runtime contract without
-   enabling the mode;
+1. keep GHSL closed unless the product owner explicitly reopens it with a new
+   budgeted design and execution plan;
+2. evaluate one bounded low-resource cultural or naming observation packet;
+3. obtain product-owner approval and a bounded implementation packet before
+   data collection or runtime integration;
 4. align tracked handoff and data documentation with the verified state;
-5. run the post-integration desktop/mobile and artifact gates;
-6. decide whether to close, defer, or formally reopen GHSL before any unrelated
-   product direction.
+5. run the post-integration desktop/mobile and artifact gates.
 
 ## 9. Migration Evidence
 

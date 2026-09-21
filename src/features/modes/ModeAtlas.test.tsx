@@ -41,23 +41,6 @@ describe('ModeAtlas', () => {
     expect(screen.getByText('No matching observations.')).toBeVisible();
   });
 
-  it('lists coming-soon modes under Other modes', () => {
-    renderAtlas();
-    fireEvent.click(screen.getByRole('tab', { name: 'Other modes' }));
-    expect(screen.getAllByRole('listitem')).toHaveLength(1);
-    expect(screen.getByText('Historical Echoes')).toBeVisible();
-    expect(screen.queryByText('Development, Unpacked')).not.toBeInTheDocument();
-    expect(screen.queryByText('Sunline')).not.toBeInTheDocument();
-    expect(screen.queryByText('Other Side')).not.toBeInTheDocument();
-  });
-
-  it('shows the new observations view with Historical Echoes', () => {
-    renderAtlas();
-    fireEvent.click(screen.getByRole('tab', { name: 'New' }));
-    expect(screen.getByText('Historical Echoes')).toBeVisible();
-    expect(screen.queryByText(/Other Side/)).not.toBeInTheDocument();
-  });
-
   it('filters the list by search text', () => {
     renderAtlas();
     fireEvent.click(screen.getByRole('tab', { name: 'All' }));
@@ -74,7 +57,6 @@ describe('ModeAtlas', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'All' }));
     fireEvent.click(screen.getByRole('button', { name: 'Time' }));
     expect(screen.getByText('Sunline')).toBeVisible();
-    expect(screen.getByText('Historical Echoes')).toBeVisible();
     expect(screen.queryByText('Other Side')).not.toBeInTheDocument();
   });
 
