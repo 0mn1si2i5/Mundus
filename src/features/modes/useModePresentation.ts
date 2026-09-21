@@ -128,7 +128,7 @@ export function useModePresentation(): ModePresentation | null {
       selectedCountry.countryId,
     );
     const record = country?.records[0];
-    return record
+    return record && record.rank !== null
       ? {
           countryId: selectedCountry.countryId,
           countryName: selectedCountry.name,
