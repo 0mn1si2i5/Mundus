@@ -1,9 +1,10 @@
 # Naming Observation Research
 
-Status: research complete; bounded Surname Atlas implementation merged into the
-current development branch pending protected-main release validation
+Status: research complete; bounded Surname Atlas implementation is being
+extended with a pinned Iran community supplement and tested label-layout
+contract before the next protected-main release validation
 
-Updated: 2026-09-21, Asia/Shanghai
+Updated: 2026-09-22, Asia/Shanghai
 
 ## Recommendation
 
@@ -35,10 +36,13 @@ silently merged with surname frequency.
 - fields include country, rank, localised name, romanised name, count, and
   percentage when available.
 
-The surname file has a `Rank=1` record for 72 of 75 countries. Albania, Bosnia
-and Herzegovina, and Greece have no rank-one record in this snapshot. Some
-countries have multiple rank-one spellings or transliterations. Counts and
-percentages are frequently absent.
+The upstream surname file has a `Rank=1` record for 72 of 75 countries in this
+early input snapshot. Albania, Bosnia and Herzegovina, and Greece have no
+rank-one record in that snapshot. Some countries have multiple rank-one
+spellings or transliterations. Counts and percentages are frequently absent.
+The current derived asset extends this baseline with the separately pinned Iran
+community supplement and preserves source-listed unranked rows, so its final
+counts are documented in the implementation packet below.
 
 The repository's CC0 declaration does not erase the need to preserve upstream
 provenance. Its README identifies Wikipedia list pages as the source, and those
@@ -46,6 +50,19 @@ pages are CC BY-SA 4.0. A production asset must retain the upstream page URLs,
 the repository version, the collection date, the transformation, and both
 license statements. A small manually reviewed derivative is preferable to
 blindly treating the CSV as an authoritative global table.
+
+The current asset also includes one separately sourced Iran record from
+[`farbodbj/iranian-surname-frequencies`](https://github.com/farbodbj/iranian-surname-frequencies):
+
+- repository license: Apache-2.0;
+- pinned source commit: `9fb2fdccb62445b52e933d4d7929a52e01bd6011`;
+- pinned CSV SHA-256:
+  `e71a59fd87e0da0fc6aeef8b44ed6c3b2b4c00adc2ade0d51af5a58281b34de7`;
+- top row: `محمدی` / `Mohammadi`, frequency `0.0085581142730807`;
+- the README describes a 10-million-record-derived Persian sample, but does
+  not establish a national census frame or a collection year;
+- the record is therefore shown as an explicit rank-one community sample for
+  Iran and is not compared numerically with the Wikipedia-derived rows.
 
 ## Data Contract
 
@@ -136,16 +153,17 @@ part of the packet.
 ## Implementation packet
 
 The bounded implementation uses `src/data/generated/surnames-by-country.json`
-and `src/features/surnames/`. It contains 75 country entries, 72 rank-one
-records, and 93 unranked source records, is 41,130 bytes before compression,
-and is loaded only when the mode is active. The manifest pins the CSV and ISO
-mapping hashes. Five Chinese
+and `src/features/surnames/`. It contains 76 country entries, 73 rank-one
+records, and 93 unranked source records, is 41,867 bytes before compression,
+and is loaded only when the mode is active. The manifest pins both source CSVs
+and the ISO mapping hash. Five Chinese
 presentations are manually reviewed (`CN`, `TW`, `KR`, `JP`, and `VN`); all
 other countries show an explicit missing state. The app preserves alternate
 local and romanized forms within a source group, does not infer a statistical
 year from the 2023 collection snapshot, and renders the compact
 local/Chinese/Latin label for every country with an explicit numeric rank.
 Labels use a conservative spherical footprint, hide on the back or outside
-the canvas, and resolve screen-space collisions with each selected country
-and visible UI panel given priority. Countries with only unranked source
-lists remain visible in the side result but do not receive a map label.
+the canvas, and resolve screen-space collisions through a pure layout
+function with the selected country and visible UI panel given priority.
+Countries with only unranked source lists remain visible in the side result
+but do not receive a map label.

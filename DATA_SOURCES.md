@@ -122,15 +122,16 @@ painted on the globe at this scale.
 - Source: [Popular Names by Country dataset v1.2](https://github.com/sigpwned/popular-names-by-country-dataset/tree/v1.2), with source-list provenance from [Wikipedia surname lists](https://en.wikipedia.org/wiki/Lists_of_most_common_surnames)
 - Snapshot: CSV released 2023-07-16; the repository records lists collected during the week of 2023-07-08
 - Terms: the dataset repository declares [CC0](https://creativecommons.org/publicdomain/zero/1.0/); upstream Wikipedia list pages retain [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) provenance
-- Use: source-listed rank-one surname records, plus unranked source lists where no numeric rank exists, for 75 countries in Surname Atlas
+- Use: source-listed rank-one surname records, plus unranked source lists where no numeric rank exists, for 76 country entries in Surname Atlas
 - Transformation: group local and romanized variants by `Name Group`, join ISO2 codes to the globe's Natural Earth numeric ids with a pinned GeoNames `countryInfo.txt` mapping, and keep source-listed unranked records without presenting an inferred rank
 - Missing-value policy: count, share, year, transliteration, and Chinese presentation remain null or empty when the source does not provide them; only a small manually reviewed Chinese presentation set is included
 - Scope: this is a community-compiled cultural observation, not a unified official global ranking or census comparison
 
-The derived asset contains 75 country entries, 72 rank-one records, and 93
-unranked source records. Its source hashes, 41,130-byte size, and transformation contract are recorded in
+The derived asset contains 76 country entries, 166 records, 73 rank-one
+records, and 93 unranked source records. Its source hashes, 41,867-byte size,
+and transformation contract are recorded in
 `src/data/manifests/surnames-by-country.json`. Raw CSV and country-info files
-are not committed. The runtime loads the 41.1 KB derived asset only when the
+are not committed. The runtime loads the 41.9 KB derived asset only when the
 Surname Atlas mode is active.
 
 ## Solar calculations

@@ -233,13 +233,52 @@ test('Surname Atlas preserves local, Latin, Chinese, and missing states', async 
   );
 });
 
+test('Surname Atlas keeps selected country labels visible across country shapes', async ({
+  page,
+}) => {
+  const cases = [
+    { point: '35.6892%2C51.3890', label: 'ne-364:محمدی', country: 'Iran' },
+    {
+      point: '31.2304%2C121.4737',
+      label: 'ne-156:王',
+      country: 'China',
+    },
+    { point: '28.6139%2C77.209', label: 'ne-356:देवी', country: 'India' },
+    {
+      point: '40.7128%2C-74.006',
+      label: 'ne-840:Smith',
+      country: 'United States of America',
+    },
+  ];
+
+  for (const item of cases) {
+    await page.goto(`./?mode=surnames&point=${item.point}&v=2`);
+    const globe = globeRegion(page);
+    await expect(globe).toHaveAttribute('data-vector-state', 'ready');
+    await expect(globe).toHaveAttribute('data-surname-map-label', item.label);
+    await expect(globe).toHaveAttribute(
+      'data-surname-map-label-country',
+      item.country,
+    );
+    await expect(globe).toHaveAttribute(
+      'data-surname-map-label-visible',
+      'true',
+      { timeout: 10_000 },
+    );
+    await expect(globe).not.toHaveAttribute(
+      'data-surname-map-label-hidden-reason',
+      /.+/,
+    );
+  }
+});
+
 test('Surname Atlas keeps unranked source lists off the map', async ({
   page,
 }) => {
   await page.goto('./?mode=surnames&point=37.9838%2C23.7275&v=2');
   const globe = globeRegion(page);
   await expect(globe).toHaveAttribute('data-vector-state', 'ready');
-  await expect(globe).toHaveAttribute('data-surname-map-label-count', '72');
+  await expect(globe).toHaveAttribute('data-surname-map-label-count', '73');
   await expect(globe).not.toHaveAttribute('data-surname-map-label');
   await expect(globe).toHaveAttribute(
     'data-surname-map-label-collision-count',

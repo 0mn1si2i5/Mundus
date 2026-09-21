@@ -8,7 +8,7 @@ import {
   getCountryTextureStyle,
 } from './countryData';
 import {
-  COUNTRY_LABEL_HEIGHT_RATIO,
+  getCountryLabelAngularFootprintDegrees,
   getCountryLabelWorldWidth,
   getCountryLabelAnchor,
   getFallbackCountryLabelAnchor,
@@ -64,13 +64,21 @@ describe('country dataset', () => {
       ).toBe(true);
       expect(anchor!.clearanceDegrees, countryId).toBeGreaterThan(0);
       const width = getCountryLabelWorldWidth(anchor!.clearanceDegrees);
-      const halfDiagonal =
-        (width / 2) * Math.sqrt(1 + COUNTRY_LABEL_HEIGHT_RATIO ** 2);
-      const angularFootprint =
-        (Math.atan2(halfDiagonal, 1.012) * 180) / Math.PI;
+      const angularFootprint = getCountryLabelAngularFootprintDegrees(width);
       expect(angularFootprint, countryId).toBeLessThanOrEqual(
         anchor!.clearanceDegrees,
       );
+      for (let bearing = 0; bearing < 360; bearing += 22.5) {
+        const edge = destinationPoint(
+          anchor!.point,
+          angularFootprint * 0.98,
+          bearing,
+        );
+        expect(
+          geoContains(country!, [edge.longitude, edge.latitude]),
+          `${countryId} bearing ${bearing}`,
+        ).toBe(true);
+      }
     }
   });
 
@@ -93,6 +101,32 @@ describe('country dataset', () => {
     expect(getCountryLabelWorldWidth(35)).toBeLessThanOrEqual(0.34);
   });
 });
+
+function destinationPoint(
+  point: { latitude: number; longitude: number },
+  distanceDegrees: number,
+  bearingDegrees: number,
+) {
+  const latitude = (point.latitude * Math.PI) / 180;
+  const longitude = (point.longitude * Math.PI) / 180;
+  const distance = (distanceDegrees * Math.PI) / 180;
+  const bearing = (bearingDegrees * Math.PI) / 180;
+  const nextLatitude = Math.asin(
+    Math.sin(latitude) * Math.cos(distance) +
+      Math.cos(latitude) * Math.sin(distance) * Math.cos(bearing),
+  );
+  const nextLongitude =
+    longitude +
+    Math.atan2(
+      Math.sin(bearing) * Math.sin(distance) * Math.cos(latitude),
+      Math.cos(distance) - Math.sin(latitude) * Math.sin(nextLatitude),
+    );
+  return {
+    latitude: (nextLatitude * 180) / Math.PI,
+    longitude:
+      (((((nextLongitude * 180) / Math.PI + 540) % 360) + 360) % 360) - 180,
+  };
+}
 
 describe('country texture rendering', () => {
   it('keeps every profile border at least one source pixel wide', () => {

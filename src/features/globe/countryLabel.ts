@@ -9,7 +9,7 @@ const EDGE_SAMPLES = 2;
 const EDGE_SAMPLE_MAX_DEGREES = 1.5;
 const LABEL_SURFACE_RADIUS = 1.012;
 const LABEL_HEIGHT_RATIO = 0.34;
-const LABEL_CLEARANCE_SAFETY = 0.58;
+const LABEL_CLEARANCE_SAFETY = 0.42;
 const LABEL_MAX_WIDTH = 0.34;
 
 export interface CountryLabelAnchor {
@@ -32,6 +32,12 @@ export function getCountryLabelWorldWidth(clearanceDegrees: number): number {
     LABEL_MAX_WIDTH,
     (2 * halfDiagonal) / Math.sqrt(1 + LABEL_HEIGHT_RATIO ** 2),
   );
+}
+
+export function getCountryLabelAngularFootprintDegrees(width: number): number {
+  const halfDiagonal =
+    (Math.max(0, width) / 2) * Math.sqrt(1 + LABEL_HEIGHT_RATIO ** 2);
+  return Math.atan2(halfDiagonal, LABEL_SURFACE_RADIUS) * RAD_TO_DEG;
 }
 
 export const COUNTRY_LABEL_HEIGHT_RATIO = LABEL_HEIGHT_RATIO;
