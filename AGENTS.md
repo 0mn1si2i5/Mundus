@@ -54,6 +54,38 @@ and stop conditions remain `docs/ROADMAP_HANDOFF.md` and
 GHSL restart, release metadata changes, migration restoration, or remote-state
 mutation.
 
+## Local resource impact gate
+
+Every development batch must assess local resource impact before execution.
+This applies to data downloads, generated artifacts, builds, browser runs,
+parallel workers, long-lived processes, and worktree creation. Estimate disk,
+peak memory, CPU time, network transfer, wall-clock duration, and the cleanup
+path from the actual command and input size; do not infer safety from the fact
+that the output is ignored by Git.
+
+Treat an action as high-resource when it may do any of the following:
+
+- consume more than 1 GiB of local storage or download more than 1 GiB;
+- require more than 4 GiB peak memory or sustained CPU for more than 15 minutes;
+- leave a background process, large worktree, generated cache, or resumable
+  download behind after the command exits; or
+- have an unknown upper bound because the source size, fan-out, or runtime has
+  not been measured.
+
+Before starting a high-resource action, stop and report the expected peak,
+duration, storage location, retention period, cleanup command, and failure or
+resume behavior. Do not start it until the product owner has chosen between a
+low-resource local path, an external volume, or a cloud development
+environment. Prefer cloud or external-volume execution for complete raw dumps,
+global builds, and other work that exceeds these limits.
+
+When local execution is accepted, keep raw inputs and generated caches outside
+the repository worktree when possible, use an explicit bounded cache path, and
+make cleanup a separate command that cannot run accidentally from `pnpm check`
+or CI. Do not add high-resource workloads to routine release gates. At the end
+of the batch, report measured peak or final usage, what was retained, what was
+removed, and whether another run would require a new download.
+
 ## Frozen V1 release history below
 
 Sections 1–13 below preserve the completed V1.0.0 execution contract and must
