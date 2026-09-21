@@ -148,7 +148,7 @@ async function pinchGlobe(page: Page, scale: 'in' | 'out') {
   await session.detach();
 }
 
-test('loads only the quality-selected vector resolution and hides raster after readiness', async ({
+test('@smoke loads the quality-selected vector resolution and hides raster after readiness', async ({
   page,
 }, testInfo) => {
   const vectorRequests: string[] = [];
@@ -3865,7 +3865,7 @@ function overlaps(
   );
 }
 
-test('opens the neutral lobby on the bare address and after a hard refresh', async ({
+test('@smoke opens the neutral lobby on the bare address and after a hard refresh', async ({
   page,
 }) => {
   await page.goto('./');
@@ -3927,7 +3927,7 @@ test('opens a preview without changing the URL or loading mode resources', async
   expect(requests.filter((url) => url.includes('undp-hdr'))).toHaveLength(0);
 });
 
-test('enters a mode from its preview and then loads its lazy resources', async ({
+test('@smoke enters a mode from its preview and then loads its lazy resources', async ({
   page,
 }, testInfo) => {
   test.skip(

@@ -1,6 +1,6 @@
 # Mundus Exhibit Shell V2
 
-Status: implemented and locally verified; awaiting product-owner review
+Status: implemented on protected `main` and verified in the public Pages path
 
 Accepted: 2026-08-15, Asia/Shanghai
 
@@ -246,21 +246,23 @@ timeouts merely to make the migration green.
 
 ## 11. Implementation Sequence
 
-Implementation is separately planned and authorized. Its required ordering is:
+The Shell V2 sequence was completed through merged PR #9, its live-smoke
+correction in PR #11, and the bounded Historical Echoes curation correction in
+PR #10. The current protected `main` is `8402112`; its CI, Pages deployment,
+and live smoke passed on the same SHA.
 
-1. correct the remaining worktree wording drift in the continuation handoff and
-   establish this document as the durable Shell V2 contract;
-2. add failing URL V1/V2, catalog, lobby, preview, loading, and state-transition
-   tests;
-3. implement the neutral globe state and URL migration;
-4. extend pure catalog metadata and build the desktop orbit, mobile strip,
-   preview, and scalable Mode Atlas;
-5. adapt all three existing modes without changing their scientific or product
-   semantics;
-6. complete failure, cleanup, accessibility, performance, browser, artifact,
-   and documentation gates;
-7. after the shell is accepted, return to the Historical Echoes data
-   feasibility gate before designing a generalized static runtime contract.
+1. The continuation wording drift was corrected and this document remains the
+   durable Shell V2 contract.
+2. URL V1/V2, catalog, lobby, preview, loading, and state-transition coverage
+   is implemented and tested.
+3. The neutral globe state and URL migration are live.
+4. Pure catalog metadata, desktop orbit, mobile strip, preview, and Mode Atlas
+   are live.
+5. All three existing modes retain their scientific and product semantics.
+6. Failure, cleanup, accessibility, performance, browser, artifact, and
+   documentation gates passed for the merged shell path.
+7. Historical Echoes remains at its separate data-feasibility gate before any
+   runtime integration or generalized static runtime contract.
 
 ## 12. Non-Goals
 

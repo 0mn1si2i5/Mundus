@@ -3,6 +3,10 @@ import { createConnection } from 'node:net';
 
 const arguments_ = process.argv.slice(2);
 if (arguments_[0] === '--') arguments_.shift();
+const skipBuild = arguments_.includes('--skip-build');
+const playwrightArguments = arguments_.filter(
+  (argument) => argument !== '--skip-build',
+);
 
 const environment = { ...process.env, MUNDUS_E2E_EXTERNAL_SERVER: '1' };
 const projects = ['chromium', 'mobile'];
@@ -114,7 +118,7 @@ async function waitForPreview() {
 if (arguments_.includes('--list')) {
   const result = spawnSync(
     'pnpm',
-    ['exec', 'playwright', 'test', ...arguments_],
+    ['exec', 'playwright', 'test', ...playwrightArguments],
     {
       stdio: 'inherit',
     },
@@ -123,12 +127,14 @@ if (arguments_.includes('--list')) {
   process.exitCode = result.status ?? 1;
 } else {
   try {
-    const build = spawnSync('pnpm', ['build'], { stdio: 'inherit' });
-    if (build.error) throw build.error;
-    if (build.status !== 0) {
-      throw Object.assign(new Error('pnpm build failed'), {
-        exitCode: build.status ?? 1,
-      });
+    if (!skipBuild) {
+      const build = spawnSync('pnpm', ['build'], { stdio: 'inherit' });
+      if (build.error) throw build.error;
+      if (build.status !== 0) {
+        throw Object.assign(new Error('pnpm build failed'), {
+          exitCode: build.status ?? 1,
+        });
+      }
     }
 
     if (await isPreviewPortOccupied()) {
@@ -147,22 +153,32 @@ if (arguments_.includes('--list')) {
     );
     await waitForPreview();
 
-    const hasExplicitProject = arguments_.some(
+    const hasExplicitProject = playwrightArguments.some(
       (argument) =>
         argument === '--project' || argument.startsWith('--project='),
     );
 
     if (hasExplicitProject) {
-      await run('pnpm', ['exec', 'playwright', 'test', ...arguments_], {
-        env: environment,
-      });
+      await run(
+        'pnpm',
+        ['exec', 'playwright', 'test', ...playwrightArguments],
+        {
+          env: environment,
+        },
+      );
     } else {
       // SwiftShader degrades when both GPU-heavy projects share one browser
       // lifetime. Keep tests serial, but give each device project a fresh process.
       for (const project of projects) {
         await run(
           'pnpm',
-          ['exec', 'playwright', 'test', ...arguments_, `--project=${project}`],
+          [
+            'exec',
+            'playwright',
+            'test',
+            ...playwrightArguments,
+            `--project=${project}`,
+          ],
           { env: environment },
         );
       }

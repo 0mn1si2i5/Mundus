@@ -402,13 +402,19 @@ pnpm check
 
 `pnpm check` currently performs, in order:
 
-1. Prettier check;
-2. ESLint with zero warnings;
-3. TypeScript project build/typecheck;
-4. generated-data hash verification;
-5. Vitest unit/integration tests;
-6. production build plus release notices;
-7. Pages artifact verification.
+1. `pnpm check:source`: Prettier check, ESLint with zero warnings, TypeScript
+   project build/typecheck, the pinned Node.js toolchain check, generated-data
+   hash verification, the GeoNames data tests, the Vitest unit/integration
+   suite, and Pages artifact verifier contract tests;
+2. the focused Natural Earth vector-data tests;
+3. the production build plus release notices;
+4. Pages artifact verification against the generated `dist/`.
+
+The full vector-data suite runs separately as `pnpm test:data-vector-globe:full`
+in CI so the required `quality` check can aggregate source and complete vector
+validation without repeating the focused vector tests. The literal `/Mundus/`
+mount rehearsal (`pnpm test:release-server`) remains an explicit low-frequency
+release exercise and is not part of the routine source gate.
 
 Complete local desktop/mobile browser gate:
 

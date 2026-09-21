@@ -10,11 +10,18 @@ product-owner gate in `MVP_RELEASE_PLAN.md`.
 
 ## Build and deploy
 
-- Pull requests run the Pages `pages-artifact` job, including `pnpm check`, the
-  complete desktop/mobile Playwright suite, artifact inspection, and upload of
-  `dist/` only. Pull requests cannot deploy.
-- A push to protected `main` repeats the same gate, uploads the exact artifact,
-  and deploys it through the `github-pages` environment.
+- Pull requests run the required CI source and full-vector checks in parallel.
+  The Pages `pages-artifact` job independently runs `pnpm build` and
+  `pnpm release:verify`, then runs the complete desktop/mobile Playwright
+  suite against that `dist` and uploads it; pull requests cannot deploy. The
+  required `quality` check already covers source, generated-data, unit, and
+  full-vector validation, while Pages keeps the built artifact and browser
+  verification self-contained.
+- The separate CI `browser-smoke` job runs three `@smoke` Chromium cases for a
+  fast signal. It does not replace the complete desktop/mobile suite in the
+  Pages artifact job.
+- A push to protected `main` must pass all required checks, then uploads the
+  exact Pages artifact and deploys it through the `github-pages` environment.
 - The deployment job alone receives `pages: write` and `id-token: write`.
 - The live-smoke job uses the URL returned by `actions/deploy-pages` and checks
   HTTP success, the expected title, loaded resources, and a completed frame
@@ -24,6 +31,12 @@ The workflow pins Node.js 22.23.1, pnpm 11.7.0, and immutable commits for the
 official GitHub and pnpm actions. Production source maps are prohibited. The
 artifact must include the code license, conservative production dependency
 inventory, and exact bundled dependency notices.
+
+The local `test:release-server` suite validates the optional literal-mount
+rehearsal server and is kept outside the routine source gate because Pages is
+served by GitHub's deployment action. Run it when exercising that local
+`/Mundus/` rehearsal; it does not substitute for artifact verification or live
+smoke.
 
 ## Private rehearsal
 

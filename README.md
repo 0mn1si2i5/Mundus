@@ -34,7 +34,8 @@ been created.
 
 ## Run locally
 
-Mundus requires Node.js 22 or later and pnpm 11.7.0.
+Mundus uses Node.js 22.23.1 and pnpm 11.7.0 for the reproducible data and
+release gates.
 
 ```bash
 pnpm install --frozen-lockfile

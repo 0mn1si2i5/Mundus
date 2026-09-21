@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@11.7.0",
   "engines": {
-    "node": ">=22"
+    "node": "22.23.1"
   },
   "scripts": {
     "dev": "vite",
@@ -14,7 +14,8 @@
     "data:vector-globe": "node scripts/build-natural-earth-vector-globe.mjs",
     "data:cities": "node scripts/build-geonames-major-cities.mjs",
     "data:cities:capture": "node scripts/build-geonames-major-cities.mjs --capture",
-    "data:verify": "node scripts/verify-generated-data.mjs",
+    "toolchain:verify": "node scripts/verify-toolchain.mjs",
+    "data:verify": "pnpm toolchain:verify && node scripts/verify-generated-data.mjs",
     "release:verify": "node scripts/verify-pages-artifact.mjs",
     "release:serve": "node scripts/serve-literal-mount.mjs",
     "preview": "vite preview",
@@ -26,6 +27,7 @@
     "test:release": "node --test scripts/verify-pages-artifact.test.mjs",
     "test:release-server": "node --test scripts/serve-literal-mount.test.mjs",
     "test:data-cities": "node --test scripts/build-geonames-major-cities.test.mjs",
+    "test:toolchain": "node --test scripts/verify-toolchain.test.mjs",
     "test:data-vector-globe": "node --test --test-name-pattern='production vector assets|handles antimeridian holes|meshopt encoding' scripts/build-natural-earth-vector-globe.test.mjs && node --test scripts/publish-asset-set.test.mjs",
     "test:data-vector-globe:full": "node --test scripts/build-natural-earth-vector-globe.test.mjs scripts/publish-asset-set.test.mjs",
     "test:performance": "node --test scripts/measure-publication-candidate.test.mjs",
@@ -33,7 +35,9 @@
     "measure:publication-candidate:compare": "node scripts/measure-publication-candidate.mjs --compare",
     "test:watch": "vitest",
     "test:e2e": "node scripts/run-playwright-e2e.mjs",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm data:verify && pnpm test:data-cities && pnpm test:data-vector-globe && pnpm test && pnpm test:release && pnpm test:release-server && pnpm build && pnpm release:verify"
+    "test:e2e:smoke": "node scripts/run-playwright-e2e.mjs --project=chromium --grep @smoke",
+    "check:source": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm data:verify && pnpm test:data-cities && pnpm test:toolchain && pnpm test && pnpm test:release",
+    "check": "pnpm check:source && pnpm test:data-vector-globe && pnpm build && pnpm release:verify"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
