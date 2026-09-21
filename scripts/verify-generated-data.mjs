@@ -45,6 +45,11 @@ const assets = [
     hashField: 'derivedAssetSha256',
     budgets: true,
   },
+  {
+    manifest: 'src/data/manifests/country-label-anchors.json',
+    asset: 'src/data/generated/country-label-anchors.json',
+    hashField: 'derivedAssetSha256',
+  },
 ];
 
 let failed = false;

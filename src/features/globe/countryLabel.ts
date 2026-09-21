@@ -2,6 +2,7 @@ import { geoArea, geoCentroid, geoContains, geoDistance } from 'd3-geo';
 import type { Feature, Geometry, Polygon } from 'geojson';
 import type { CountryFeature } from './countryData';
 import type { GeoPoint } from './geo';
+import generatedAnchors from '../../data/generated/country-label-anchors.json' with { type: 'json' };
 
 const RAD_TO_DEG = 180 / Math.PI;
 const GRID_STEPS = 12;
@@ -16,6 +17,13 @@ export interface CountryLabelAnchor {
   point: GeoPoint;
   clearanceDegrees: number;
 }
+
+type GeneratedAnchor = CountryLabelAnchor;
+
+const GENERATED_LABEL_ANCHORS = generatedAnchors.anchors as Record<
+  string,
+  GeneratedAnchor
+>;
 
 /**
  * Returns a conservative world-space width for the three-line billboard.
@@ -73,6 +81,25 @@ type PolygonCoordinates = Polygon['coordinates'];
 export function getCountryLabelAnchor(
   country: CountryFeature,
 ): CountryLabelAnchor | null {
+  const generated = GENERATED_LABEL_ANCHORS[country.properties.countryId];
+  if (
+    generated &&
+    geoContains(country, [generated.point.longitude, generated.point.latitude])
+  ) {
+    return generated;
+  }
+
+  return computeCountryLabelAnchor(country);
+}
+
+/**
+ * Computes an anchor from the supplied geometry without consulting the
+ * generated high-resolution anchor table. The build script uses this to
+ * derive deterministic anchors from the pinned 50m and 110m assets.
+ */
+export function computeCountryLabelAnchor(
+  country: CountryFeature,
+): CountryLabelAnchor | null {
   const polygons = [...polygonGeometries(country.geometry)].sort(
     (a, b) => geoArea(b) - geoArea(a),
   );
@@ -103,6 +130,32 @@ export function getCountryLabelAnchor(
   if (best) return best;
 
   return null;
+}
+
+/** Returns the nearest sampled boundary distance for a point inside a country. */
+export function getCountryLabelClearance(
+  country: CountryFeature,
+  point: GeoPoint,
+): number {
+  let best = 0;
+  for (const polygon of polygonGeometries(country.geometry)) {
+    const polygonFeature = polygonFeatureFor(polygon);
+    if (!geoContains(polygonFeature, [point.longitude, point.latitude])) {
+      continue;
+    }
+    best = Math.max(best, boundaryClearance(point, polygon.coordinates));
+  }
+  return best;
+}
+
+/** Returns a generated anchor for countries absent from the 110m picking set. */
+export function getCountryLabelAnchorForId(
+  countryId: string,
+): CountryLabelAnchor | null {
+  return (
+    GENERATED_LABEL_ANCHORS[countryId] ??
+    getFallbackCountryLabelAnchor(countryId)
+  );
 }
 
 function polygonGeometries(geometry: Geometry): Polygon[] {

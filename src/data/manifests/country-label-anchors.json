@@ -1,0 +1,35 @@
+{
+  "id": "country-label-anchors",
+  "sourceName": "Natural Earth Admin 0 country polygons",
+  "sourceUrl": "https://www.naturalearthdata.com/downloads/",
+  "distributionUrl": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json",
+  "licenseName": "Public domain",
+  "licenseUrl": "https://www.naturalearthdata.com/about/terms-of-use/",
+  "version": "world-atlas 2.0.2; 50m anchors cross-checked against 110m geometry",
+  "retrievedAt": "2026-09-22",
+  "derivedAssetSha256": "8719111a9732ce745b5e90137ac1cb638a3fe76820a4912c8dfa9417bac4983f",
+  "sourceAssets": {
+    "50m": {
+      "distributionUrl": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json",
+      "sha256": "04342cdc1e3016bcd7db1630de95684d67b79fe3c8c460321e87aef469502394"
+    },
+    "110m": {
+      "distributionUrl": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json",
+      "sha256": "2516c915867c7baf18ddec727aec46c315541a07cfb3d79a6559b05d5e94eee8"
+    }
+  },
+  "attribution": "Made with Natural Earth",
+  "redistribution": "allowed",
+  "transformations": [
+    "Compute interior label anchors and sampled boundary clearance from merged 50m country polygons",
+    "Retain only anchors contained by both 50m and 110m geometries when both are present",
+    "Round coordinates and clearance to six decimal places for deterministic static delivery"
+  ],
+  "missingValuePolicy": "Countries without a cross-resolution anchor use the runtime 110m geometry algorithm or an explicit verified fallback.",
+  "boundaryPolicy": "Natural Earth boundaries are cartographic data and are not a legal authority on territorial status.",
+  "recordCount": 240,
+  "rawBytes": 22681,
+  "gzipBytes": 5457,
+  "staticDecodedBytesEstimate": 90724,
+  "runtimeDecodedBytesEstimate": 136086
+}

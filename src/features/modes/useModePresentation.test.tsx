@@ -50,7 +50,7 @@ describe('useGlobePresentation', () => {
     const { result } = renderHook(() => useGlobePresentation());
 
     await waitFor(() =>
-      expect(result.current.surnameMapLabels).toHaveLength(73),
+      expect(result.current.surnameMapLabels).toHaveLength(74),
     );
     expect(
       result.current.surnameMapLabels.some(

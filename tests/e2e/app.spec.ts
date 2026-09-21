@@ -269,7 +269,71 @@ test('Surname Atlas keeps selected country labels visible across country shapes'
       'data-surname-map-label-hidden-reason',
       /.+/,
     );
+    const canvas = page.locator('canvas').first();
+    const canvasBox = await canvas.boundingBox();
+    expect(canvasBox).not.toBeNull();
+    const rectangles = JSON.parse(
+      (await globe.getAttribute('data-surname-map-label-visible-rectangles')) ??
+        '[]',
+    ) as Array<{
+      id: string;
+      left: number;
+      right: number;
+      top: number;
+      bottom: number;
+    }>;
+    expect(
+      rectangles.some((rectangle) => rectangle.id === item.label.split(':')[0]),
+    ).toBe(true);
+    for (const rectangle of rectangles) {
+      expect(rectangle.left).toBeGreaterThanOrEqual(0);
+      expect(rectangle.top).toBeGreaterThanOrEqual(0);
+      expect(rectangle.right).toBeLessThanOrEqual(canvasBox!.width);
+      expect(rectangle.bottom).toBeLessThanOrEqual(canvasBox!.height);
+    }
+    for (let first = 0; first < rectangles.length; first += 1) {
+      for (let second = first + 1; second < rectangles.length; second += 1) {
+        const a = rectangles[first]!;
+        const b = rectangles[second]!;
+        expect(
+          a.right <= b.left ||
+            b.right <= a.left ||
+            a.bottom <= b.top ||
+            b.bottom <= a.top,
+          `${a.id} overlaps ${b.id}`,
+        ).toBe(true);
+      }
+    }
+    expect(
+      Number(
+        await globe.getAttribute('data-surname-map-label-min-corner-radius'),
+      ),
+    ).toBeGreaterThanOrEqual(1.004);
   }
+});
+
+test('Surname Atlas restores the selected label after camera interaction', async ({
+  page,
+}) => {
+  await page.goto('./?mode=surnames&point=31.2304%2C121.4737&v=2');
+  const globe = globeRegion(page);
+  await expect(globe).toHaveAttribute('data-surname-map-label-visible', 'true');
+  const center = await globeCenter(page);
+  await page.mouse.move(center.x, center.y);
+  await page.mouse.down();
+  await page.mouse.move(center.x + 160, center.y + 22, { steps: 5 });
+  await page.mouse.up();
+  await expect(globe).toHaveAttribute(
+    'data-surname-map-label-visible',
+    'true',
+    {
+      timeout: 10_000,
+    },
+  );
+  await expect(globe).not.toHaveAttribute(
+    'data-surname-map-label-hidden-reason',
+    /.+/,
+  );
 });
 
 test('Surname Atlas keeps unranked source lists off the map', async ({
@@ -278,7 +342,7 @@ test('Surname Atlas keeps unranked source lists off the map', async ({
   await page.goto('./?mode=surnames&point=37.9838%2C23.7275&v=2');
   const globe = globeRegion(page);
   await expect(globe).toHaveAttribute('data-vector-state', 'ready');
-  await expect(globe).toHaveAttribute('data-surname-map-label-count', '73');
+  await expect(globe).toHaveAttribute('data-surname-map-label-count', '74');
   await expect(globe).not.toHaveAttribute('data-surname-map-label');
   await expect(globe).toHaveAttribute(
     'data-surname-map-label-collision-count',

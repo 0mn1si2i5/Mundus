@@ -37,7 +37,11 @@ const OBSTACLE_PADDING_PX = 3;
 export function computeSurnameLabelLayout(
   rectangles: readonly SurnameLabelScreenRect[],
   obstacles: readonly SurnameLabelObstacle[],
-  viewport: { width: number; height: number },
+  viewport: {
+    width: number;
+    height: number;
+    allowSelectedObstacleOverlap?: boolean;
+  },
 ): SurnameLabelLayout {
   const ordered = [...rectangles].sort(
     (a, b) =>
@@ -78,7 +82,11 @@ function hiddenReason(
   rectangle: SurnameLabelScreenRect,
   accepted: readonly SurnameLabelScreenRect[],
   obstacles: readonly SurnameLabelObstacle[],
-  viewport: { width: number; height: number },
+  viewport: {
+    width: number;
+    height: number;
+    allowSelectedObstacleOverlap?: boolean;
+  },
 ): SurnameLabelHiddenReason | null {
   if (!hasFiniteRect(rectangle)) return 'invalid';
   if (!rectangle.frontFacing) return 'backface';
@@ -91,6 +99,7 @@ function hiddenReason(
     return 'outside-viewport';
   }
   if (
+    !(viewport.allowSelectedObstacleOverlap && rectangle.selected) &&
     obstacles.some((obstacle) => intersectsWithPadding(rectangle, obstacle))
   ) {
     return 'obstacle';

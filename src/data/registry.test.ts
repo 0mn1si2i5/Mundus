@@ -12,6 +12,7 @@ describe('data registry', () => {
       'undp-hdr-2025-development',
       'geonames-major-cities',
       'surnames-by-country',
+      'country-label-anchors',
     ]);
     expect(
       DATA_MANIFESTS.every(
@@ -152,13 +153,51 @@ describe('data registry', () => {
       version: expect.stringContaining('v1.2'),
       licenseName: expect.stringMatching(/CC0.*Apache-2\.0/u),
       derivedAssetSha256:
-        '4b640ca026aacc59fd8b481df56c7a58f517087a3b3a08bf76cfb974842f9580',
-      recordCount: 166,
-      rawBytes: 41867,
-      gzipBytes: 4049,
-      staticDecodedBytesEstimate: 167468,
+        'f9c4a179d10a56996de2775554c98f82b8e102e5f394f701bb540daa302c5693',
+      recordCount: 167,
+      rawBytes: 42822,
+      gzipBytes: 4410,
+      staticDecodedBytesEstimate: 171288,
     });
+    expect(manifest?.auxiliarySources).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sourceName: 'Statistics Sweden surname ranking supplement',
+          sha256:
+            '8e5d469eabd46e67174b45bfccc73d2097a93af1e88b199694e78a5a196e4ad9',
+        }),
+        expect.objectContaining({
+          sourceName: 'Wikipedia European surname list, Sweden section',
+          sha256:
+            'c5fbe91365197c28ab8b3c200ce69ef08ea0bf098b9dc81ba2c77e9cd0dff60b',
+        }),
+      ]),
+    );
     expect(manifest?.rawBytes).toBeLessThan(200 * 1024);
     expect(manifest?.runtimeDecodedBytesEstimate).toBeLessThan(2 * 1024 * 1024);
+  });
+
+  it('pins the cross-resolution country label anchors', () => {
+    const manifest = DATA_MANIFESTS.find(
+      (candidate) => candidate.id === 'country-label-anchors',
+    );
+    expect(manifest).toMatchObject({
+      derivedAssetSha256:
+        '8719111a9732ce745b5e90137ac1cb638a3fe76820a4912c8dfa9417bac4983f',
+      recordCount: 240,
+      rawBytes: 22681,
+      gzipBytes: 5457,
+      sourceAssets: {
+        '50m': {
+          sha256:
+            '04342cdc1e3016bcd7db1630de95684d67b79fe3c8c460321e87aef469502394',
+        },
+        '110m': {
+          sha256:
+            '2516c915867c7baf18ddec727aec46c315541a07cfb3d79a6559b05d5e94eee8',
+        },
+      },
+    });
+    expect(manifest?.rawBytes).toBeLessThan(64 * 1024);
   });
 });

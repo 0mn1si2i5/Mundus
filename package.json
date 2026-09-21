@@ -12,6 +12,7 @@
     "build": "tsc -b && vite build && node scripts/copy-release-notices.mjs",
     "data:development": "node scripts/build-undp-development.mjs",
     "data:vector-globe": "node scripts/build-natural-earth-vector-globe.mjs",
+    "data:label-anchors": "node --experimental-strip-types scripts/build-country-label-anchors.mjs",
     "data:cities": "node scripts/build-geonames-major-cities.mjs",
     "data:cities:capture": "node scripts/build-geonames-major-cities.mjs --capture",
     "data:surnames": "node scripts/build-surname-observation.mjs",
