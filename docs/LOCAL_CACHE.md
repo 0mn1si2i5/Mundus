@@ -1,10 +1,9 @@
 # Local cache lifecycle
 
-Large Historical Echoes and GHSL inputs are local evidence, not release assets.
+Large research inputs and GHSL evidence are local evidence, not release assets.
 They must stay outside `pnpm check`, Pages builds, and routine browser tests.
-For a future full rebuild, keep the pinned Wikidata archive in a user cache or
-external volume and pass its absolute path to the builder; do not put the source
-archive inside a Git worktree's `tmp/` directory.
+Keep any future large source archive in a user cache or external volume; do not
+put it inside a Git worktree's `tmp/` directory.
 
 From the repository root, inspect known cache directories with:
 
@@ -23,13 +22,7 @@ pnpm cache:prune
 ```
 
 The command requires `--apply` internally and refuses to touch a cache with a
-live PID. To delete the pinned Wikidata dump as well, use the explicit command
-below only after accepting that the source must be downloaded again for another
-full reproduction:
-
-```bash
-pnpm cache:prune -- --sources
-```
+live PID. Source archives are never removed by this command.
 
 The cleanup tool never removes `phase0-current-rules`, GHSL proof caches, or
 unregistered worktrees automatically. Those contain review evidence and require

@@ -4,7 +4,6 @@ import { basename, relative, resolve, sep } from 'node:path';
 
 const args = new Set(process.argv.slice(2));
 const apply = args.has('--apply');
-const removeSources = args.has('--sources');
 const json = args.has('--json');
 
 const repositoryRoot = resolve(
@@ -16,7 +15,7 @@ const worktreePaths = await discoverWorktrees(repositoryRoot);
 const entries = [];
 
 for (const worktreePath of worktreePaths) {
-  for (const relativePath of ['tmp/historical-echoes', '.cache/ghsl']) {
+  for (const relativePath of ['.cache/ghsl']) {
     const path = resolve(worktreePath, relativePath);
     if (await exists(path)) {
       entries.push(await inspectEntry(repositoryRoot, worktreePath, path));
@@ -25,13 +24,13 @@ for (const worktreePath of worktreePaths) {
 }
 
 if (apply) {
-  await prune(entries, { apply, removeSources });
+  await prune(entries, { apply });
 }
 
 if (json) {
   console.log(JSON.stringify({ repositoryRoot, entries }, null, 2));
 } else {
-  printReport(repositoryRoot, entries, { apply, removeSources });
+  printReport(repositoryRoot, entries, { apply });
 }
 
 async function discoverWorktrees(root) {
@@ -54,7 +53,6 @@ async function inspectEntry(root, worktreePath, path) {
     files.push({
       path: relative(root, filePath).split(sep).join('/'),
       bytes: size,
-      kind: isSourceArchive(filePath) ? 'source' : 'generated',
     });
   });
 
@@ -78,10 +76,7 @@ async function inspectEntry(root, worktreePath, path) {
     registered: isRegisteredWorktree(root, worktreePath),
     bytes,
     files: files.length,
-    sources: files.filter((file) => file.kind === 'source'),
-    generatedBytes: files
-      .filter((file) => file.kind === 'generated')
-      .reduce((total, file) => total + file.bytes, 0),
+    generatedBytes: bytes,
     pids,
   };
 }
@@ -99,21 +94,15 @@ async function walk(path, onFile) {
   }
 }
 
-async function prune(
-  entries,
-  { apply: shouldApply, removeSources: includeSources },
-) {
+async function prune(entries, { apply: shouldApply }) {
   for (const entry of entries) {
-    if (!entry.path.endsWith('tmp/historical-echoes')) {
-      console.log(`skip protected evidence ${entry.path}`);
-      continue;
-    }
+    console.log(`skip protected evidence ${entry.path}`);
     if (entry.pids.some((pid) => pid.active)) {
       throw new Error(`Refusing to prune active cache: ${entry.path}`);
     }
     const root = resolve(repositoryRoot, entry.path);
     const disposable = [];
-    await collectDisposable(root, disposable, { includeSources });
+    await collectDisposable(root, disposable);
     for (const path of disposable) {
       console.log(
         `${shouldApply ? 'remove' : 'would remove'} ${relative(repositoryRoot, path)}`,
@@ -123,7 +112,7 @@ async function prune(
   }
 }
 
-async function collectDisposable(path, output, { includeSources }) {
+async function collectDisposable(path, output) {
   const entries = await readdir(path, { withFileTypes: true });
   for (const entry of entries) {
     const child = resolve(path, entry.name);
@@ -138,14 +127,8 @@ async function collectDisposable(path, output, { includeSources }) {
       (entry.name.endsWith('.pid') || entry.name.endsWith('.log'))
     ) {
       output.push(child);
-    } else if (includeSources && entry.isFile() && isSourceArchive(child)) {
-      output.push(child);
     }
   }
-}
-
-function isSourceArchive(path) {
-  return /^wikidata-\d{8}-all\.json\.gz$/.test(basename(path));
 }
 
 function isProcessAlive(pid) {
@@ -174,18 +157,14 @@ function isRegisteredWorktree(root, worktreePath) {
 function printReport(root, inspected, options) {
   console.log(`Local cache root: ${root}`);
   if (inspected.length === 0) {
-    console.log('No Historical Echoes or GHSL cache directories found.');
+    console.log('No known research cache directories found.');
     return;
   }
   for (const entry of inspected) {
-    const sourceBytes = entry.sources.reduce(
-      (total, file) => total + file.bytes,
-      0,
-    );
     const active = entry.pids.filter((pid) => pid.active).map((pid) => pid.pid);
     console.log(
       `${entry.path}: ${formatBytes(entry.bytes)} in ${entry.files} files; ` +
-        `${formatBytes(sourceBytes)} source, ${formatBytes(entry.generatedBytes)} generated; ` +
+        `${formatBytes(entry.generatedBytes)} generated; ` +
         `worktree=${entry.worktree} registered=${entry.registered} ` +
         `activePids=${active.length ? active.join(',') : 'none'}`,
     );
@@ -193,9 +172,6 @@ function printReport(root, inspected, options) {
   if (!options.apply) {
     console.log(
       'Dry run only. Use --apply to remove logs, pid files, and completed current-run directories.',
-    );
-    console.log(
-      'Add --sources with --apply only when the pinned source archive may be redownloaded.',
     );
   }
 }

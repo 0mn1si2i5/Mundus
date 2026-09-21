@@ -8,14 +8,11 @@ and where an agent must stop for product-owner review. It is an index and
 governance contract, not a detailed implementation plan.
 
 The accepted Shell V2 architecture is now present on protected `main` through
-merged PR #9, its live-smoke correction in PR #11, and the bounded Historical
-Echoes curation correction in PR #10. The architecture is:
+merged PR #9 and its live-smoke correction in PR #11. The architecture is:
 [`docs/EXHIBIT_SHELL_V2.md`](EXHIBIT_SHELL_V2.md): a mode-neutral globe lobby,
 curated featured orbit, scalable Mode Atlas, explicit mode previews, and
-versioned URL compatibility for a growing observation collection. Historical
-Echoes remains a catalog preview only; its data feasibility gate and runtime
-integration are still incomplete. This direction does not reopen GHSL or
-authorize a new mode.
+versioned URL compatibility for a growing observation collection. This
+direction does not reopen GHSL or authorize a new mode.
 
 ## 1. Three Planning Layers
 
@@ -227,11 +224,15 @@ Stop and ask the product owner before:
 
 ## 9. Post-GHSL High-Level Direction
 
-After GHSL is globally complete and live, the next candidate product packet is a
-cultural observation design and licensing spike using redistribution-safe
-Wikidata and/or Pleiades sources. Its purpose is to test whether Mundus can add a
-deep cultural-historical observation experience while preserving the museum
-exhibit, scientific-instrument, and interactive-atlas character.
+Because GHSL is terminally stopped, the next candidate product packet may be a
+small cultural or naming observation design and licensing spike using
+redistribution-safe community data. Its purpose is to test whether Mundus can
+add one deep, low-resource observation while preserving the museum exhibit,
+scientific-instrument, and interactive-atlas character.
+
+The current naming research is recorded in
+[`docs/NAMING_OBSERVATION_RESEARCH.md`](NAMING_OBSERVATION_RESEARCH.md). It is
+research evidence only; it does not authorize implementation or data import.
 
 That packet is not yet designed or approved. Before implementation it must
 define:
@@ -264,7 +265,7 @@ A new agent must:
 4. Treat the ignored V1.1 convergence plan and merged PR #5/#6 as historical
    evidence. Do not repeat their merge, deployment, tag, or Release steps, and
    do not copy the ignored plan into Git.
-5. Keep GHSL Plans 2 through 7 frozen unless the project is separately reopened
+5. Keep GHSL Plans 2 through 7 closed unless the project is separately reopened
    and approved.
 
 If GHSL or post-GHSL product work is later proposed, first obtain the applicable

@@ -55,7 +55,6 @@ export const messages = {
     curationArchived: '归档',
     maturityStable: '稳定',
     maturityExperimental: '实验',
-    comingSoon: '即将上线',
     newBadge: '新',
     lobbyTitle: '选择一种观察',
     lobbyDescription: '转动地球，选择地点，再进入一种观察方式。',
@@ -78,7 +77,6 @@ export const messages = {
     atlasAll: '全部',
     atlasArchived: '归档',
     unknownModeNotice: '这个观察方式暂时不可用，已回到展厅。',
-    comingSoonNotice: '这项观察即将上线，已回到展厅。',
     dismissNotice: '关闭提示',
     archiveNotice: '这是一项已归档的观察方式，仍可正常查看。',
   },
@@ -139,7 +137,6 @@ export const messages = {
     curationArchived: 'Archived',
     maturityStable: 'Stable',
     maturityExperimental: 'Experimental',
-    comingSoon: 'Coming soon',
     newBadge: 'New',
     lobbyTitle: 'Choose an observation',
     lobbyDescription: 'Turn Earth, choose a place, then enter a way of seeing.',
@@ -163,8 +160,6 @@ export const messages = {
     atlasArchived: 'Archived',
     unknownModeNotice:
       'That observation is unavailable; you have been returned to the lobby.',
-    comingSoonNotice:
-      'This observation is coming soon; you have been returned to the lobby.',
     dismissNotice: 'Dismiss',
     archiveNotice: 'This observation has been archived; it remains viewable.',
   },

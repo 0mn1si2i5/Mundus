@@ -24,8 +24,8 @@ The ignored V1.1 convergence plan and the tracked candidate/publication
 documents are historical execution evidence. Do not execute their pre-merge
 steps again or copy the ignored plan into Git.
 
-GHSL Human Morphology is a shared overlay, not a fourth mode. Reserve product
-identity **V1.2.0** for it only if Plans 1–7 and their approval gates complete.
+GHSL Human Morphology is a stopped research direction, not a fourth mode or a
+scheduled product identity.
 GHSL Plan 1 terminated with `STOP_GLOBAL_MORPHOLOGY` at
 `6e396d90ef215085a3d5bc8dbf602b6e4f239051`; Plans 2–7 are frozen. Its detailed
 recovery plan is historical evidence and does not authorize a restart. The
@@ -458,10 +458,10 @@ pnpm test:e2e
 ```
 
 Local cache inspection is intentionally separate from the release gates:
-`pnpm cache:status` reports Historical Echoes and GHSL cache occupancy, while
+`pnpm cache:status` reports known research and GHSL cache occupancy, while
 `pnpm cache:prune` removes only completed run folders, stale PID files, and
-logs. Add `-- --sources` only when the pinned source dump may be redownloaded;
-never make cache cleanup part of `pnpm check` or CI.
+logs. Source archives are never removed by the routine command. Never make
+cache cleanup part of `pnpm check` or CI.
 
 Artifact-only verification:
 
@@ -694,14 +694,15 @@ release is incomplete and identify the exact blocker.
 ## 15. Deferred roadmap
 
 V1.1.0 Parchment Atlas is the current public Pages product. Human Morphology
-reserves V1.2.0 only after GHSL Plans 1–7 and their budget/release gates
-complete. The current sequence is in `docs/ROADMAP_HANDOFF.md`.
+remains a stopped research direction; it has no scheduled product version.
+The terminal evidence is in `docs/GHSL_EXECUTION_HANDOFF.md`.
 
 GHSL Plan 1 is terminal at `6e396d90ef215085a3d5bc8dbf602b6e4f239051`.
 Do not restart it or begin Plans 2–7 unless GHSL is separately reopened and
-approved. Do not restart the completed V1.1 convergence procedure. Also defer
-Pleiades/Wikidata cultural exploration, plugin marketplaces, street-level GIS,
-weather, time-zone layers, offline/PWA work, accounts, and backend services.
+approved. Do not restart the completed V1.1 convergence procedure. New cultural
+or naming observations require their own small data/licensing packet. Also defer
+plugin marketplaces, street-level GIS, weather, time-zone layers, offline/PWA
+work, accounts, and backend services.
 
 ## 16. Historical kickoff prompt
 

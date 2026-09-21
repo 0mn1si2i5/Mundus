@@ -36,9 +36,6 @@ describe('ExhibitLobby', () => {
     expect(screen.getByRole('button', { name: /Other Side/ })).toBeVisible();
     expect(screen.getByRole('button', { name: /Development/ })).toBeVisible();
     expect(screen.getByRole('button', { name: /Sunline/ })).toBeVisible();
-    expect(
-      screen.queryByRole('button', { name: /Historical Echoes/ }),
-    ).not.toBeInTheDocument();
   });
 
   it('requests a preview for the selected mode without activating it', () => {
@@ -48,7 +45,7 @@ describe('ExhibitLobby', () => {
     expect(onSelectPreview).toHaveBeenCalledWith('sunline');
   });
 
-  it('keeps coming-soon modes out of the lobby orbit', () => {
+  it('keeps non-featured catalog views out of the lobby orbit', () => {
     render(<ExhibitLobby locale="en" onSelectPreview={vi.fn()} />);
     expect(screen.queryByText('New')).not.toBeInTheDocument();
   });

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { Locale } from '../i18n/messages';
-import { isAvailableMode, type ModeId } from '../features/modes/modeRegistry';
+import type { ModeId } from '../features/modes/modeRegistry';
 import type { CountryRef } from '../features/globe/country';
 import { antipodeOf, type GeoPoint } from '../features/antipodes/geography';
 import type { DevelopmentIndicator } from '../features/development/developmentData';
@@ -82,8 +82,7 @@ export const useAppStore = create<AppState>((set) => ({
   hasMeaningfulInteraction: false,
   sunlinePlaying: false,
   selectMode: (activeMode) =>
-    set((state) => {
-      if (!isAvailableMode(activeMode)) return state;
+    set(() => {
       return {
         activeMode,
         previewMode: null,
@@ -96,7 +95,7 @@ export const useAppStore = create<AppState>((set) => ({
   closeModePreview: () => set({ previewMode: null }),
   enterPreviewMode: () =>
     set((state) => {
-      if (state.previewMode === null || !isAvailableMode(state.previewMode)) {
+      if (state.previewMode === null) {
         return state;
       }
       return {
