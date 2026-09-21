@@ -64,6 +64,7 @@ const dataManifestObjectSchema = z.object({
   transformations: z.array(z.string().min(1)).min(1),
   missingValuePolicy: z.string().min(1),
   boundaryPolicy: z.string().min(1),
+  coverageNote: z.string().min(1).optional(),
   recordCount: z.number().int().nonnegative().optional(),
   rawBytes: z.number().int().nonnegative().optional(),
   gzipBytes: z.number().int().nonnegative().optional(),

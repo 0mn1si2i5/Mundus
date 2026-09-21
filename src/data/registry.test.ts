@@ -152,11 +152,11 @@ describe('data registry', () => {
       version: expect.stringContaining('v1.2'),
       licenseName: expect.stringContaining('CC0'),
       derivedAssetSha256:
-        '0d9973838bcde8d489985f3bb11c7ea043be17cbbcc30878458ed752f93740ed',
-      recordCount: 72,
-      rawBytes: 24472,
-      gzipBytes: 2698,
-      staticDecodedBytesEstimate: 97888,
+        '8fff58f7004fedb719502fa99e74d1246e0e3b03f2f92972f4409f071b2363be',
+      recordCount: 165,
+      rawBytes: 41130,
+      gzipBytes: 3741,
+      staticDecodedBytesEstimate: 164520,
     });
     expect(manifest?.rawBytes).toBeLessThan(200 * 1024);
     expect(manifest?.runtimeDecodedBytesEstimate).toBeLessThan(2 * 1024 * 1024);

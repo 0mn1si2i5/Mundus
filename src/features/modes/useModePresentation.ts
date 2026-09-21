@@ -24,12 +24,14 @@ import {
   useSurnameDataset,
   type SurnameLoadState,
 } from '../surnames/useSurnameDataset';
+import type { SurnameMapLabel } from '../surnames/surnameData';
 
 export interface GlobePresentation {
   countryFills: ReadonlyMap<string, string> | null;
   showAntipodes: boolean;
   sunline: SunlineRenderState | null;
   antipodeRelation: AntipodeRelation | null;
+  surnameMapLabel: SurnameMapLabel | null;
 }
 
 export type AntipodeRelationLoadState = 'idle' | 'loading' | 'error' | 'ready';
@@ -114,6 +116,26 @@ export function useModePresentation(): ModePresentation | null {
       events: solarEventsUtc(point, sunlineTimeMs),
     };
   }, [activeMode, point, sunlineTimeMs]);
+  const surnameMapLabel = useMemo(() => {
+    if (
+      activeMode !== 'surnames' ||
+      !selectedCountry ||
+      surnameData.status !== 'ready'
+    ) {
+      return null;
+    }
+    const country = surnameData.data.countriesById.get(
+      selectedCountry.countryId,
+    );
+    const record = country?.records[0];
+    return record && record.rank !== null
+      ? {
+          countryId: selectedCountry.countryId,
+          countryName: selectedCountry.name,
+          record,
+        }
+      : null;
+  }, [activeMode, selectedCountry, surnameData]);
 
   switch (activeMode) {
     case null:
@@ -126,6 +148,7 @@ export function useModePresentation(): ModePresentation | null {
           showAntipodes: true,
           sunline: null,
           antipodeRelation: relation,
+          surnameMapLabel: null,
         },
         selectedCountry,
         antipodeCountry,
@@ -142,6 +165,7 @@ export function useModePresentation(): ModePresentation | null {
           showAntipodes: false,
           sunline: null,
           antipodeRelation: null,
+          surnameMapLabel: null,
         },
         selectedCountry,
         developmentData,
@@ -154,6 +178,7 @@ export function useModePresentation(): ModePresentation | null {
           showAntipodes: false,
           sunline: { subsolarPoint: sun!.position.subsolarPoint },
           antipodeRelation: null,
+          surnameMapLabel: null,
         },
         point,
         selectedCountry,
@@ -168,6 +193,7 @@ export function useModePresentation(): ModePresentation | null {
           showAntipodes: false,
           sunline: null,
           antipodeRelation: null,
+          surnameMapLabel,
         },
         selectedCountry,
         surnameData,
@@ -190,6 +216,8 @@ export function useGlobePresentation(): GlobePresentation {
   const sunlineTimeMs = useAppStore((state) => state.sunlineTimeMs);
   const developmentData = useDevelopmentDataset(activeMode === 'development');
   const cityIndex = useGeoNamesCityIndex(activeMode === 'antipodes');
+  const selectedCountry = useAppStore((state) => state.selectedCountry);
+  const surnameData = useSurnameDataset(activeMode === 'surnames');
 
   const countryFills = useMemo(() => {
     if (activeMode !== 'development' || developmentData.status !== 'ready') {
@@ -215,6 +243,27 @@ export function useGlobePresentation(): GlobePresentation {
     }
   }, [activeMode, sunlineTimeMs]);
 
+  const surnameMapLabel = useMemo(() => {
+    if (
+      activeMode !== 'surnames' ||
+      !selectedCountry ||
+      surnameData.status !== 'ready'
+    ) {
+      return null;
+    }
+    const country = surnameData.data.countriesById.get(
+      selectedCountry.countryId,
+    );
+    const record = country?.records[0];
+    return record
+      ? {
+          countryId: selectedCountry.countryId,
+          countryName: selectedCountry.name,
+          record,
+        }
+      : null;
+  }, [activeMode, selectedCountry, surnameData]);
+
   const antipodeRelation = useMemo(() => {
     if (activeMode !== 'antipodes') return null;
     try {
@@ -232,6 +281,7 @@ export function useGlobePresentation(): GlobePresentation {
     showAntipodes: activeMode === 'antipodes',
     sunline,
     antipodeRelation,
+    surnameMapLabel,
   };
 }
 

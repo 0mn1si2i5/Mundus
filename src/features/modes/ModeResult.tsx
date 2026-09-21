@@ -191,7 +191,9 @@ export function ModeResult({
                   key={`${record.rank}-${index}`}
                 >
                   <span>
-                    {t.surnameRank} {record.rank}
+                    {record.rank !== null
+                      ? `${t.surnameRank} ${record.rank}`
+                      : t.surnameListed}
                   </span>
                   <strong>
                     {record.localForms.length
