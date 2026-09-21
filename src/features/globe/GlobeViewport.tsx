@@ -79,8 +79,10 @@ import { cssPixelsToWorldUnits } from './screenSpace';
 import { VectorGlobeLayer, type VectorGlobeState } from './VectorGlobeLayer';
 import type { VectorGlobeResources } from './vectorGlobe';
 import {
+  COUNTRY_LABEL_HEIGHT_RATIO,
   getFallbackCountryLabelAnchor,
   getCountryLabelAnchor,
+  getCountryLabelWorldWidth,
   type CountryLabelAnchor,
 } from './countryLabel';
 import type { SurnameMapLabel } from '../surnames/surnameData';
@@ -104,7 +106,7 @@ interface GlobeViewportProps {
   showAntipodes: boolean;
   sunline: SunlineRenderState | null;
   antipodeRelation: AntipodeRelation | null;
-  surnameMapLabel: SurnameMapLabel | null;
+  surnameMapLabels: readonly SurnameMapLabel[];
 }
 
 export interface SunlineRenderState {
@@ -138,7 +140,7 @@ export function GlobeViewport({
   showAntipodes,
   sunline,
   antipodeRelation,
-  surnameMapLabel,
+  surnameMapLabels,
 }: GlobeViewportProps) {
   const [supported] = useState(supportsWebGL2);
   const [profile] = useState(detectQualityProfile);
@@ -157,6 +159,10 @@ export function GlobeViewport({
     string | null
   >(null);
   const [surnameLabelVisible, setSurnameLabelVisible] = useState(false);
+  const [surnameLabelLayout, setSurnameLabelLayout] = useState({
+    visibleCount: 0,
+    collisionCount: 0,
+  });
   const [vectorRenderEvidence, setVectorRenderEvidence] = useState<{
     vectorDraws: number;
     rendererCalls: number;
@@ -175,6 +181,13 @@ export function GlobeViewport({
   const setCameraFocusFree = useAppStore((state) => state.setCameraFocusFree);
   const point = useAppStore((state) => state.point);
   const selectedCountry = useAppStore((state) => state.selectedCountry);
+  const selectedSurnameMapLabel = useMemo(
+    () =>
+      surnameMapLabels.find(
+        (label) => label.countryId === selectedCountry?.countryId,
+      ) ?? null,
+    [selectedCountry?.countryId, surnameMapLabels],
+  );
   const antipodeDragVisible = showAntipodes && antipodeDragActive;
   const handleVectorStateChange = useCallback(
     (state: VectorGlobeState, resources: VectorGlobeResources | null) => {
@@ -637,13 +650,30 @@ export function GlobeViewport({
         sunline ? 'selected>solar>highlight>mask' : undefined
       }
       data-surname-map-label={
-        surnameMapLabel
-          ? `${surnameMapLabel.countryId}:${surnameMapLabel.record.localForms[0]?.value ?? ''}`
+        selectedSurnameMapLabel
+          ? `${selectedSurnameMapLabel.countryId}:${selectedSurnameMapLabel.record.localForms[0]?.value ?? selectedSurnameMapLabel.record.romanizedForms[0] ?? ''}`
           : undefined
       }
-      data-surname-map-label-country={surnameMapLabel?.countryName}
+      data-surname-map-label-country={
+        selectedCountry?.name ?? selectedSurnameMapLabel?.countryName
+      }
       data-surname-map-label-visible={
-        surnameMapLabel ? String(surnameLabelVisible) : undefined
+        selectedSurnameMapLabel ? String(surnameLabelVisible) : undefined
+      }
+      data-surname-map-label-count={
+        surnameMapLabels.length > 0
+          ? String(surnameMapLabels.length)
+          : undefined
+      }
+      data-surname-map-label-visible-count={
+        surnameMapLabels.length > 0
+          ? String(surnameLabelLayout.visibleCount)
+          : undefined
+      }
+      data-surname-map-label-collision-count={
+        surnameMapLabels.length > 0
+          ? String(surnameLabelLayout.collisionCount)
+          : undefined
       }
       data-sunline-selected-marker-role={
         sunline ? SUNLINE_RENDERING.selectedMarker.role : undefined
@@ -700,8 +730,9 @@ export function GlobeViewport({
           dragDiagnosticsEnabled={dragDiagnosticsEnabled}
           sunline={sunline}
           antipodeRelation={antipodeRelation}
-          surnameMapLabel={surnameMapLabel}
+          surnameMapLabels={surnameMapLabels}
           onSurnameLabelVisibilityChange={setSurnameLabelVisible}
+          onSurnameLabelLayoutChange={setSurnameLabelLayout}
           onCameraFocusStart={clearCameraDiagnostic}
           onCameraFocusAnimationStart={recordCameraFocusStart}
           onCameraFocusComplete={recordCameraDiagnostic}
@@ -757,8 +788,12 @@ interface GlobeSceneProps {
   dragDiagnosticsEnabled: boolean;
   sunline: SunlineRenderState | null;
   antipodeRelation: AntipodeRelation | null;
-  surnameMapLabel: SurnameMapLabel | null;
+  surnameMapLabels: readonly SurnameMapLabel[];
   onSurnameLabelVisibilityChange: (visible: boolean) => void;
+  onSurnameLabelLayoutChange: (layout: {
+    visibleCount: number;
+    collisionCount: number;
+  }) => void;
   onCameraFocusStart: () => void;
   onCameraFocusAnimationStart: (timestamp: number) => void;
   onCameraFocusComplete: (
@@ -829,8 +864,9 @@ function GlobeScene({
   dragDiagnosticsEnabled,
   sunline,
   antipodeRelation,
-  surnameMapLabel,
+  surnameMapLabels,
   onSurnameLabelVisibilityChange,
+  onSurnameLabelLayoutChange,
   onCameraFocusStart,
   onCameraFocusAnimationStart,
   onCameraFocusComplete,
@@ -907,24 +943,44 @@ function GlobeScene({
   const reducedMotion = useReducedMotion();
   const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
   const countries = useMemo(() => getCountryDataset(), []);
-  const surnameCountry = useMemo(
+  const selectedSurnameMapLabel = useMemo(
     () =>
-      surnameMapLabel
-        ? (countries.countries.features.find(
-            (country) =>
-              country.properties.countryId === surnameMapLabel.countryId,
-          ) ?? null)
-        : null,
-    [countries, surnameMapLabel],
+      surnameMapLabels.find(
+        (label) => label.countryId === selectedCountry?.countryId,
+      ) ?? null,
+    [selectedCountry?.countryId, surnameMapLabels],
   );
-  const surnameAnchor = useMemo(
+  const surnameAnchor = useMemo(() => {
+    if (!selectedSurnameMapLabel) return null;
+    const country = countries.countries.features.find(
+      (candidate) =>
+        candidate.properties.countryId === selectedSurnameMapLabel.countryId,
+    );
+    return country
+      ? getCountryLabelAnchor(country)
+      : getFallbackCountryLabelAnchor(selectedSurnameMapLabel.countryId);
+  }, [countries, selectedSurnameMapLabel]);
+  const surnameLabelEntries = useMemo(
     () =>
-      surnameCountry
-        ? getCountryLabelAnchor(surnameCountry)
-        : surnameMapLabel
-          ? getFallbackCountryLabelAnchor(surnameMapLabel.countryId)
-          : null,
-    [surnameCountry, surnameMapLabel],
+      surnameMapLabels.flatMap((label) => {
+        const country = countries.countries.features.find(
+          (candidate) => candidate.properties.countryId === label.countryId,
+        );
+        const anchor = country
+          ? getCountryLabelAnchor(country)
+          : getFallbackCountryLabelAnchor(label.countryId);
+        if (!anchor) return [];
+        return [
+          {
+            label: {
+              ...label,
+              countryName: country?.properties.name ?? label.countryName,
+            },
+            anchor,
+          },
+        ];
+      }),
+    [countries, surnameMapLabels],
   );
   useEffect(() => {
     if (activeMode !== 'surnames') {
@@ -932,21 +988,21 @@ function GlobeScene({
       return;
     }
     if (
-      !surnameMapLabel ||
+      !selectedSurnameMapLabel ||
       !surnameAnchor ||
       hasInteracted ||
-      surnameFocusKey.current === surnameMapLabel.countryId
+      surnameFocusKey.current === selectedSurnameMapLabel.countryId
     ) {
       return;
     }
-    surnameFocusKey.current = surnameMapLabel.countryId;
-    requestCameraFocus(surnameAnchor.point);
+    surnameFocusKey.current = selectedSurnameMapLabel.countryId;
+    requestCameraFocus(getSurnameCameraFocusPoint(surnameAnchor.point));
   }, [
     activeMode,
     hasInteracted,
     requestCameraFocus,
     surnameAnchor,
-    surnameMapLabel,
+    selectedSurnameMapLabel,
   ]);
   const rasterCountryFills = vectorReady ? null : countryFills;
   const texture = useMemo(
@@ -1339,11 +1395,12 @@ function GlobeScene({
           onRenderEvidence={onVectorRenderEvidence}
           renderSampleKey={vectorRenderSampleKey}
         />
-        {surnameMapLabel && surnameAnchor ? (
+        {surnameLabelEntries.length > 0 ? (
           <SurnameMapLabelLayer
-            label={surnameMapLabel}
-            anchor={surnameAnchor}
+            entries={surnameLabelEntries}
+            selectedCountryId={selectedCountry?.countryId ?? null}
             onVisibilityChange={onSurnameLabelVisibilityChange}
+            onLayoutChange={onSurnameLabelLayoutChange}
           />
         ) : null}
         <mesh
@@ -1673,48 +1730,214 @@ function BenchmarkPanel({
   );
 }
 
-function SurnameMapLabelLayer({
-  label,
-  anchor,
-  onVisibilityChange,
-}: {
+interface SurnameLabelEntry {
   label: SurnameMapLabel;
   anchor: CountryLabelAnchor;
-  onVisibilityChange: (visible: boolean) => void;
-}) {
-  const sprite = useRef<Sprite>(null);
-  const worldPosition = useRef(new Vector3());
-  const cameraOffset = useRef(new Vector3());
-  const previousVisibility = useRef<boolean | null>(null);
-  const { camera } = useThree();
-  const texture = useMemo(() => createSurnameLabelTexture(label), [label]);
-  const width = surnameLabelWorldWidth(anchor.clearanceDegrees);
-  const position = useMemo(() => geoToVector3(anchor.point, 1.012), [anchor]);
+}
 
-  useEffect(() => () => texture.dispose(), [texture]);
+interface SurnameLabelRect {
+  id: string;
+  sprite: Sprite;
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+  frontFacing: boolean;
+  selected: boolean;
+}
+
+function getSurnameCameraFocusPoint(point: GeoPoint): GeoPoint {
+  if (typeof window === 'undefined' || window.innerWidth > 760) {
+    return point;
+  }
+
+  // The compact title occupies the upper part of the canvas. Aim slightly
+  // north of the label so the selected country remains in the unobstructed
+  // lower portion of the globe while preserving the same geographic view.
+  return {
+    latitude: Math.min(75, point.latitude + 14),
+    longitude: point.longitude,
+  };
+}
+
+function SurnameMapLabelLayer({
+  entries,
+  selectedCountryId,
+  onVisibilityChange,
+  onLayoutChange,
+}: {
+  entries: readonly SurnameLabelEntry[];
+  selectedCountryId: string | null;
+  onVisibilityChange: (visible: boolean) => void;
+  onLayoutChange: (layout: {
+    visibleCount: number;
+    collisionCount: number;
+  }) => void;
+}) {
+  const sprites = useRef(new Map<string, Sprite>());
+  const previousEvidence = useRef('');
+  const { camera, gl, size } = useThree();
+  const register = useCallback((id: string, sprite: Sprite | null) => {
+    if (sprite) sprites.current.set(id, sprite);
+    else sprites.current.delete(id);
+  }, []);
 
   useFrame(() => {
-    const object = sprite.current;
-    if (!object) return;
-    object.getWorldPosition(worldPosition.current);
-    cameraOffset.current.subVectors(camera.position, worldPosition.current);
-    const visible =
-      worldPosition.current
-        .clone()
-        .normalize()
-        .dot(cameraOffset.current.normalize()) > 0.12;
-    object.visible = visible;
-    if (previousVisibility.current !== visible) {
-      previousVisibility.current = visible;
-      onVisibilityChange(visible);
+    const cameraRight = new Vector3().setFromMatrixColumn(
+      camera.matrixWorld,
+      0,
+    );
+    const cameraUp = new Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+    const cameraOffset = new Vector3();
+    const worldPosition = new Vector3();
+    const worldScale = new Vector3();
+    const corner = new Vector3();
+    const projected = new Vector3();
+    const canvasRect = gl.domElement.getBoundingClientRect();
+    const obstacles = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-surname-label-obstacle]'),
+    )
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          left: rect.left - canvasRect.left,
+          right: rect.right - canvasRect.left,
+          top: rect.top - canvasRect.top,
+          bottom: rect.bottom - canvasRect.top,
+        };
+      })
+      .filter((rect) => rect.right > rect.left && rect.bottom > rect.top);
+    const rectangles: SurnameLabelRect[] = [];
+
+    for (const entry of entries) {
+      const sprite = sprites.current.get(entry.label.countryId);
+      if (!sprite) continue;
+      sprite.getWorldPosition(worldPosition);
+      sprite.getWorldScale(worldScale);
+      cameraOffset.subVectors(camera.position, worldPosition);
+      const frontFacing =
+        worldPosition.clone().normalize().dot(cameraOffset.normalize()) > 0.12;
+      const halfWidth = worldScale.x / 2;
+      const halfHeight = worldScale.y / 2;
+      let left = Number.POSITIVE_INFINITY;
+      let right = Number.NEGATIVE_INFINITY;
+      let top = Number.POSITIVE_INFINITY;
+      let bottom = Number.NEGATIVE_INFINITY;
+      for (const horizontal of [-1, 1]) {
+        for (const vertical of [-1, 1]) {
+          corner
+            .copy(worldPosition)
+            .addScaledVector(cameraRight, halfWidth * horizontal)
+            .addScaledVector(cameraUp, halfHeight * vertical);
+          projected.copy(corner).project(camera);
+          const x = ((projected.x + 1) * size.width) / 2;
+          const y = ((1 - projected.y) * size.height) / 2;
+          left = Math.min(left, x);
+          right = Math.max(right, x);
+          top = Math.min(top, y);
+          bottom = Math.max(bottom, y);
+        }
+      }
+      rectangles.push({
+        id: entry.label.countryId,
+        sprite,
+        left,
+        right,
+        top,
+        bottom,
+        frontFacing,
+        selected: entry.label.countryId === selectedCountryId,
+      });
+    }
+
+    rectangles.sort(
+      (a, b) =>
+        Number(b.selected) - Number(a.selected) || a.id.localeCompare(b.id),
+    );
+    const accepted: SurnameLabelRect[] = [];
+    let visibleCount = 0;
+    let collisionCount = 0;
+    let selectedVisible = false;
+    for (const rectangle of rectangles) {
+      const inViewport =
+        rectangle.left >= 0 &&
+        rectangle.right <= size.width &&
+        rectangle.top >= 0 &&
+        rectangle.bottom <= size.height;
+      const overlaps = accepted.some(
+        (other) =>
+          rectangle.left < other.right &&
+          rectangle.right > other.left &&
+          rectangle.top < other.bottom &&
+          rectangle.bottom > other.top,
+      );
+      const hitsObstacle = obstacles.some(
+        (obstacle) =>
+          rectangle.left < obstacle.right &&
+          rectangle.right > obstacle.left &&
+          rectangle.top < obstacle.bottom &&
+          rectangle.bottom > obstacle.top,
+      );
+      const visible =
+        rectangle.frontFacing && inViewport && !overlaps && !hitsObstacle;
+      rectangle.sprite.visible = visible;
+      if (visible) {
+        accepted.push(rectangle);
+        visibleCount += 1;
+        if (rectangle.selected) selectedVisible = true;
+      } else if (
+        rectangle.frontFacing &&
+        inViewport &&
+        (overlaps || hitsObstacle)
+      ) {
+        collisionCount += 1;
+      }
+    }
+    const evidence = `${visibleCount}:${collisionCount}:${selectedVisible}`;
+    if (previousEvidence.current !== evidence) {
+      previousEvidence.current = evidence;
+      onVisibilityChange(selectedVisible);
+      onLayoutChange({ visibleCount, collisionCount });
     }
   });
 
   return (
+    <>
+      {entries.map((entry) => (
+        <SurnameMapLabelSprite
+          key={entry.label.countryId}
+          entry={entry}
+          register={register}
+        />
+      ))}
+    </>
+  );
+}
+
+function SurnameMapLabelSprite({
+  entry,
+  register,
+}: {
+  entry: SurnameLabelEntry;
+  register: (id: string, sprite: Sprite | null) => void;
+}) {
+  const texture = useMemo(
+    () => createSurnameLabelTexture(entry.label),
+    [entry.label],
+  );
+  const width = getCountryLabelWorldWidth(entry.anchor.clearanceDegrees);
+  const position = useMemo(
+    () => geoToVector3(entry.anchor.point, 1.012),
+    [entry.anchor],
+  );
+
+  useEffect(() => () => texture.dispose(), [texture]);
+
+  return (
     <sprite
-      ref={sprite}
+      ref={(sprite) => register(entry.label.countryId, sprite)}
       position={[position.x, position.y, position.z]}
-      scale={[width, width * 0.34, 1]}
+      scale={[width, width * COUNTRY_LABEL_HEIGHT_RATIO, 1]}
       renderOrder={6}
       raycast={ignoreRaycast}
     >
@@ -1750,7 +1973,15 @@ function createSurnameLabelTexture(label: SurnameMapLabel): CanvasTexture {
     compactSurnameForm(label.record.romanizedForms[0]),
   ];
   lines.forEach((line, index) => {
-    context.font = `${index === 0 ? 86 : 58}px sans-serif`;
+    const preferredSize = index === 0 ? 86 : 58;
+    const maximumSize = index === 0 ? 140 : 110;
+    context.font = `${preferredSize}px sans-serif`;
+    const measured = Math.max(1, context.measureText(line).width);
+    const fittedSize = Math.min(
+      maximumSize,
+      Math.max(preferredSize, (canvas.width * 0.82 * preferredSize) / measured),
+    );
+    context.font = `${fittedSize}px sans-serif`;
     context.fillText(line, canvas.width / 2, 52 + index * 70);
   });
 
@@ -1768,12 +1999,6 @@ function compactSurnameForm(value: string | undefined | null): string {
   return characters.length > 16
     ? `${characters.slice(0, 15).join('')}…`
     : value;
-}
-
-function surnameLabelWorldWidth(clearanceDegrees: number): number {
-  const clearanceRadians =
-    MathUtils.clamp(clearanceDegrees, 0, 35) * (Math.PI / 180);
-  return Math.min(0.34, 2 * Math.sin(clearanceRadians * 0.68));
 }
 
 type MarkerRole = 'origin' | 'antipode' | 'selected';

@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useAppStore } from '../../state/appStore';
 import { useGlobePresentation } from './useModePresentation';
@@ -8,6 +8,7 @@ describe('useGlobePresentation', () => {
     useAppStore.setState({
       activeMode: null,
       point: { latitude: 31.2304, longitude: 121.4737 },
+      selectedCountry: null,
       developmentIndicator: 'hdi',
       developmentYear: 2023,
       sunlineTimeMs: Date.parse('2026-07-14T09:37:00Z'),
@@ -21,7 +22,7 @@ describe('useGlobePresentation', () => {
       showAntipodes: false,
       sunline: null,
       antipodeRelation: null,
-      surnameMapLabel: null,
+      surnameMapLabels: [],
     });
   });
 
@@ -39,5 +40,27 @@ describe('useGlobePresentation', () => {
     expect(result.current.showAntipodes).toBe(false);
     expect(result.current.sunline).not.toBeNull();
     expect(result.current.sunline?.subsolarPoint).toBeDefined();
+  });
+
+  it('emits every ranked map record and excludes unranked source lists', async () => {
+    useAppStore.setState({
+      activeMode: 'surnames',
+      selectedCountry: { countryId: 'ne-300', name: 'Greece' },
+    });
+    const { result } = renderHook(() => useGlobePresentation());
+
+    await waitFor(() =>
+      expect(result.current.surnameMapLabels).toHaveLength(72),
+    );
+    expect(
+      result.current.surnameMapLabels.some(
+        (label) => label.countryId === 'ne-300',
+      ),
+    ).toBe(false);
+    expect(
+      result.current.surnameMapLabels.find(
+        (label) => label.countryId === 'ne-156',
+      )?.record.rank,
+    ).toBe(1);
   });
 });

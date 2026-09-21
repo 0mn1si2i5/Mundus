@@ -101,6 +101,12 @@ Wikidata has a CC0 structured-data policy but does not expose a single,
 consistent country-by-country surname-frequency table. Wikipedia lists can be
 used for provenance and manual review, not as a silently unified census.
 
+`SMenigat/common-surnames` is an additional small MIT-licensed community list,
+but its 13 country files are alphabetical surname inventories without counts or
+rank fields. It can support a future explicitly unranked browse fallback; it
+cannot safely fill a map label that claims to be the country's most common
+surname, so it is not merged into the rank-one asset.
+
 Do not use Forebears as a redistribution source without a separate license
 decision. Do not use `philipperemy/name-dataset`: its provenance includes a
 Facebook data leak and its full data has multi-gigabyte storage and memory
@@ -137,6 +143,9 @@ mapping hashes. Five Chinese
 presentations are manually reviewed (`CN`, `TW`, `KR`, `JP`, and `VN`); all
 other countries show an explicit missing state. The app preserves alternate
 local and romanized forms within a source group, does not infer a statistical
-year from the 2023 collection snapshot, and renders only the selected
-country's compact local/Chinese/Latin label on the globe so labels cannot cover
-neighbouring countries.
+year from the 2023 collection snapshot, and renders the compact
+local/Chinese/Latin label for every country with an explicit numeric rank.
+Labels use a conservative spherical footprint, hide on the back or outside
+the canvas, and resolve screen-space collisions with each selected country
+and visible UI panel given priority. Countries with only unranked source
+lists remain visible in the side result but do not receive a map label.

@@ -23,7 +23,9 @@ ships:
   rank exists, and keeps unranked source lists visible when a country has no
   numeric rank. It presents local forms, Latin transliterations, and a small
   manually reviewed Chinese presentation set. It uses a community snapshot,
-  not a unified official global ranking; missing fields remain explicit.
+  not a unified official global ranking; missing fields remain explicit. Ranked
+  records are labelled on the globe with conservative boundary and collision
+  handling.
 
 The verified public site is <https://0mn1si2i5.github.io/Mundus/>. The V1.1
 product implementation entered protected `main` at

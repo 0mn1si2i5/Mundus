@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import dataset from '../../data/generated/surnames-by-country.json';
-import { decodeSurnameDataset } from './surnameData';
+import { decodeSurnameDataset, getRankOneSurnameRecord } from './surnameData';
 
 describe('surname observation data', () => {
   it('keeps exact Natural Earth country joins and explicit source coverage', () => {
@@ -42,6 +42,16 @@ describe('surname observation data', () => {
       rank: null,
       localForms: [{ value: 'Σαμαράς', script: 'Greek' }],
     });
+  });
+
+  it('does not promote an unranked source list to the map finding', () => {
+    const decoded = decodeSurnameDataset(dataset);
+    expect(getRankOneSurnameRecord(decoded.countriesById.get('ne-300'))).toBe(
+      null,
+    );
+    expect(
+      getRankOneSurnameRecord(decoded.countriesById.get('ne-156'))?.rank,
+    ).toBe(1);
   });
 
   it('rejects malformed rows instead of silently accepting them', () => {

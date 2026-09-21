@@ -8,6 +8,8 @@ import {
   getCountryTextureStyle,
 } from './countryData';
 import {
+  COUNTRY_LABEL_HEIGHT_RATIO,
+  getCountryLabelWorldWidth,
   getCountryLabelAnchor,
   getFallbackCountryLabelAnchor,
 } from './countryLabel';
@@ -61,6 +63,14 @@ describe('country dataset', () => {
         countryId,
       ).toBe(true);
       expect(anchor!.clearanceDegrees, countryId).toBeGreaterThan(0);
+      const width = getCountryLabelWorldWidth(anchor!.clearanceDegrees);
+      const halfDiagonal =
+        (width / 2) * Math.sqrt(1 + COUNTRY_LABEL_HEIGHT_RATIO ** 2);
+      const angularFootprint =
+        (Math.atan2(halfDiagonal, 1.012) * 180) / Math.PI;
+      expect(angularFootprint, countryId).toBeLessThanOrEqual(
+        anchor!.clearanceDegrees,
+      );
     }
   });
 
@@ -72,6 +82,15 @@ describe('country dataset', () => {
       expect(Number.isFinite(anchor!.point.longitude)).toBe(true);
       expect(anchor!.clearanceDegrees).toBeGreaterThan(0);
     }
+  });
+
+  it('keeps the billboard footprint conservative as clearance shrinks', () => {
+    expect(getCountryLabelWorldWidth(0)).toBe(0);
+    expect(getCountryLabelWorldWidth(0.35)).toBeGreaterThan(0);
+    expect(getCountryLabelWorldWidth(0.35)).toBeLessThan(
+      getCountryLabelWorldWidth(5),
+    );
+    expect(getCountryLabelWorldWidth(35)).toBeLessThanOrEqual(0.34);
   });
 });
 

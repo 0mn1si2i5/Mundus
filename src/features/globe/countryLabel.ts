@@ -6,11 +6,35 @@ import type { GeoPoint } from './geo';
 const RAD_TO_DEG = 180 / Math.PI;
 const GRID_STEPS = 12;
 const EDGE_SAMPLES = 2;
+const EDGE_SAMPLE_MAX_DEGREES = 1.5;
+const LABEL_SURFACE_RADIUS = 1.012;
+const LABEL_HEIGHT_RATIO = 0.34;
+const LABEL_CLEARANCE_SAFETY = 0.58;
+const LABEL_MAX_WIDTH = 0.34;
 
 export interface CountryLabelAnchor {
   point: GeoPoint;
   clearanceDegrees: number;
 }
+
+/**
+ * Returns a conservative world-space width for the three-line billboard.
+ * The diagonal, rather than only the width, is kept inside the measured
+ * angular clearance so the billboard cannot cross a country boundary when it
+ * faces the camera.
+ */
+export function getCountryLabelWorldWidth(clearanceDegrees: number): number {
+  const clearanceRadians =
+    Math.max(0, Math.min(clearanceDegrees, 35)) * (Math.PI / 180);
+  const halfDiagonal =
+    LABEL_SURFACE_RADIUS * Math.tan(clearanceRadians * LABEL_CLEARANCE_SAFETY);
+  return Math.min(
+    LABEL_MAX_WIDTH,
+    (2 * halfDiagonal) / Math.sqrt(1 + LABEL_HEIGHT_RATIO ** 2),
+  );
+}
+
+export const COUNTRY_LABEL_HEIGHT_RATIO = LABEL_HEIGHT_RATIO;
 
 // The 110m world-atlas snapshot omits these two small countries, while the
 // 50m Natural Earth asset contains them. Keep verified interior points so a
@@ -153,8 +177,17 @@ function boundaryClearance(
       if (!start || !end) continue;
       const startLongitude = start[0] ?? 0;
       const endLongitude = unwrapLongitude(end[0] ?? 0, startLongitude);
-      for (let sample = 0; sample <= EDGE_SAMPLES; sample += 1) {
-        const ratio = sample / EDGE_SAMPLES;
+      const segmentDegrees =
+        geoDistance(
+          [startLongitude, start[1] ?? 0],
+          [endLongitude, end[1] ?? 0],
+        ) * RAD_TO_DEG;
+      const sampleCount = Math.max(
+        EDGE_SAMPLES,
+        Math.min(24, Math.ceil(segmentDegrees / EDGE_SAMPLE_MAX_DEGREES)),
+      );
+      for (let sample = 0; sample <= sampleCount; sample += 1) {
+        const ratio = sample / sampleCount;
         const longitude =
           startLongitude + (endLongitude - startLongitude) * ratio;
         const latitude =
