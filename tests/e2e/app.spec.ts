@@ -204,9 +204,11 @@ test('Surname Atlas preserves local, Latin, Chinese, and missing states', async 
   page,
 }) => {
   await page.goto('./?mode=surnames&point=31.2304%2C121.4737&v=2');
-  await expectVectorReady(
-    page,
-    test.info().project.name === 'mobile' ? '110m' : '50m',
+  const globe = globeRegion(page);
+  await expect(globe).toHaveAttribute('data-vector-state', 'ready');
+  await expect(globe).toHaveAttribute(
+    'data-vector-raster-fallback-visible',
+    'false',
   );
   const result = page.getByTestId('surname-result');
   await expect(result).toContainText('China');
