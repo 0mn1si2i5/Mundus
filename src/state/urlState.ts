@@ -37,7 +37,7 @@ export interface ShareableState {
 
 export type NavigationNotice = 'unknown-mode';
 
-const modeSchema = z.enum(['antipodes', 'development', 'sunline']);
+const modeSchema = z.enum(['antipodes', 'development', 'sunline', 'surnames']);
 const developmentIndicatorSchema = z.enum([
   'hdi',
   'health',

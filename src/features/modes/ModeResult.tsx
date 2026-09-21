@@ -149,6 +149,91 @@ export function ModeResult({
           </div>
         </aside>
       );
+    case 'surnames': {
+      const country = presentation.selectedCountry;
+      const loadState = presentation.surnameData;
+      const countryData =
+        country && loadState.status === 'ready'
+          ? loadState.data.countriesById.get(country.countryId)
+          : null;
+      const numberFormatter = new Intl.NumberFormat(
+        locale === 'zh' ? 'zh-CN' : 'en-US',
+      );
+      return (
+        <aside
+          className={`${styles.result} ${styles.surnameResult}`}
+          aria-live="polite"
+          aria-label={t.surnameResult}
+          data-testid="surname-result"
+        >
+          <span>{t.selectedCountryLabel}</span>
+          <em>{country?.name ?? t.surnameChooseCountry}</em>
+          {!country ? (
+            <strong>{t.surnameSelectOnGlobe}</strong>
+          ) : loadState.status === 'loading' ? (
+            <strong>{t.surnameLoading}</strong>
+          ) : loadState.status === 'error' ? (
+            <strong>{t.surnameUnavailable}</strong>
+          ) : countryData?.records.length ? (
+            <div className={styles.surnameRecords}>
+              {countryData.records.map((record, index) => (
+                <section
+                  className={styles.surnameRecord}
+                  key={`${record.rank}-${index}`}
+                >
+                  <span>
+                    {t.surnameRank} {record.rank}
+                  </span>
+                  <strong>
+                    {record.localForms.length
+                      ? record.localForms.map((form) => form.value).join(' · ')
+                      : t.surnameMissing}
+                  </strong>
+                  <small>
+                    {t.surnameLocalForm}
+                    {record.localForms
+                      .map((form) => form.script)
+                      .filter(Boolean)
+                      .join(', ') || t.surnameMissing}
+                  </small>
+                  <small>
+                    {t.surnameRomanized}
+                    {record.romanizedForms.length
+                      ? record.romanizedForms.join(' · ')
+                      : t.surnameMissing}
+                  </small>
+                  <small>
+                    {t.surnameChinese}
+                    {record.zhDisplay ?? t.surnameMissing}
+                  </small>
+                  {record.count !== null || record.share !== null ? (
+                    <small>
+                      {record.count !== null
+                        ? `${t.surnameCount} ${numberFormatter.format(record.count)}`
+                        : ''}
+                      {record.count !== null && record.share !== null
+                        ? ' · '
+                        : ''}
+                      {record.share !== null
+                        ? `${t.surnameShare} ${(record.share * 100).toFixed(2)}%`
+                        : ''}
+                    </small>
+                  ) : null}
+                </section>
+              ))}
+            </div>
+          ) : (
+            <strong>{t.surnameNoRecord}</strong>
+          )}
+          {loadState.status === 'ready' ? (
+            <div className={styles.surnameScope}>
+              <small>{t.surnameScope}</small>
+              <small>{loadState.data.license}</small>
+            </div>
+          ) : null}
+        </aside>
+      );
+    }
     default:
       return assertNever(presentation);
   }

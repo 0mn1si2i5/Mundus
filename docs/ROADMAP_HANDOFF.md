@@ -230,12 +230,13 @@ redistribution-safe community data. Its purpose is to test whether Mundus can
 add one deep, low-resource observation while preserving the museum exhibit,
 scientific-instrument, and interactive-atlas character.
 
-The current naming research is recorded in
-[`docs/NAMING_OBSERVATION_RESEARCH.md`](NAMING_OBSERVATION_RESEARCH.md). It is
-research evidence only; it does not authorize implementation or data import.
+The current naming research and bounded implementation are recorded in
+[`docs/NAMING_OBSERVATION_RESEARCH.md`](NAMING_OBSERVATION_RESEARCH.md). The
+accepted Surname Atlas packet uses a small community snapshot and does not
+reopen GHSL or introduce a backend, crawler, runtime translation service, or
+new renderer.
 
-That packet is not yet designed or approved. Before implementation it must
-define:
+The packet defines:
 
 - one clear question and product loop rather than a general culture layer;
 - source identity, licensing, attribution, snapshot, and redistribution policy;
@@ -244,6 +245,9 @@ define:
 - bilingual narrative and caveats without authority or completeness inflation;
 - compatibility with one Canvas, existing modes, semantic DOM, mobile,
   keyboard, reduced motion, WebGL fallback, sharing, and Pages deployment.
+
+The implementation remains subject to the normal protected-main, artifact, and
+live smoke gates before it is treated as a fully released product slice.
 
 Also deferred after GHSL:
 

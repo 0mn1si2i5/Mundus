@@ -200,6 +200,22 @@ test('Development palette updates preserve vector geometry identity', async ({
     .toBeGreaterThan(renderRevision);
 });
 
+test('Surname Atlas preserves local, Latin, Chinese, and missing states', async ({
+  page,
+}) => {
+  await page.goto('./?mode=surnames&point=31.2304%2C121.4737&v=2');
+  await expectVectorReady(
+    page,
+    test.info().project.name === 'mobile' ? '110m' : '50m',
+  );
+  const result = page.getByTestId('surname-result');
+  await expect(result).toContainText('China');
+  await expect(result).toContainText('王');
+  await expect(result).toContainText('Wáng');
+  await expect(result).toContainText('中文呈现');
+  await expect(result).toContainText('社区整理');
+});
+
 test('vector drag shell becomes transparent while the hit sphere remains active', async ({
   page,
 }, testInfo) => {
@@ -1596,7 +1612,7 @@ test('opens the mode atlas and restores keyboard focus', async ({ page }) => {
 
   const atlas = page.getByRole('dialog', { name: '观察地球的方式' });
   await expect(atlas).toBeVisible();
-  await expect(atlas.getByRole('heading', { level: 3 })).toHaveCount(3);
+  await expect(atlas.getByRole('heading', { level: 3 })).toHaveCount(4);
   await expect(page.locator('#root')).toHaveAttribute('inert', '');
   await expect(
     atlas.getByRole('button', { name: '关闭模式图鉴' }),
@@ -3888,12 +3904,12 @@ test('@smoke opens the neutral lobby on the bare address and after a hard refres
   ).toBeVisible();
 });
 
-test('presents the three featured modes as one semantic lobby list', async ({
+test('presents the four featured modes as one semantic lobby list', async ({
   page,
 }) => {
   await page.goto('./');
   const list = page.getByRole('list', { name: '观察模式' });
-  await expect(list.getByRole('listitem')).toHaveCount(3);
+  await expect(list.getByRole('listitem')).toHaveCount(4);
   await expect(list.getByRole('button', { name: /地球另一端/ })).toBeVisible();
   await expect(
     list.getByRole('button', { name: /发展的不同侧面/ }),

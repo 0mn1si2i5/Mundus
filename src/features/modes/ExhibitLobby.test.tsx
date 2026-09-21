@@ -32,7 +32,7 @@ describe('ExhibitLobby', () => {
     expect(
       screen.getByRole('list', { name: 'Observation modes' }),
     ).toBeVisible();
-    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.getAllByRole('listitem')).toHaveLength(4);
     expect(screen.getByRole('button', { name: /Other Side/ })).toBeVisible();
     expect(screen.getByRole('button', { name: /Development/ })).toBeVisible();
     expect(screen.getByRole('button', { name: /Sunline/ })).toBeVisible();
@@ -47,7 +47,7 @@ describe('ExhibitLobby', () => {
 
   it('keeps non-featured catalog views out of the lobby orbit', () => {
     render(<ExhibitLobby locale="en" onSelectPreview={vi.fn()} />);
-    expect(screen.queryByText('New')).not.toBeInTheDocument();
+    expect(screen.getByText('New')).toBeVisible();
   });
 
   it('disables orbit parallax under reduced motion', () => {

@@ -44,6 +44,9 @@ export function ModeControls({
     case 'sunline':
       controls = <SunlineControls locale={locale} />;
       break;
+    case 'surnames':
+      controls = null;
+      break;
     default:
       return assertNever(presentation);
   }

@@ -7,7 +7,7 @@ different scientific lenses. It is designed as a small digital museum exhibit:
 direct enough to explore, explicit about its methods, and careful about the
 limits of its data.
 
-The current public product begins with three modes. **V1.1.0 Parchment Atlas**
+The current public product includes four observation modes. **V1.1.0 Parchment Atlas**
 ships:
 
 - **Other Side** calculates exact antipodal endpoints and shows the nearest
@@ -19,6 +19,10 @@ ships:
   Report 2025 dataset.
 - **Sunline** visualizes the day-night boundary and estimates solar position,
   sunrise, and sunset in UTC for educational use.
+- **Surname Atlas** shows source-listed rank-one surname records with local
+  forms, Latin transliterations, and a small manually reviewed Chinese
+  presentation set. It uses a community snapshot, not a unified official
+  global ranking; missing fields remain explicit.
 
 The verified public site is <https://0mn1si2i5.github.io/Mundus/>. The V1.1
 product implementation entered protected `main` at

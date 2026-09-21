@@ -1,0 +1,46 @@
+{
+  "id": "surnames-by-country",
+  "sourceName": "Popular Names by Country community dataset",
+  "sourceUrl": "https://github.com/sigpwned/popular-names-by-country-dataset/tree/v1.2",
+  "distributionUrl": "https://raw.githubusercontent.com/sigpwned/popular-names-by-country-dataset/v1.2/common-surnames-by-country.csv",
+  "licenseName": "CC0 for the repository dataset; upstream Wikipedia lists retain CC BY-SA 4.0 provenance",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "version": "v1.2 surname CSV; Wikipedia lists collected during the week of 2023-07-08",
+  "retrievedAt": "2026-09-21",
+  "derivedAssetSha256": "fb20513ef104acc60ec551f81f1a73db51d8b0fd74401f296271ac06d91a365d",
+  "auxiliarySources": [
+    {
+      "sourceName": "GeoNames countryInfo numeric ISO mapping",
+      "distributionUrl": "https://download.geonames.org/export/dump/countryInfo.txt",
+      "version": "capture used for ISO2 to Natural Earth numeric joins",
+      "sha256": "93bafc525813f22e4711ff9ed6d626343094ce48c26388dc7c49189b3d7d5512",
+      "purpose": "Map source ISO2 codes to the Natural Earth numeric country ids used by the globe."
+    }
+  ],
+  "attribution": "Community-compiled surname records from the v1.2 dataset; underlying Wikipedia list provenance remains CC BY-SA 4.0.",
+  "redistribution": "allowed",
+  "transformations": [
+    "Keep every source country and only Rank=1 rows; preserve countries with no Rank=1 record as an explicit empty result",
+    "Group alternate local and romanized spellings by source Name Group and preserve tied variants as arrays",
+    "Join ISO2 source codes to Natural Earth numeric ids with the pinned GeoNames countryInfo capture",
+    "Keep source count and percent only when present; no year is inferred from the source snapshot",
+    "Add only a small manually reviewed Chinese presentation set; all other Chinese fields remain null"
+  ],
+  "missingValuePolicy": "Missing rank-one records, counts, shares, years, local spellings, romanizations, and Chinese presentations remain explicit null or empty arrays and are never imputed.",
+  "boundaryPolicy": "A community-compiled source-listed observation, not a unified official global surname ranking or a census comparison.",
+  "recordCount": 72,
+  "rawBytes": 16662,
+  "gzipBytes": 2531,
+  "staticDecodedBytesEstimate": 66648,
+  "runtimeDecodedBytesEstimate": 99972,
+  "sourceAssets": {
+    "csv": {
+      "distributionUrl": "https://raw.githubusercontent.com/sigpwned/popular-names-by-country-dataset/v1.2/common-surnames-by-country.csv",
+      "sha256": "32cb28bea558a9d353feeef097da03c6488a4e7ba9398e5983cee2f0b9caa91c"
+    },
+    "countryInfo": {
+      "distributionUrl": "https://download.geonames.org/export/dump/countryInfo.txt",
+      "sha256": "93bafc525813f22e4711ff9ed6d626343094ce48c26388dc7c49189b3d7d5512"
+    }
+  }
+}

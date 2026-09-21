@@ -144,6 +144,43 @@
   gap: 0.3rem;
 }
 
+.surnameResult {
+  top: 22%;
+  width: 19rem;
+}
+
+.surnameRecords {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.surnameRecord {
+  display: grid;
+  gap: 0.25rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--color-line);
+}
+
+.surnameRecord > small,
+.surnameScope small {
+  color: var(--color-muted);
+  font-size: 0.62rem;
+  line-height: 1.4;
+}
+
+.surnameRecord > small::first-letter {
+  color: var(--color-text);
+}
+
+.surnameScope {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--color-line);
+}
+
 @media (min-width: 761px) and (max-width: 900px) {
   .result {
     width: 11rem;
@@ -218,6 +255,24 @@
     display: grid;
     grid-template-columns: 1fr auto;
     text-align: left;
+  }
+
+  .surnameResult {
+    top: auto;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    text-align: left;
+  }
+
+  .surnameResult > :nth-child(n) {
+    grid-column: auto;
+    text-align: inherit;
+  }
+
+  .surnameResult > strong,
+  .surnameResult > .surnameRecords,
+  .surnameResult > .surnameScope {
+    grid-column: 1 / -1;
   }
 
   .sunlineResult > :nth-child(n) {

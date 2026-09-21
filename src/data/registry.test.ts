@@ -11,6 +11,7 @@ describe('data registry', () => {
       'natural-earth-vector-globe',
       'undp-hdr-2025-development',
       'geonames-major-cities',
+      'surnames-by-country',
     ]);
     expect(
       DATA_MANIFESTS.every(
@@ -141,5 +142,23 @@ describe('data registry', () => {
     expect(manifest?.runtimeDecodedBytesEstimate).toBeLessThanOrEqual(
       8 * 1024 * 1024,
     );
+  });
+
+  it('pins the bounded community surname observation asset', () => {
+    const manifest = DATA_MANIFESTS.find(
+      (candidate) => candidate.id === 'surnames-by-country',
+    );
+    expect(manifest).toMatchObject({
+      version: expect.stringContaining('v1.2'),
+      licenseName: expect.stringContaining('CC0'),
+      derivedAssetSha256:
+        'fb20513ef104acc60ec551f81f1a73db51d8b0fd74401f296271ac06d91a365d',
+      recordCount: 72,
+      rawBytes: 16662,
+      gzipBytes: 2531,
+      staticDecodedBytesEstimate: 66648,
+    });
+    expect(manifest?.rawBytes).toBeLessThan(200 * 1024);
+    expect(manifest?.runtimeDecodedBytesEstimate).toBeLessThan(2 * 1024 * 1024);
   });
 });

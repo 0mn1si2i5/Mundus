@@ -110,11 +110,12 @@ license.
 
 ## Data
 
-| Material                        | Version                           | Terms                                                         | Attribution                                                                                        |
-| ------------------------------- | --------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Natural Earth Admin 0 countries | 4.1.0 through `world-atlas` 2.0.2 | Public domain                                                 | Made with Natural Earth                                                                            |
-| GeoNames major-city snapshot    | Captured 2026-08-01T09:39:05.688Z | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)     | Contains GeoNames data, licensed under CC BY 4.0                                                   |
-| UNDP HDR complete time series   | HDR 2025, 1990–2023               | [CC BY 3.0 IGO](https://hdr.undp.org/copyright-and-terms-use) | Source: United Nations Development Programme, Human Development Report 2025; transformed by Mundus |
+| Material                        | Version                           | Terms                                                                                                                                              | Attribution                                                                                        |
+| ------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Natural Earth Admin 0 countries | 4.1.0 through `world-atlas` 2.0.2 | Public domain                                                                                                                                      | Made with Natural Earth                                                                            |
+| GeoNames major-city snapshot    | Captured 2026-08-01T09:39:05.688Z | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                                                          | Contains GeoNames data, licensed under CC BY 4.0                                                   |
+| UNDP HDR complete time series   | HDR 2025, 1990–2023               | [CC BY 3.0 IGO](https://hdr.undp.org/copyright-and-terms-use)                                                                                      | Source: United Nations Development Programme, Human Development Report 2025; transformed by Mundus |
+| Community surname observation   | Popular Names by Country v1.2     | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) plus upstream [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) provenance | Community-compiled source-listed surname records; see `DATA_SOURCES.md`                            |
 
 Natural Earth source and terms are documented at
 <https://www.naturalearthdata.com/about/terms-of-use/>. Exact source URLs,

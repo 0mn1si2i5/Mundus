@@ -1,6 +1,7 @@
 # Naming Observation Research
 
-Status: research complete; implementation not authorized
+Status: research complete; bounded Surname Atlas implementation merged into the
+current development branch pending protected-main release validation
 
 Updated: 2026-09-21, Asia/Shanghai
 
@@ -122,3 +123,14 @@ Acceptance requires deterministic asset hashing, source and license notices,
 desktop/mobile semantic output, keyboard access, reduced-motion behavior, and a
 measured Pages transfer/runtime budget. No global crawl or large source dump is
 part of the packet.
+
+## Implementation packet
+
+The bounded implementation uses `src/data/generated/surnames-by-country.json`
+and `src/features/surnames/`. It contains 75 country entries and 72 rank-one
+records, is 16,662 bytes before compression, and is loaded only when the mode is
+active. The manifest pins the CSV and ISO mapping hashes. Five Chinese
+presentations are manually reviewed (`CN`, `TW`, `KR`, `JP`, and `VN`); all
+other countries show an explicit missing state. The app preserves alternate
+local and romanized forms within a rank-one source group and does not infer a
+statistical year from the 2023 collection snapshot.

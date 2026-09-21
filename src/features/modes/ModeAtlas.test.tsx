@@ -27,9 +27,9 @@ describe('ModeAtlas', () => {
     }
   });
 
-  it('lists the three featured modes by default', () => {
+  it('lists the four featured modes by default', () => {
     renderAtlas();
-    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.getAllByRole('listitem')).toHaveLength(4);
     expect(screen.getByText('Other Side')).toBeVisible();
     expect(screen.getByText('Development, Unpacked')).toBeVisible();
     expect(screen.getByText('Sunline')).toBeVisible();
@@ -63,12 +63,12 @@ describe('ModeAtlas', () => {
   it('marks the active mode as viewing and disables it', () => {
     renderAtlas('antipodes');
     expect(screen.getByRole('button', { name: 'Viewing' })).toBeDisabled();
-    expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(3);
   });
 
   it('offers a preview for every mode when in the lobby', () => {
     renderAtlas(null);
-    expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(4);
     expect(
       screen.queryByRole('button', { name: 'Viewing' }),
     ).not.toBeInTheDocument();
