@@ -2615,12 +2615,14 @@ test('resets bilateral focus for new points and mode round trips', async ({
   await expectCameraDiagnosticCleared(page);
   await switchModeFromAtlas(page, '地球另一端');
 
-  const citySearch = page.getByLabel('搜索全球主要城市');
-  if (testInfo.project.name === 'mobile' && !(await citySearch.isVisible())) {
+  const latitude = page.getByLabel('纬度');
+  if (testInfo.project.name === 'mobile' && !(await latitude.isVisible())) {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
-  await citySearch.fill('Tokyo');
-  await localizedCityOption(page, '东京').click();
+  await latitude.fill('35.6762');
+  await page.getByLabel('经度').fill('139.6503');
+  await page.getByRole('button', { name: '前往' }).click();
+  await expectCameraCenter(page, 35.6762, 139.6503);
   await expect(page.getByRole('button', { name: '翻到对跖点' })).toBeVisible();
 
   await page.getByRole('button', { name: '翻到对跖点' }).click();
