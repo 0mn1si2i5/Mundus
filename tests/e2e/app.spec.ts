@@ -215,7 +215,16 @@ test('Surname Atlas preserves local, Latin, Chinese, and missing states', async 
   await expect(result).toContainText('王');
   await expect(result).toContainText('Wáng');
   await expect(result).toContainText('中文呈现');
+  await expect(result).toContainText('占比 · 缺失');
+  await expect(result).toContainText('统计年份 · 缺失');
+  await expect(result).toContainText('来源快照');
   await expect(result).toContainText('社区整理');
+  await expect(
+    result.getByRole('link', { name: '查看来源页面' }),
+  ).toHaveAttribute(
+    'href',
+    'https://en.wikipedia.org/wiki/List_of_most_common_surnames_in_Asian_countries',
+  );
 });
 
 test('vector drag shell becomes transparent while the hit sphere remains active', async ({

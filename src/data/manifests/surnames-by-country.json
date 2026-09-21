@@ -7,7 +7,7 @@
   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
   "version": "v1.2 surname CSV; Wikipedia lists collected during the week of 2023-07-08",
   "retrievedAt": "2026-09-21",
-  "derivedAssetSha256": "fb20513ef104acc60ec551f81f1a73db51d8b0fd74401f296271ac06d91a365d",
+  "derivedAssetSha256": "0d9973838bcde8d489985f3bb11c7ea043be17cbbcc30878458ed752f93740ed",
   "auxiliarySources": [
     {
       "sourceName": "GeoNames countryInfo numeric ISO mapping",
@@ -29,10 +29,10 @@
   "missingValuePolicy": "Missing rank-one records, counts, shares, years, local spellings, romanizations, and Chinese presentations remain explicit null or empty arrays and are never imputed.",
   "boundaryPolicy": "A community-compiled source-listed observation, not a unified official global surname ranking or a census comparison.",
   "recordCount": 72,
-  "rawBytes": 16662,
-  "gzipBytes": 2531,
-  "staticDecodedBytesEstimate": 66648,
-  "runtimeDecodedBytesEstimate": 99972,
+  "rawBytes": 24472,
+  "gzipBytes": 2698,
+  "staticDecodedBytesEstimate": 97888,
+  "runtimeDecodedBytesEstimate": 146832,
   "sourceAssets": {
     "csv": {
       "distributionUrl": "https://raw.githubusercontent.com/sigpwned/popular-names-by-country-dataset/v1.2/common-surnames-by-country.csv",

@@ -8,6 +8,9 @@ describe('surname observation data', () => {
     expect(decoded.countries).toHaveLength(75);
     expect(decoded.countriesById.get('ne-156')?.countryIso2).toBe('CN');
     expect(decoded.countriesById.get('ne-008')?.records).toEqual([]);
+    expect(decoded.countriesById.get('ne-156')?.sourceUrls).toEqual([
+      'https://en.wikipedia.org/wiki/List_of_most_common_surnames_in_Asian_countries',
+    ]);
     expect(decoded.countriesById.get('ne-x-kosovo')?.countryIso2).toBe('XK');
   });
 
@@ -39,6 +42,7 @@ describe('surname observation data', () => {
         countries: {
           'ne-156': {
             countryIso2: 'CN',
+            sourceUrls: [],
             records: [{ rank: 1, localForms: [] }],
           },
         },

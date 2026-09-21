@@ -20,6 +20,93 @@ const reviewedChinese = new Map([
   ['VN:VN-1', '阮'],
 ]);
 
+const wikipediaSourceUrls = {
+  asia: 'https://en.wikipedia.org/wiki/List_of_most_common_surnames_in_Asian_countries',
+  europe:
+    'https://en.wikipedia.org/wiki/List_of_most_common_surnames_in_European_countries',
+  northAmerica:
+    'https://en.wikipedia.org/wiki/List_of_most_common_surnames_in_North_American_countries',
+  oceania:
+    'https://en.wikipedia.org/wiki/List_of_most_common_surnames_in_Oceanian_countries',
+  southAmerica:
+    'https://en.wikipedia.org/wiki/List_of_most_common_surnames_in_South_American_countries',
+};
+
+const wikipediaCountryRegions = new Map([
+  ...[
+    'AM',
+    'AZ',
+    'BD',
+    'CN',
+    'IN',
+    'IL',
+    'JP',
+    'KH',
+    'KR',
+    'KZ',
+    'LK',
+    'NP',
+    'PH',
+    'TR',
+    'TW',
+    'VN',
+  ].map((country) => [country, 'asia']),
+  ...[
+    'AL',
+    'AT',
+    'BA',
+    'BE',
+    'BG',
+    'BY',
+    'CH',
+    'CZ',
+    'DE',
+    'DK',
+    'EE',
+    'ES',
+    'FI',
+    'FO',
+    'FR',
+    'GB',
+    'GE',
+    'GR',
+    'HR',
+    'HU',
+    'IE',
+    'IS',
+    'IT',
+    'LT',
+    'LU',
+    'LV',
+    'MD',
+    'ME',
+    'MK',
+    'MT',
+    'NL',
+    'NO',
+    'PL',
+    'PT',
+    'RO',
+    'RS',
+    'RU',
+    'SI',
+    'SK',
+    'SR',
+    'UA',
+    'XK',
+  ].map((country) => [country, 'europe']),
+  ...['CA', 'US'].map((country) => [country, 'northAmerica']),
+  ...['AU', 'FJ', 'NZ'].map((country) => [country, 'oceania']),
+  ...['AR', 'BR', 'CL', 'CO', 'PE', 'PY'].map((country) => [
+    country,
+    'southAmerica',
+  ]),
+  ...['CR', 'CU', 'DO', 'GT', 'MX', 'SV'].map((country) => [
+    country,
+    'northAmerica',
+  ]),
+]);
+
 const args = new Map();
 for (let index = 2; index < process.argv.length; index += 1) {
   const value = process.argv[index];
@@ -83,6 +170,10 @@ for (const countryIso2 of [...sourceCountryCodes].sort()) {
   if (!numeric)
     throw new Error(`Missing countryInfo numeric code for ${countryIso2}`);
   const countryId = numeric === '000' ? 'ne-x-kosovo' : `ne-${numeric}`;
+  const sourceRegion = wikipediaCountryRegions.get(countryIso2);
+  if (!sourceRegion) {
+    throw new Error(`Missing Wikipedia source region for ${countryIso2}`);
+  }
   const records = (byCountry.get(countryIso2) ?? []).map((record) => ({
     rank: record.rank,
     localForms: uniqueLocalForms(record.localForms),
@@ -93,7 +184,11 @@ for (const countryIso2 of [...sourceCountryCodes].sort()) {
     share: record.share,
     statYear: record.statYear,
   }));
-  countries[countryId] = { countryIso2, records };
+  countries[countryId] = {
+    countryIso2,
+    sourceUrls: [wikipediaSourceUrls[sourceRegion]],
+    records,
+  };
 }
 
 const output = {
@@ -104,6 +199,7 @@ const output = {
   sourceUrl: [
     'https://github.com/sigpwned/popular-names-by-country-dataset/tree/v1.2',
     'https://en.wikipedia.org/wiki/Lists_of_most_common_surnames',
+    ...new Set(Object.values(wikipediaSourceUrls)),
   ],
   license:
     'Dataset repository CC0; upstream Wikipedia list pages are generally CC BY-SA 4.0.',

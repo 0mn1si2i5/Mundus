@@ -27,6 +27,7 @@ const surnameDatasetSchema = z.object({
     z.string().min(1),
     z.object({
       countryIso2: z.string().regex(/^[A-Z]{2}$/),
+      sourceUrls: z.array(z.url()).min(1),
       records: z.array(surnameRecordSchema),
     }),
   ),
@@ -51,6 +52,7 @@ export interface SurnameRecord {
 export interface SurnameCountry {
   countryId: string;
   countryIso2: string;
+  sourceUrls: readonly string[];
   records: readonly SurnameRecord[];
 }
 
@@ -73,6 +75,7 @@ export function decodeSurnameDataset(input: unknown): SurnameDataset {
     .map(([countryId, country]) => ({
       countryId,
       countryIso2: country.countryIso2,
+      sourceUrls: country.sourceUrls,
       records: country.records,
     }));
   return {

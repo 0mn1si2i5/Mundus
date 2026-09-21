@@ -173,7 +173,16 @@ export function ModeResult({
           ) : loadState.status === 'loading' ? (
             <strong>{t.surnameLoading}</strong>
           ) : loadState.status === 'error' ? (
-            <strong>{t.surnameUnavailable}</strong>
+            <>
+              <strong>{t.surnameUnavailable}</strong>
+              <button
+                className={styles.surnameRetry}
+                type="button"
+                onClick={loadState.retry}
+              >
+                {t.surnameRetry}
+              </button>
+            </>
           ) : countryData?.records.length ? (
             <div className={styles.surnameRecords}>
               {countryData.records.map((record, index) => (
@@ -206,19 +215,21 @@ export function ModeResult({
                     {t.surnameChinese}
                     {record.zhDisplay ?? t.surnameMissing}
                   </small>
-                  {record.count !== null || record.share !== null ? (
-                    <small>
-                      {record.count !== null
-                        ? `${t.surnameCount} ${numberFormatter.format(record.count)}`
-                        : ''}
-                      {record.count !== null && record.share !== null
-                        ? ' · '
-                        : ''}
-                      {record.share !== null
-                        ? `${t.surnameShare} ${(record.share * 100).toFixed(2)}%`
-                        : ''}
-                    </small>
-                  ) : null}
+                  <small>
+                    {t.surnameCount} ·{' '}
+                    {record.count !== null
+                      ? numberFormatter.format(record.count)
+                      : t.surnameMissing}
+                  </small>
+                  <small>
+                    {t.surnameShare} ·{' '}
+                    {record.share !== null
+                      ? `${(record.share * 100).toFixed(2)}%`
+                      : t.surnameMissing}
+                  </small>
+                  <small>
+                    {t.surnameYear} · {record.statYear ?? t.surnameMissing}
+                  </small>
                 </section>
               ))}
             </div>
@@ -227,8 +238,24 @@ export function ModeResult({
           )}
           {loadState.status === 'ready' ? (
             <div className={styles.surnameScope}>
+              <small>
+                {t.surnameSourceSnapshot}
+                {loadState.data.sourceSnapshot}
+              </small>
+              <small>
+                {t.surnameCoverage}
+                {loadState.data.coverageNote}
+              </small>
+              <small>
+                {t.surnameLicense}
+                {loadState.data.license}
+              </small>
               <small>{t.surnameScope}</small>
-              <small>{loadState.data.license}</small>
+              {countryData?.sourceUrls.map((url) => (
+                <a href={url} key={url} rel="noreferrer" target="_blank">
+                  {t.surnameSourceLink}
+                </a>
+              ))}
             </div>
           ) : null}
         </aside>
