@@ -63,8 +63,8 @@ This snapshot helps detect drift; refresh it before relying on it.
   as `1c6beb9f8b3b92149e847d1840825a6eadb7a4bd` after its quality,
   browser-smoke, vector-data-full, and Pages artifact checks passed and both
   review conversations were resolved.
-- `main` requires strict `quality`, `browser-smoke`, and `pages-artifact`
-  checks; private vulnerability reporting is enabled.
+- `main` requires strict `source-quality`, `vector-data-full`, `browser-smoke`,
+  and `pages-artifact` checks; private vulnerability reporting is enabled.
 - The only tag and GitHub Release are `v1.0.0`, targeting
   `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`.
 - The public product is described as V1.1.0 Parchment Atlas, but no V1.1 tag or

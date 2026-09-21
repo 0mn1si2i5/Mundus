@@ -134,8 +134,9 @@ become stale. Run the refresh commands in Section 5 before acting.
 - Homepage URL: `https://0mn1si2i5.github.io/Mundus/`
 - Pages site: enabled with GitHub Actions and HTTPS at
   `https://0mn1si2i5.github.io/Mundus/`
-- `main` branch protection: enabled with strict `quality`, `browser-smoke`, and
-  `pages-artifact` checks plus resolved review conversations
+- `main` branch protection: enabled with strict `source-quality`,
+  `vector-data-full`, `browser-smoke`, and `pages-artifact` checks plus resolved
+  review conversations
 - Private vulnerability reporting: enabled
 - Tags/releases at this historical snapshot: no `v1.0.0` release was found;
   the current-authority section above records its later completion
@@ -148,7 +149,8 @@ become stale. Run the refresh commands in Section 5 before acting.
 - PR #3 URL: `https://github.com/0mn1si2i5/Mundus/pull/3`
 - PR #3 merge: `40c4ab2fdc7ff570924ff5f5c9ed6b024b7a1a77`
 - PR #3 remote results at the snapshot:
-  - `quality`: success;
+  - `source-quality`: success;
+  - `vector-data-full`: success;
   - `browser-smoke`: success;
   - `pages-artifact`: success;
   - `deploy-pages`: intentionally skipped on a pull request;
@@ -411,8 +413,10 @@ pnpm check
 4. Pages artifact verification against the generated `dist/`.
 
 The full vector-data suite runs separately as `pnpm test:data-vector-globe:full`
-in CI so the required `quality` check can aggregate source and complete vector
-validation without repeating the focused vector tests. The literal `/Mundus/`
+in CI so `source-quality` can keep its focused vector tests while
+`vector-data-full` provides the complete vector validation. Both checks are
+required directly by protected `main`; there is no pass-through aggregator
+job. The literal `/Mundus/`
 mount rehearsal (`pnpm test:release-server`) remains an explicit low-frequency
 release exercise and is not part of the routine source gate.
 
@@ -421,6 +425,12 @@ Complete local desktop/mobile browser gate:
 ```bash
 pnpm test:e2e
 ```
+
+Local cache inspection is intentionally separate from the release gates:
+`pnpm cache:status` reports Historical Echoes and GHSL cache occupancy, while
+`pnpm cache:prune` removes only completed run folders, stale PID files, and
+logs. Add `-- --sources` only when the pinned source dump may be redownloaded;
+never make cache cleanup part of `pnpm check` or CI.
 
 Artifact-only verification:
 
@@ -543,8 +553,9 @@ core requests, and frame sample; it does not close this broader checklist.
 ### Phase 2 — merge the final evidence PR
 
 PR #4, `codex/v1-release-evidence`, contains only durable release evidence and
-the verified live-site links. Review its final diff, require green `quality`,
-`browser-smoke`, and `pages-artifact`, resolve valid conversations, and merge
+the verified live-site links. Review its final diff, require green
+`source-quality`, `vector-data-full`, `browser-smoke`, and `pages-artifact`,
+resolve valid conversations, and merge
 through protected `main`. That merge creates the final candidate production
 SHA. Wait for its CI, Pages deployment, and live smoke to pass again.
 

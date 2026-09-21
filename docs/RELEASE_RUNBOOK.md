@@ -14,9 +14,10 @@ product-owner gate in `MVP_RELEASE_PLAN.md`.
   The Pages `pages-artifact` job independently runs `pnpm build` and
   `pnpm release:verify`, then runs the complete desktop/mobile Playwright
   suite against that `dist` and uploads it; pull requests cannot deploy. The
-  required `quality` check already covers source, generated-data, unit, and
-  full-vector validation, while Pages keeps the built artifact and browser
-  verification self-contained.
+  required `source-quality` and `vector-data-full` checks cover source,
+  generated-data, unit, and full-vector validation, while Pages keeps the built
+  artifact and browser verification self-contained. Both checks are required
+  directly; no pass-through aggregate job is needed.
 - The separate CI `browser-smoke` job runs three `@smoke` Chromium cases for a
   fast signal. It does not replace the complete desktop/mobile suite in the
   Pages artifact job.
