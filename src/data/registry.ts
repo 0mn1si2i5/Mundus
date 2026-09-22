@@ -4,6 +4,7 @@ import undpDevelopmentManifest from './manifests/undp-hdr-2025-development.json'
 import geoNamesMajorCitiesManifest from './manifests/geonames-major-cities.json';
 import naturalEarthVectorManifest from './manifests/natural-earth-vector-globe.json';
 import surnamesManifest from './manifests/surnames-by-country.json';
+import countryLabelAnchorsManifest from './manifests/country-label-anchors.json';
 
 const auxiliarySourceSchema = z.object({
   sourceName: z.string().min(1),
@@ -157,4 +158,5 @@ export const DATA_MANIFESTS: readonly DataManifest[] = [
   dataManifestSchema.parse(undpDevelopmentManifest),
   dataManifestSchema.parse(geoNamesMajorCitiesManifest),
   dataManifestSchema.parse(surnamesManifest),
+  dataManifestSchema.parse(countryLabelAnchorsManifest),
 ];

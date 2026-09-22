@@ -5,7 +5,7 @@ import { decodeSurnameDataset, getRankOneSurnameRecord } from './surnameData';
 describe('surname observation data', () => {
   it('keeps exact Natural Earth country joins and explicit source coverage', () => {
     const decoded = decodeSurnameDataset(dataset);
-    expect(decoded.countries).toHaveLength(76);
+    expect(decoded.countries).toHaveLength(77);
     expect(decoded.countriesById.get('ne-156')?.countryIso2).toBe('CN');
     expect(decoded.countriesById.get('ne-008')?.records[0]).toMatchObject({
       rank: null,
@@ -15,6 +15,13 @@ describe('surname observation data', () => {
       'https://en.wikipedia.org/wiki/List_of_most_common_surnames_in_Asian_countries',
     ]);
     expect(decoded.countriesById.get('ne-x-kosovo')?.countryIso2).toBe('XK');
+    expect(decoded.countriesById.get('ne-752')?.records[0]).toMatchObject({
+      rank: 1,
+      localForms: [{ value: 'Andersson', script: 'Latin' }],
+      romanizedForms: ['Andersson'],
+      count: 251621,
+      statYear: 2012,
+    });
     expect(decoded.countriesById.get('ne-364')?.records[0]).toMatchObject({
       rank: 1,
       localForms: [{ value: 'محمدی', script: 'Arabic' }],
@@ -47,6 +54,16 @@ describe('surname observation data', () => {
     expect(greece.records[0]).toMatchObject({
       rank: null,
       localForms: [{ value: 'Σαμαράς', script: 'Greek' }],
+    });
+
+    const sweden = decoded.countriesById.get('ne-752')!;
+    expect(sweden.records[0]).toMatchObject({
+      rank: 1,
+      count: 251621,
+      statYear: 2012,
+      share: null,
+      zhDisplay: null,
+      zhMethod: 'missing',
     });
   });
 

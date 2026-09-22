@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { geoContains } from 'd3-geo';
+import { feature } from 'topojson-client';
+import type { GeometryCollection, Topology } from 'topojson-specification';
+import type { Feature, FeatureCollection, Geometry } from 'geojson';
 import surnameDataset from '../../data/generated/surnames-by-country.json';
+import labelAnchors from '../../data/generated/country-label-anchors.json';
+import atlas50 from 'world-atlas/countries-50m.json';
 import {
   getBoundedTextureAnisotropy,
   getCountryDataset,
@@ -16,6 +21,11 @@ import {
 
 describe('country dataset', () => {
   const dataset = getCountryDataset();
+  const detailedCountries = detailedCountryFeatures();
+  const anchorsById = labelAnchors.anchors as Record<
+    string,
+    { point: { latitude: number; longitude: number }; clearanceDegrees: number }
+  >;
 
   it('builds stable unique internal ids', () => {
     const ids = dataset.countries.features.map(
@@ -92,6 +102,33 @@ describe('country dataset', () => {
     }
   });
 
+  it('keeps generated surname anchors and their footprints inside 50m geometry', () => {
+    for (const countryId of Object.keys(surnameDataset.countries)) {
+      const anchor = anchorsById[countryId];
+      expect(anchor, countryId).toBeDefined();
+      if (!anchor) continue;
+      const matchingCountries = detailedCountries.filter(
+        (country) => country.properties.countryId === countryId,
+      );
+      expect(matchingCountries.length, countryId).toBeGreaterThan(0);
+      const contains = (point: { latitude: number; longitude: number }) =>
+        matchingCountries.some((country) =>
+          geoContains(country, [point.longitude, point.latitude]),
+        );
+      expect(contains(anchor.point), countryId).toBe(true);
+      const width = getCountryLabelWorldWidth(anchor.clearanceDegrees);
+      const angularFootprint = getCountryLabelAngularFootprintDegrees(width);
+      for (let bearing = 0; bearing < 360; bearing += 22.5) {
+        const edge = destinationPoint(
+          anchor.point,
+          angularFootprint * 0.98,
+          bearing,
+        );
+        expect(contains(edge), `${countryId} bearing ${bearing}`).toBe(true);
+      }
+    }
+  });
+
   it('keeps the billboard footprint conservative as clearance shrinks', () => {
     expect(getCountryLabelWorldWidth(0)).toBe(0);
     expect(getCountryLabelWorldWidth(0.35)).toBeGreaterThan(0);
@@ -101,6 +138,32 @@ describe('country dataset', () => {
     expect(getCountryLabelWorldWidth(35)).toBeLessThanOrEqual(0.34);
   });
 });
+
+function detailedCountryFeatures(): Feature<Geometry, { countryId: string }>[] {
+  const topology = atlas50 as unknown as Topology<{
+    countries: GeometryCollection<{ name: string }>;
+  }>;
+  const exceptions: Record<string, string> = {
+    'N. Cyprus': 'ne-x-northern-cyprus',
+    Somaliland: 'ne-x-somaliland',
+    Kosovo: 'ne-x-kosovo',
+    'Indian Ocean Ter.': 'ne-x-indian-ocean-territories',
+    'Siachen Glacier': 'ne-x-siachen-glacier',
+  };
+  const countries = feature(
+    topology,
+    topology.objects.countries,
+  ) as unknown as FeatureCollection<Geometry, { name: string }>;
+  return countries.features.map((country) => ({
+    ...country,
+    properties: {
+      countryId:
+        country.id !== undefined
+          ? `ne-${String(country.id).padStart(3, '0')}`
+          : exceptions[country.properties.name]!,
+    },
+  }));
+}
 
 function destinationPoint(
   point: { latitude: number; longitude: number },

@@ -121,17 +121,21 @@ painted on the globe at this scale.
 
 - Source: [Popular Names by Country dataset v1.2](https://github.com/sigpwned/popular-names-by-country-dataset/tree/v1.2), with source-list provenance from [Wikipedia surname lists](https://en.wikipedia.org/wiki/Lists_of_most_common_surnames)
 - Snapshot: CSV released 2023-07-16; the repository records lists collected during the week of 2023-07-08
-- Terms: the dataset repository declares [CC0](https://creativecommons.org/publicdomain/zero/1.0/); upstream Wikipedia list pages retain [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) provenance
-- Use: source-listed rank-one surname records, plus unranked source lists where no numeric rank exists, for 76 country entries in Surname Atlas
+- Terms: the dataset repository declares [CC0](https://creativecommons.org/publicdomain/zero/1.0/); upstream Wikipedia list pages retain [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) provenance; the Sweden supplement reproduces a Statistics Sweden table through an immutable Wayback capture
+- Use: source-listed rank-one surname records, plus unranked source lists where no numeric rank exists, for 77 country entries in Surname Atlas
 - Transformation: group local and romanized variants by `Name Group`, join ISO2 codes to the globe's Natural Earth numeric ids with a pinned GeoNames `countryInfo.txt` mapping, and keep source-listed unranked records without presenting an inferred rank
+- Sweden supplement: Statistics Sweden's 2012 `Namnstatistik` table lists `Andersson` at rank 1 with 251,621 individuals. The immutable capture is <https://web.archive.org/web/20130921054130id_/http://www.scb.se/Pages/TableAndChart____31063.aspx> with SHA-256 `8e5d469eabd46e67174b45bfccc73d2097a93af1e88b199694e78a5a196e4ad9`; the Wikipedia review page is pinned separately in the manifest.
 - Missing-value policy: count, share, year, transliteration, and Chinese presentation remain null or empty when the source does not provide them; only a small manually reviewed Chinese presentation set is included
 - Scope: this is a community-compiled cultural observation, not a unified official global ranking or census comparison
 
-The derived asset contains 76 country entries, 166 records, 73 rank-one
-records, and 93 unranked source records. Its source hashes, 41,867-byte size,
+The derived asset contains 77 country entries, 167 records, 74 rank-one
+records, and 93 unranked source records. It includes a separately pinned
+Statistics Sweden 2012 table for Sweden (`Andersson`, rank 1, 251,621) in
+addition to the Iran community supplement; neither supplement is numerically
+compared with the primary country lists. Its source hashes, 42,822-byte size,
 and transformation contract are recorded in
 `src/data/manifests/surnames-by-country.json`. Raw CSV and country-info files
-are not committed. The runtime loads the 41.9 KB derived asset only when the
+are not committed. The runtime loads the 42.7 KB derived asset only when the
 Surname Atlas mode is active.
 
 ## Solar calculations

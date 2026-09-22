@@ -17,6 +17,12 @@ const IRANIAN_CSV_SHA256 =
   'e71a59fd87e0da0fc6aeef8b44ed6c3b2b4c00adc2ade0d51af5a58281b34de7';
 const IRANIAN_SOURCE_URL =
   'https://github.com/farbodbj/iranian-surname-frequencies/tree/9fb2fdccb62445b52e933d4d7929a52e01bd6011';
+const SWEDEN_SOURCE_URL =
+  'https://web.archive.org/web/20130921054130id_/http://www.scb.se/Pages/TableAndChart____31063.aspx';
+const SWEDEN_SOURCE_SHA256 =
+  '8e5d469eabd46e67174b45bfccc73d2097a93af1e88b199694e78a5a196e4ad9';
+const SWEDEN_WIKIPEDIA_RAW_URL =
+  'https://en.wikipedia.org/w/index.php?title=List_of_most_common_surnames_in_European_countries&action=raw';
 
 const reviewedChinese = new Map([
   ['CN:CN-1', '王'],
@@ -112,6 +118,32 @@ const wikipediaCountryRegions = new Map([
     'northAmerica',
   ]),
 ]);
+
+// This official, country-wide table is outside the v1.2 CSV and is kept as a
+// small reviewed supplement. The source hash and immutable URL are recorded in
+// the manifest; the row remains deliberately comparable only within Sweden's
+// own source snapshot.
+const supplementalRankOneCountries = [
+  {
+    countryIso2: 'SE',
+    sourceUrls: [
+      'https://en.wikipedia.org/wiki/List_of_most_common_surnames_in_European_countries',
+      SWEDEN_SOURCE_URL,
+    ],
+    records: [
+      {
+        rank: 1,
+        localForms: [{ value: 'Andersson', script: 'Latin' }],
+        romanizedForms: ['Andersson'],
+        zhDisplay: null,
+        zhMethod: 'missing',
+        count: 251621,
+        share: null,
+        statYear: 2012,
+      },
+    ],
+  },
+];
 
 const args = new Map();
 for (let index = 2; index < process.argv.length; index += 1) {
@@ -214,6 +246,24 @@ for (const countryIso2 of [...sourceCountryCodes].sort()) {
   };
 }
 
+for (const supplement of supplementalRankOneCountries) {
+  const numeric = countryCodes.get(supplement.countryIso2);
+  if (!numeric) {
+    throw new Error(
+      `Missing countryInfo numeric code for ${supplement.countryIso2}`,
+    );
+  }
+  const countryId = numeric === '000' ? 'ne-x-kosovo' : `ne-${numeric}`;
+  if (countries[countryId]) {
+    throw new Error(`Supplement duplicates generated country ${countryId}`);
+  }
+  countries[countryId] = {
+    countryIso2: supplement.countryIso2,
+    sourceUrls: supplement.sourceUrls,
+    records: supplement.records,
+  };
+}
+
 const iranianCountryNumeric = countryCodes.get('IR');
 if (!iranianCountryNumeric) {
   throw new Error('Missing countryInfo numeric code for IR');
@@ -243,19 +293,20 @@ countries[`ne-${iranianCountryNumeric}`] = {
 
 const output = {
   schemaVersion: 1,
-  sourceSnapshot:
-    'sigpwned/popular-names-by-country-dataset v1.2; source lists collected during the week of 2023-07-08; Iran supplemented from farbodbj/iranian-surname-frequencies commit 9fb2fdccb62445b52e933d4d7929a52e01bd6011',
+  sourceSnapshot: `sigpwned/popular-names-by-country-dataset v1.2; source lists collected during the week of 2023-07-08; Sweden supplemented from Statistics Sweden 2012 surname ranking (Wayback capture 2013-09-21, SHA-256 ${SWEDEN_SOURCE_SHA256}); Iran supplemented from farbodbj/iranian-surname-frequencies commit 9fb2fdccb62445b52e933d4d7929a52e01bd6011`,
   sourceKind: 'community',
   sourceUrl: [
     'https://github.com/sigpwned/popular-names-by-country-dataset/tree/v1.2',
     IRANIAN_SOURCE_URL,
+    SWEDEN_SOURCE_URL,
+    SWEDEN_WIKIPEDIA_RAW_URL,
     'https://en.wikipedia.org/wiki/Lists_of_most_common_surnames',
     ...new Set(Object.values(wikipediaSourceUrls)),
   ],
   license:
-    'Primary dataset repository CC0; Iran supplement Apache-2.0; upstream Wikipedia list pages are generally CC BY-SA 4.0.',
+    'Primary dataset repository CC0; Sweden official table reproduced through a CC BY-SA 4.0 Wikipedia-derived supplement; Iran supplement Apache-2.0; upstream Wikipedia list pages retain CC BY-SA 4.0 provenance.',
   coverageNote:
-    'Community-compiled source-listed records, not a unified official global ranking. The Iran record is a separate Persian-language community sample and is not directly comparable to the Wikipedia-derived country lists. Numeric rank-one records are absent for some countries; their unranked source lists remain visible without an inferred rank.',
+    'Community-compiled source-listed records, not a unified official global ranking. The Sweden record is a separate Statistics Sweden 2012 snapshot and the Iran record is a separate Persian-language community sample; neither is numerically compared with the Wikipedia-derived country lists. Numeric rank-one records are absent for some countries; their unranked source lists remain visible without an inferred rank.',
   countries,
 };
 
@@ -264,8 +315,11 @@ const outputPath =
 await mkdir(join(outputPath, '..'), { recursive: true });
 await writeFile(outputPath, `${JSON.stringify(output)}\n`);
 console.log(`wrote ${outputPath}`);
+const generatedRecords = Object.values(countries).flatMap(
+  (country) => country.records,
+);
 console.log(
-  `countries=${Object.keys(countries).length} rankOneRows=${rows.filter((row) => row.Rank === 1).length} unrankedRows=${rows.filter((row) => !row.Rank).length}`,
+  `countries=${Object.keys(countries).length} rankOneRows=${generatedRecords.filter((record) => record.rank === 1).length} unrankedRows=${generatedRecords.filter((record) => record.rank === null).length}`,
 );
 
 async function loadBytes(path, url, expectedSha256, fallbackPath) {

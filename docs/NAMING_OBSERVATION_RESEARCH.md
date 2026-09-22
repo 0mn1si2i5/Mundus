@@ -130,6 +130,44 @@ Facebook data leak and its full data has multi-gigabyte storage and memory
 requirements. Do not use unprovenanced country frequency repositories merely
 because their repository license is permissive.
 
+## Coverage Audit (2026-09-22)
+
+The v1.2 source snapshot has 75 country codes; the Iran and Sweden supplements
+add one country entry each, for 77 generated entries. A review of the current
+Natural Earth 110m country features found 177 geometries, so the snapshot is
+intentionally incomplete.
+The missing-geometry list must not be treated as a list of missing surnames:
+some countries do not use stable family surnames, and several public lists only
+describe a city, an ethnic group, or an unranked set of examples.
+
+One additional country has a directly usable ranked record in the reviewed
+Wikipedia source page. The Sweden section lists `Andersson` as rank 1 with
+251,621 individuals and cites Statistics Sweden's `Namnstatistik` table
+(dated 2013-09-15). The page is CC BY-SA 4.0 like the other Wikipedia-derived
+source material. The raw page used for this audit was 127,970 bytes with SHA-256
+`c5fbe91365197c28ab8b3c200ce69ef08ea0bf098b9dc81ba2c77e9cd0dff60b`:
+
+- <https://en.wikipedia.org/wiki/List_of_most_common_surnames_in_European_countries>
+- <http://www.scb.se/Pages/TableAndChart____31063.aspx>
+
+The Sweden row is now included in the generated asset as a pinned, manually
+reviewed supplement with both source URLs; the builder output schema remains
+unchanged. It contributes one rank-one map label, while its 2012 count remains
+explicitly separate from the primary community snapshot.
+
+The same page does not justify several tempting additions. Bosnia and
+Herzegovina is split into Bosniak and Serb lists rather than a country-wide
+ranking. Belarus reports Minsk only, and Switzerland reports German-speaking
+cantons only. Those records must not be promoted to country-level rank 1.
+The Asian page says that most Indonesians and Malaysians do not use family
+names, describes Thai surnames as legally unique, and gives Pakistan only an
+unranked `Khan` note. These statements are useful coverage caveats, but they do
+not support a map label claiming a national highest-frequency surname. No
+redistribution-safe, country-wide ranked source was found for the reviewed
+African gaps during this audit. `SMenigat/common-surnames` remains an
+alphabetical MIT-licensed inventory and is therefore still unsuitable for a
+rank-one map label.
+
 ## Product Packet Boundary
 
 An implementation packet should contain one static JSON asset under 0.2 MB,
@@ -153,9 +191,10 @@ part of the packet.
 ## Implementation packet
 
 The bounded implementation uses `src/data/generated/surnames-by-country.json`
-and `src/features/surnames/`. It contains 76 country entries, 73 rank-one
-records, and 93 unranked source records, is 41,867 bytes before compression,
-and is loaded only when the mode is active. The manifest pins both source CSVs
+and `src/features/surnames/`. It contains 77 country entries, 74 rank-one
+records, and 93 unranked source records, is 42,822 bytes before compression,
+and is loaded only when the mode is active. The manifest pins both source CSVs,
+the Statistics Sweden supplement, the Wikipedia raw page used to review it,
 and the ISO mapping hash. Five Chinese
 presentations are manually reviewed (`CN`, `TW`, `KR`, `JP`, and `VN`); all
 other countries show an explicit missing state. The app preserves alternate
